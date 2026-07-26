@@ -1,5 +1,5 @@
 /**
- * assembly/ — Regras de montagem do Sistema Europeu (Modelo B).
+ * assembly/ â€” Regras de montagem do Sistema Europeu (Modelo B).
  */
 
 import type {
@@ -33,7 +33,7 @@ export function validateEuropeanDrawerBox(
   }
   if (config.depthMm < model.depthProfile.minMm || config.depthMm > model.depthProfile.maxMm) {
     errors.push(
-      `Profundidade ${config.depthMm} mm fora da gama ${model.depthProfile.minMm}–${model.depthProfile.maxMm} mm.`
+      `Profundidade ${config.depthMm} mm fora da gama ${model.depthProfile.minMm}â€“${model.depthProfile.maxMm} mm.`
     );
   }
   if (needed > usefulH + 0.5) {
@@ -48,7 +48,7 @@ export function validateEuropeanDrawerBox(
   }
 
   if (config.pushOpen && config.softClose) {
-    warnings.push("Push-Open e Soft-Close activos em simultaneo — confirmar ferragem combinada do fabricante.");
+    warnings.push("Push-Open e Soft-Close activos em simultaneo â€” confirmar ferragem combinada do fabricante.");
   }
 
   return { valid: errors.length === 0, errors, warnings };

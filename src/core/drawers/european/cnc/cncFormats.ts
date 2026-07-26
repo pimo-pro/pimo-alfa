@@ -1,6 +1,6 @@
 /**
- * cncFormats.ts — Serialização de programas CNC para formatos físicos.
- * Conteúdo estruturado mínimo (genérico / SCM / Biesse / Homag / XML).
+ * cncFormats.ts â€” SerializaÃ§Ã£o de programas CNC para formatos fÃ­sicos.
+ * ConteÃºdo estruturado mÃ­nimo (genÃ©rico / SCM / Biesse / Homag / XML).
  */
 
 import type {
@@ -11,7 +11,7 @@ import type {
 } from "./cncMapping";
 import type { EuropeanCncFormat } from "./cncFileNaming";
 
-/** Shape serializável (evita ciclo com cncBuilder). */
+/** Shape serializÃ¡vel (evita ciclo com cncBuilder). */
 export type CncSerializableProgram = {
   meta: CncPieceMeta;
   cuts: CncCutOperation[];
@@ -73,7 +73,7 @@ function toGenericCnc(p: CncSerializableProgram): string {
   lines.push(`; --- DRILL ---`);
   for (const d of p.drills) {
     lines.push(
-      `G81 X${d.x} Y${d.y} Z-${d.depthMm} R2 F120 ; Ø${d.diameterMm} ${d.holeType} face=${d.face}`
+      `G81 X${d.x} Y${d.y} Z-${d.depthMm} R2 F120 ; â€”${d.diameterMm} ${d.holeType} face=${d.face}`
     );
   }
   if (p.pockets.length) {

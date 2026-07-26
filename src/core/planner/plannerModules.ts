@@ -1,5 +1,5 @@
 /**
- * plannerModules.ts — Colocação / movimento / colisões de módulos na grelha.
+ * plannerModules.ts â€” ColocaÃ§Ã£o / movimento / colisÃµes de mÃ³dulos na grelha.
  */
 
 import type { KitchenModuleSpec } from "../kitchen/types";
@@ -23,10 +23,10 @@ export type PlannerPlacedModule = {
   widthMm: number;
   heightMm: number;
   depthMm: number;
-  /** Posição na planta (X ao longo da parede / Y profundidade). */
+  /** PosiÃ§Ã£o na planta (X ao longo da parede / Y profundidade). */
   xMm: number;
   yMm: number;
-  /** Elevação no alçado. */
+  /** ElevaÃ§Ã£o no alÃ§ado. */
   elevationYMm: number;
   frontId?: string;
   doorId?: string;
@@ -71,7 +71,7 @@ export function detectCollisions(modules: PlannerPlacedModule[]): PlannerCollisi
     for (let j = i + 1; j < modules.length; j++) {
       const a = modules[i];
       const b = modules[j];
-      // Colisão em planta: X × profundidade (yMm usa depth como ocupação)
+      // ColisÃ³o em planta: X â€” profundidade (yMm usa depth como ocupaÃ§Ã£o)
       const overlap = rectsOverlap(
         a.xMm,
         a.yMm,
@@ -126,7 +126,7 @@ export function movePlacedModule(
   return { ...module, xMm: pos.xMm, yMm: pos.yMm };
 }
 
-/** Alinha módulos base em fila contínua a partir de x=0. */
+/** Alinha mÃ³dulos base em fila contÃ­nua a partir de x=0. */
 export function autoAlignBaseRow(
   modules: PlannerPlacedModule[],
   grid: PlannerGridConfig,
@@ -164,7 +164,7 @@ export function addModuleToPlan(
     return {
       modules: placed,
       collisions,
-      warning: `Colisão ao colocar ${spec.id} — posição rejeitada.`,
+      warning: `ColisÃ³o ao colocar ${spec.id} â€” posiÃ§Ã£o rejeitada.`,
     };
   }
   return { modules, collisions };

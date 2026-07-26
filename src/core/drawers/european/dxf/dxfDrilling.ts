@@ -1,5 +1,5 @@
 /**
- * dxfDrilling.ts — Círculos DXF a partir dos furos existentes (somente leitura).
+ * dxfDrilling.ts â€” CÃ­rculos DXF a partir dos furos existentes (somente leitura).
  */
 
 import type { EuropeanDrawerHole, EuropeanDrawerResult } from "../types";
@@ -25,7 +25,7 @@ function mapHoleToContour(
 
 /**
  * Gera entidades CIRCLE no layer DRILLING. Profundidade fica em metadata.
- * Furos de módulo (module_lat_*) são documentados sem contorno de peça.
+ * Furos de mÃ³dulo (module_lat_*) sÃ³o documentados sem contorno de peÃ§a.
  */
 export function buildDxfDrillingEntities(
   result: EuropeanDrawerResult,

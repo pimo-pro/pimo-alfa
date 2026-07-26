@@ -1,4 +1,4 @@
-# Sistema Europeu de Gavetas — Modelo B
+# Sistema Europeu de Gavetas â€” Modelo B
 
 Implementacao completa (fase specs oficiais + validacao industrial).
 
@@ -24,11 +24,11 @@ Activo apenas com **Modelo A desactivado** (Admin ? Produtos ? Gavetas).
 
 ## Modulos
 
-- `types.ts` / `catalog.ts` — contratos e SSOT
-- `measures/` / `geometry/` — calculos puros
-- `drilling/` / `assembly/` — furos e montagem
-- `cutlist/` / `pdf/` / `viewer/` / `adapter/` — saidas
-- `validation/` — camada de validacao industrial (errors, warnings, auto-fix)
-- `ui/` — painel de configuracao + estado valida/invalida
+- `types.ts` / `catalog.ts` â€” contratos e SSOT
+- `measures/` / `geometry/` â€” calculos puros
+- `drilling/` / `assembly/` â€” furos e montagem
+- `cutlist/` / `pdf/` / `viewer/` / `adapter/` â€” saidas
+- `validation/` â€” camada de validacao industrial (errors, warnings, auto-fix)
+- `ui/` â€” painel de configuracao + estado valida/invalida
 
 Industrial (`src/industrial/**`) permanece intocado.

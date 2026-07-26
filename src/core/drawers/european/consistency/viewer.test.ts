@@ -35,7 +35,7 @@ describe("consistency/viewer + pipeline", () => {
     expect(viewer.drawers[0]!.holes[0]!.pieceRef).toBe("gav_fren");
   });
 
-  it("generateEuropeanDrawer emite códigos SSOT no cutlist/pdf/holes", () => {
+  it("generateEuropeanDrawer emite cÃ³digos SSOT no cutlist/pdf/holes", () => {
     vi.spyOn(flags, "isDrawerModeloAActive").mockReturnValue(false);
     const result = generateEuropeanDrawer(
       "hettich-innotech-atira",
@@ -69,7 +69,7 @@ describe("consistency/viewer + pipeline", () => {
 
     const gavHoles = result.holes.filter((h) => !h.pieceRef.startsWith("module_"));
     for (const h of gavHoles) {
-      // front/bottom aliases devem estar canónicos
+      // front/bottom aliases devem estar canÃºnicos
       expect(["gav_fren", "gav_1_fren", "gav_2_fren", "gav_lat_esq", "gav_lat_dir", "gav_costa", "gav_fun", "gav_fre_int"]).toContain(
         h.pieceRef
       );

@@ -1,5 +1,5 @@
 /**
- * releaseBuilder.ts — Construção das Release Notes industriais (Modelo B).
+ * releaseBuilder.ts â€” ConstruÃ§Ã£o das Release Notes industriais (Modelo B).
  */
 
 import type { EuropeanDrawerResult } from "../types";
@@ -11,7 +11,7 @@ import {
 } from "./releaseFormatter";
 import { buildReleaseReport, type EuropeanReleaseReport } from "./releaseReport";
 
-/** Versão documental da camada Release Notes (Fase 14). */
+/** VersÃ³o documental da camada Release Notes (Fase 14). */
 export const EUROPEAN_RELEASE_VERSION = "B.v3.14";
 export const EUROPEAN_RELEASE_AUTHOR = "PIMO Engine";
 
@@ -23,7 +23,7 @@ export type EuropeanReleaseNotes = {
   sections: EuropeanReleaseSection[];
   /** Texto industrial completo. */
   text: string;
-  /** Integração com camadas anexadas ao result. */
+  /** IntegraÃ§Ã£o com camadas anexadas ao result. */
   integrations: {
     safety: boolean;
     docs: boolean;
@@ -36,7 +36,7 @@ export type EuropeanReleaseNotes = {
 };
 
 /**
- * Constrói Release Notes a partir do resultado (somente leitura).
+ * ConstrÃ³i Release Notes a partir do resultado (somente leitura).
  */
 export function buildEuropeanReleaseNotes(
   result: EuropeanDrawerResult

@@ -1,15 +1,15 @@
 /**
- * operationsCost.ts — Custo de operações industriais (peças / furos / cortes).
+ * operationsCost.ts â€” Custo de operaÃ§Ãµes industriais (peÃ§as / furos / cortes).
  */
 
 export type OperationsCostConfig = {
-  /** Tempo estimado por peça (min). */
+  /** Tempo estimado por peÃ§a (min). */
   minutesPerPiece: number;
   /** Tempo estimado por furo (min). */
   minutesPerHole: number;
-  /** Tempo estimado por operação de corte (min). */
+  /** Tempo estimado por operaÃ§Ã£o de corte (min). */
   minutesPerCutOp: number;
-  /** Custo €/min de operação de fábrica (antes do labor dedicado). */
+  /** Custo â‚¬/min de operaÃ§Ã£o de fÃ¡brica (antes do labor dedicado). */
   costPerMinute: number;
 };
 

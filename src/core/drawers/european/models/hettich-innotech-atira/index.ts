@@ -1,5 +1,5 @@
 /**
- * Hettich InnoTech Atira — Modelo B
+ * Hettich InnoTech Atira â€” Modelo B
  */
 
 export { HETTICH_INNOTECH_ATIRA as model, HETTICH_INNOTECH_ATIRA } from "../../catalog";

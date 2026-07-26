@@ -1,6 +1,6 @@
 /**
  * Contagem local de projetos em `api/projects/data/*.json`.
- * Leitura em disco (fs) — sem rotas novas.
+ * Leitura em disco (fs) â€” sem rotas novas.
  *
  * Em browser o Vite nao pode usar fs; `loadProjectCount()` devolve 0
  * e o Hub hidrata com `loadProjectCountAsync()` / `useHubProjectCount`
@@ -53,7 +53,7 @@ export function loadProjectCount(): ProjectCountSnapshot {
 
 /**
  * Contagem live alinhada a `/PROJETOS`
- * (listProjetosPageProjects / action=projetos — sem rotas novas).
+ * (listProjetosPageProjects / action=projetos â€” sem rotas novas).
  */
 export async function loadProjectCountAsync(): Promise<ProjectCountSnapshot> {
   try {

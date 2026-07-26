@@ -1,6 +1,6 @@
 /**
- * P3.9 ù ADMIN ? Sistema ? Orùamentos.
- * F1: tarifas. F2: flag unificaùùo ferragens. Sem ligar custos avanùados.
+ * P3.9 ‚Äî ADMIN ? Sistema ? Or√ßamentos.
+ * F1: tarifas. F2: flag unifica√ß√£o ferragens. Sem ligar custos avan√ßados.
  */
 
 import { useEffect, useState } from "react";
@@ -363,9 +363,9 @@ export default function OrcamentosAdminSettings() {
               <option value="por_chapas_reais">Por chapas reais (exclusivo)</option>
             </select>
             <p style={{ margin: "6px 0 0", fontSize: 11, color: "var(--text-muted)" }}>
-              Por chapas reais substitui o custo material peù (paineis/portas/gavetas/remates)
-              ù anti double-count. MO usa valorHoraMaquina Orùamentos; se 0, fallback System
-              Settings. Logùstica (ù/kg) nùo altera portes P3.6.
+              Por chapas reais substitui o custo material pe√ßa (paineis/portas/gavetas/remates)
+              ‚Äî anti double-count. MO usa valorHoraMaquina Or√ßamentos; se 0, fallback System
+              Settings. Log√≠stica (‚Ç¨/kg) n√£o altera portes P3.6.
             </p>
           </div>
         </div>
@@ -495,7 +495,7 @@ export default function OrcamentosAdminSettings() {
               }))
             }
           />
-          Activar margem (tarifas ù sem efeito no total ate Fase 5)
+          Activar margem (tarifas ‚Äî sem efeito no total ate Fase 5)
         </label>
         <div style={grid2}>
           <div>

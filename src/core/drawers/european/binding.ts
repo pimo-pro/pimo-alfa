@@ -1,9 +1,9 @@
 /**
- * european/binding.ts — Pontos de binding UI ? Modelo B (DXF / CNC / overlay / config).
- * Camada de aliases apenas — não altera pipelines industriais.
+ * european/binding.ts â€” Pontos de binding UI ? Modelo B (DXF / CNC / overlay / config).
+ * Camada de aliases apenas â€” nÃ£o altera pipelines industriais.
  *
  * generateEuropeanDrawer / defaultEuropeanDrawerConfig: reexportados em index.ts
- * como drawerEuropeanGenerate / drawerEuropeanConfig (definidos no próprio index).
+ * como drawerEuropeanGenerate / drawerEuropeanConfig (definidos no prÃ³prio index).
  */
 
 export {

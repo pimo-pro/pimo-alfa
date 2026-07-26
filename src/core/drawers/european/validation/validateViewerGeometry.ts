@@ -1,5 +1,5 @@
 /**
- * validateViewerGeometry.ts — Geometria de viewer Modelo B.
+ * validateViewerGeometry.ts â€” Geometria de viewer Modelo B.
  */
 
 import type {
@@ -70,7 +70,7 @@ export function validateViewerGeometry(
       result.errors.push(
         euError(
           EU_ERROR_CODES.VIEW_CLIPPING,
-          "maxPullMm invalido — animacao de abertura impossivel.",
+          "maxPullMm invalido â€” animacao de abertura impossivel.",
           "viewer.animation"
         )
       );

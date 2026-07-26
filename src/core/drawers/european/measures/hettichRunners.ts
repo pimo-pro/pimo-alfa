@@ -1,15 +1,15 @@
 /**
- * Corrediças Hettich — comprimentos industriais permitidos (Modelo B).
+ * CorrediÃ§as Hettich â€” comprimentos industriais permitidos (Modelo B).
  */
 
-/** Comprimentos Hettich válidos (mm). */
+/** Comprimentos Hettich vÃ¡lidos (mm). */
 export const HETTICH_RUNNER_LENGTHS_MM = [300, 350, 400, 450, 500, 550, 600] as const;
 
 export type HettichRunnerLengthMm = (typeof HETTICH_RUNNER_LENGTHS_MM)[number];
 
 /**
- * Seleciona o comprimento de corrediça Hettich válido mais próximo
- * abaixo da profundidade útil interna (sempre STRICTLY menor).
+ * Seleciona o comprimento de corrediÃ§a Hettich vÃ¡lido mais prÃ³ximo
+ * abaixo da profundidade Ãºtil interna (sempre STRICTLY menor).
  *
  * Exemplos:
  * - 500 mm ? 450 mm

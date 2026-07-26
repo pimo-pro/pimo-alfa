@@ -1,5 +1,5 @@
 /**
- * Blum Legrabox — Modelo B
+ * Blum Legrabox â€” Modelo B
  * Re-exporta o perfil oficial do catalogo europeu.
  */
 

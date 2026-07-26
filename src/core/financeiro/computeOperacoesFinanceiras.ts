@@ -1,7 +1,7 @@
 /**
- * P3.9 F3a ù SSOT operaùùes CNC/Drill financeiras.
- * CNC = perùmetro real ù corte_cnc_metro (pricing.json).
- * Drill = furos reais ù furo_cnc (exclui rasgos/grooves).
+ * P3.9 F3a ‚Äî SSOT opera√ß√µes CNC/Drill financeiras.
+ * CNC = per√≠metro real ‚Äî corte_cnc_metro (pricing.json).
+ * Drill = furos reais ‚Äî furo_cnc (exclui rasgos/grooves).
  */
 
 import type { CutListItemComPreco } from "../types";
@@ -11,9 +11,9 @@ import type { OrcamentosPerfuracoesSettings } from "../orcamentos";
 
 export type OperacoesFinanceirasTarifas = {
   drillEurPorFuro: number;
-  /** ù/m de perùmetro de corte CNC. */
+  /** ‚Äî /m de per√≠metro de corte CNC. */
   corteEurPorMetro: number;
-  /** Legado ù nùo usar para ù; mantido para compat. */
+  /** Legado ‚Äî n√£o usar para ‚Äî; mantido para compat. */
   nestingEurPorOperacao: number;
 };
 
@@ -74,7 +74,7 @@ export function resolveOperacoesTarifas(
   };
 }
 
-/** Peùa nestùvel se tem ùrea + espessura. */
+/** Pe√ßa nest√°vel se tem √°rea + espessura. */
 export function pieceHasCncOperacao(item: CutListItemComPreco): boolean {
   const w = item.dimensoes?.largura ?? 0;
   const h = item.dimensoes?.altura ?? 0;
@@ -82,7 +82,7 @@ export function pieceHasCncOperacao(item: CutListItemComPreco): boolean {
   return w > 0 && h > 0 && e > 0;
 }
 
-/** Perùmetro de corte em metros (2 ù (L+A) / 1000). */
+/** Per√≠metro de corte em metros (2 ‚Äî (L+A) / 1000). */
 export function pieceCutPerimeterM(item: CutListItemComPreco): number {
   const w = item.dimensoes?.largura ?? 0;
   const h = item.dimensoes?.altura ?? 0;
@@ -90,7 +90,7 @@ export function pieceCutPerimeterM(item: CutListItemComPreco): number {
   return (2 * (w + h)) / 1000;
 }
 
-/** Furos reais (exclui rasgos/grooves ù cobrados sù em ops avanùadas em gavetas). */
+/** Furos reais (exclui rasgos/grooves ‚Äî cobrados s√≥ em ops avan√ßadas em gavetas). */
 export function pieceDrillHoleCount(item: CutListItemComPreco): number {
   const holes = item.drillHoles ?? [];
   let n = 0;
@@ -103,7 +103,7 @@ export function pieceDrillHoleCount(item: CutListItemComPreco): number {
 
 /**
  * Calcula custos CNC + Drill a partir da cutlist e tarifas.
- * Sem flat-fee por peùa; sem rasgos fantasma.
+ * Sem flat-fee por pe√ßa; sem rasgos fantasma.
  */
 export function computeOperacoesFinanceiras(
   cutlist: CutListItemComPreco[],

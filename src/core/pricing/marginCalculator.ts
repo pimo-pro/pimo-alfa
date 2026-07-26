@@ -1,9 +1,9 @@
 /**
- * marginCalculator.ts — Margem e preço final.
+ * marginCalculator.ts â€” Margem e preÃ§o final.
  */
 
 export type MarginConfig = {
-  /** Margem fracionária (ex.: 0.30 = 30%). */
+  /** Margem fracionÃ¡ria (ex.: 0.30 = 30%). */
   marginPercent: number;
 };
 

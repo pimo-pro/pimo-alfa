@@ -1,5 +1,5 @@
 /**
- * P3.7/P3.8 — Secao PDF — Financeiro pecas (A4 landscape).
+ * P3.7/P3.8 â€” Secao PDF â€” Financeiro pecas (A4 landscape).
  */
 
 import type jsPDF from "jspdf";

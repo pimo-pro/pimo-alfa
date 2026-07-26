@@ -17,7 +17,7 @@ describe("planner/plannerModules", () => {
     vi.spyOn(flags, "isDrawerModeloAActive").mockReturnValue(false);
   });
 
-  it("adiciona módulos e detecta colisões", () => {
+  it("adiciona mÃ³dulos e detecta colisÃµes", () => {
     const lib = buildKitchenLibrary();
     const grid = buildPlannerGrid();
     const rules = buildPlacementRules({ rodape: lib.rodape });

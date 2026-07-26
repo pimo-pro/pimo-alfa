@@ -1,5 +1,5 @@
 /**
- * validateDrawerDimensions.ts — Dimensões da gaveta europeia (regras industriais B).
+ * validateDrawerDimensions.ts â€” DimensÃµes da gaveta europeia (regras industriais B).
  */
 
 import type {
@@ -72,7 +72,7 @@ export function validateDrawerDimensions(
     result.errors.push(
       euError(
         EU_ERROR_CODES.BOX_DEPTH,
-        `Corrediça ${geometry.runnerDepthMm} mm deve ser Hettich e < profundidade útil ${useful.toFixed(0)} mm (esperado ${expectedRunner}).`,
+        `CorrediÃ§a ${geometry.runnerDepthMm} mm deve ser Hettich e < profundidade Ãºtil ${useful.toFixed(0)} mm (esperado ${expectedRunner}).`,
         "geometry.runnerDepthMm"
       )
     );
@@ -83,7 +83,7 @@ export function validateDrawerDimensions(
     result.errors.push(
       euError(
         EU_ERROR_CODES.DIM_BOTTOM,
-        `Profundidade do corpo deve ser corrediça ? ${EUROPEAN_BODY_DEPTH_SLIDE_CLEARANCE_MM} mm.`,
+        `Profundidade do corpo deve ser corrediÃ§a ? ${EUROPEAN_BODY_DEPTH_SLIDE_CLEARANCE_MM} mm.`,
         "geometry.bodyDepthMm"
       )
     );
@@ -107,14 +107,14 @@ export function validateDrawerDimensions(
     );
   }
 
-  // Frente: se não houver override, deve respeitar folga oficial
+  // Frente: se nÃ£o houver override, deve respeitar folga oficial
   if (config.frontWidthMm == null) {
     const expectedFrontW = calcFrontWidthMm(box);
     if (Math.abs(geometry.front.widthMm - expectedFrontW) > 1) {
       result.errors.push(
         euError(
           EU_ERROR_CODES.DIM_FRONT_SETBACK,
-          `Frente ${geometry.front.widthMm.toFixed(1)} mm não respeita folga (esperado ~${expectedFrontW.toFixed(1)} mm).`,
+          `Frente ${geometry.front.widthMm.toFixed(1)} mm nÃ£o respeita folga (esperado ~${expectedFrontW.toFixed(1)} mm).`,
           "geometry.front"
         )
       );

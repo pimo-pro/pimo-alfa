@@ -1,6 +1,6 @@
 /**
- * europeanDrawerAdapter.ts — Integração somente-leitura com Modelo B.
- * Não altera generateEuropeanDrawer nem resultados industriais.
+ * europeanDrawerAdapter.ts â€” IntegraÃ§Ã£o somente-leitura com Modelo B.
+ * NÃ£o altera generateEuropeanDrawer nem resultados industriais.
  */
 
 import {
@@ -27,7 +27,7 @@ export type KitchenEuropeanDrawerSample = {
   overlayStatus?: string;
   releaseVersion?: string;
   pricingStatus?: string;
-  /** Snapshot leve — não muta o result. */
+  /** Snapshot leve â€” nÃ£o muta o result. */
   summary: {
     holes: number;
     woodPieces: number;

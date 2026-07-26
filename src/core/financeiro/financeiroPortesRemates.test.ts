@@ -9,12 +9,12 @@ import {
   type FinanceiroUnificadoSnapshot,
 } from "./financeiroUnificadoTypes";
 
-describe("portes — escolha explícita", () => {
+describe("portes â€” escolha explÃ­cita", () => {
   it("default admin tem portes.enabled=false", () => {
     expect(defaultFinanceiroAdminSettings().portes.enabled).toBe(false);
   });
 
-  it("fórmula devolve 0 quando portes.enabled=false", () => {
+  it("fÃ³rmula devolve 0 quando portes.enabled=false", () => {
     const settings = defaultFinanceiroAdminSettings();
     const r = computeFinanceiroAdminCustos({
       subtotalMateriais: 1000,
@@ -27,7 +27,7 @@ describe("portes — escolha explícita", () => {
     expect(r.portes).toBe(0);
   });
 
-  it("fórmula calcula quando enabled=true (sem inventar se desligado)", () => {
+  it("fÃ³rmula calcula quando enabled=true (sem inventar se desligado)", () => {
     const settings = defaultFinanceiroAdminSettings();
     settings.portes.enabled = true;
     const r = computeFinanceiroAdminCustos({
@@ -49,7 +49,7 @@ describe("portes — escolha explícita", () => {
   });
 });
 
-describe("remates — classificação e linhas UI", () => {
+describe("remates â€” classificaÃ§Ã£o e linhas UI", () => {
   it("classifica remate/rodape em remates", () => {
     expect(classifyFinanceiroCustoKey("remate")).toBe("remates");
     expect(classifyFinanceiroCustoKey("rodape")).toBe("remates");

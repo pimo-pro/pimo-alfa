@@ -1,6 +1,6 @@
 /**
- * ui/EuropeanDrawerConfigPanel — UI do Modelo B.
- * Visível apenas quando o Modelo A está desactivado.
+ * ui/EuropeanDrawerConfigPanel â€” UI do Modelo B.
+ * VisÃ­vel apenas quando o Modelo A estÃ¡ desactivado.
  * Otimizado: useMemo/useCallback + painel da frente isolado.
  */
 
@@ -106,7 +106,7 @@ export function EuropeanDrawerConfigPanel({
         undefined,
         { applyAutoFixes: false }
       ),
-    // dimFingerprint cobre dims; material frente só afecta cutlist labels no preview
+    // dimFingerprint cobre dims; material frente sÃ³ afecta cutlist labels no preview
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [dimFingerprint, config.frontMaterialId]
   );
@@ -170,7 +170,7 @@ export function EuropeanDrawerConfigPanel({
           color: preview.valid ? "#34d399" : "#f87171",
         }}
       >
-        {preview.valid ? "Gaveta válida" : "Gaveta inválida"}
+        {preview.valid ? "Gaveta vÃ¡lida" : "Gaveta invÃ¡lida"}
       </div>
 
       <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -204,7 +204,7 @@ export function EuropeanDrawerConfigPanel({
       </label>
 
       <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-        <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Corrediça Hettich (mm)</span>
+        <span style={{ fontSize: 11, color: "var(--text-muted)" }}>CorrediÃ§a Hettich (mm)</span>
         <select
           className="select select-xs"
           value={config.depthMm}
@@ -271,15 +271,15 @@ export function EuropeanDrawerConfigPanel({
         }}
       >
         <div>
-          <strong>Pré-visualização</strong>
+          <strong>PrÃ©-visualizaÃ§Ã£o</strong>
         </div>
         <div>Largura externa: {preview.geometry.externalWidthMm.toFixed(1)} mm</div>
         <div>Corpo (sem frente): {preview.geometry.bodyDepthMm} mm</div>
         <div>
-          Frente: {preview.geometry.front.widthMm.toFixed(1)} ×{" "}
+          Frente: {preview.geometry.front.widthMm.toFixed(1)} Ã—{" "}
           {preview.geometry.front.heightMm.toFixed(1)} mm
         </div>
-        <div>Corrediça Hettich: {preview.geometry.runnerDepthMm} mm</div>
+        <div>CorrediÃ§a Hettich: {preview.geometry.runnerDepthMm} mm</div>
         <div>
           Folga lateral: {EUROPEAN_SIDE_CLEARANCE_EACH_MM}+{EUROPEAN_SIDE_CLEARANCE_EACH_MM} mm
         </div>
@@ -305,7 +305,7 @@ export function EuropeanDrawerConfigPanel({
 
       {!preview.valid && preview.autoFixes.length > 0 ? (
         <button type="button" className="button button-ghost" onClick={applyAutoFixes}>
-          Aplicar correções automáticas ({preview.autoFixes.length})
+          Aplicar correÃ§Ãµes automÃ¡ticas ({preview.autoFixes.length})
         </button>
       ) : null}
     </div>

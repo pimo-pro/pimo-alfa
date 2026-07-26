@@ -1,5 +1,5 @@
 /**
- * safetyGeometryGate.ts — Bloqueia geometrias industriais corruptas.
+ * safetyGeometryGate.ts â€” Bloqueia geometrias industriais corruptas.
  */
 
 import type { DrawerGeometry, DrawerPieceBox } from "../types";
@@ -40,7 +40,7 @@ function hasNaNDims(p: DrawerPieceBox): boolean {
   );
 }
 
-/** AABB 3D — usado só para detetar sobreposição catastrófica (quase idêntica). */
+/** AABB 3D â€” usado sÃ³ para detetar sobreposiÃ§Ã£o catastrÃ³fica (quase idÃªntica). */
 function almostIdentical(a: DrawerPieceBox, b: DrawerPieceBox): boolean {
   const tol = 0.5;
   return (
@@ -54,8 +54,8 @@ function almostIdentical(a: DrawerPieceBox, b: DrawerPieceBox): boolean {
 }
 
 /**
- * Gate de geometria: NaN, dims negativas, peças colapsadas, sobreposição idêntica.
- * Não bloqueia encaixes industriais válidos (fundo nas laterais / frente sobreposta).
+ * Gate de geometria: NaN, dims negativas, peÃ§as colapsadas, sobreposiÃ§Ã£o idÃªntica.
+ * NÃ£o bloqueia encaixes industriais vÃ¡lidos (fundo nas laterais / frente sobreposta).
  */
 export function runSafetyGeometryGate(geometry: DrawerGeometry): EuropeanSafetyGateResult {
   const t0 = performance.now();
@@ -96,7 +96,7 @@ export function runSafetyGeometryGate(geometry: DrawerGeometry): EuropeanSafetyG
     if (hasNaNDims(piece) || hasNegativeDims(piece)) {
       errors.push(issue("geometry", "error", "DIMS_INVALID", `Dimensoes NaN/negativas`, name));
     }
-    // Peça principal com volume zero (exceto espessura já coberta)
+    // PeÃ§a principal com volume zero (exceto espessura jÃ¡ coberta)
     if (
       Number.isFinite(piece.widthMm) &&
       Number.isFinite(piece.heightMm) &&
@@ -106,7 +106,7 @@ export function runSafetyGeometryGate(geometry: DrawerGeometry): EuropeanSafetyG
         issue("geometry", "error", "DIMS_NON_POSITIVE", `Largura/altura <= 0`, name)
       );
     }
-    // Rotação: DrawerPieceBox não tem campo de rotação — qualquer propriedade extra "rotation*" ? 0 é proibida
+    // RotaÃ§Ã£o: DrawerPieceBox nÃ£o tem campo de rotaÃ§Ã£o â€” qualquer propriedade extra "rotation*" ? 0 â€” proibida
     const extra = piece as DrawerPieceBox & { rotationDeg?: number; rotation?: number };
     const rot = extra.rotationDeg ?? extra.rotation;
     if (typeof rot === "number" && Number.isFinite(rot) && Math.abs(rot) > 0.01) {
@@ -116,7 +116,7 @@ export function runSafetyGeometryGate(geometry: DrawerGeometry): EuropeanSafetyG
     }
   }
 
-  // Interseção catastrófica: duas peças distintas com AABB quase idêntico
+  // InterseÃ§Ã£o catastrÃ³fica: duas peÃ§as distintas com AABB quase idÃªntico
   for (let i = 0; i < pieces.length; i++) {
     for (let j = i + 1; j < pieces.length; j++) {
       const a = pieces[i]!;
@@ -135,7 +135,7 @@ export function runSafetyGeometryGate(geometry: DrawerGeometry): EuropeanSafetyG
     }
   }
 
-  // Laterais devem estar em X espelhados (sinal oposto) — se ambas no mesmo X com mesma largura, fora do espaço
+  // Laterais devem estar em X espelhados (sinal oposto) â€” se ambas no mesmo X com mesma largura, fora do espaÃ§o
   const left = geometry.leftSide;
   const right = geometry.rightSide;
   if (
@@ -148,7 +148,7 @@ export function runSafetyGeometryGate(geometry: DrawerGeometry): EuropeanSafetyG
         "geometry",
         "error",
         "SIDES_SAME_X",
-        "Laterais no mesmo X — pecas fora do espaco da caixa",
+        "Laterais no mesmo X â€” pecas fora do espaco da caixa",
         "gav_lat_*"
       )
     );

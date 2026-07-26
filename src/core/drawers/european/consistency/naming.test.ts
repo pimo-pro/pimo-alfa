@@ -7,13 +7,13 @@ import {
 } from "./index";
 
 describe("consistency/naming", () => {
-  it("SSOT: nomes canónicos", () => {
+  it("SSOT: nomes canÃºnicos", () => {
     expect(EUROPEAN_INDUSTRIAL_NAMES.gav_fren).toBe("gaveta frente");
     expect(EUROPEAN_INDUSTRIAL_NAMES.gav_costa).toBe("gaveta costa");
     expect(EUROPEAN_INDUSTRIAL_NAMES.gav_fun).toBe("gaveta fundo");
   });
 
-  it("aliases proibidos resolvem para códigos canónicos", () => {
+  it("aliases proibidos resolvem para cÃ³digos canÃºnicos", () => {
     expect(resolveBaseCode("gaveta_frente")).toBe("gav_fren");
     expect(resolveBaseCode("gav_frent")).toBe("gav_fren");
     expect(resolveBaseCode("front")).toBe("gav_fren");
@@ -22,7 +22,7 @@ describe("consistency/naming", () => {
     expect(resolveBaseCode("bottom")).toBe("gav_fun");
   });
 
-  it("enforceNaming corrige variações", () => {
+  it("enforceNaming corrige variaÃ§Ãµes", () => {
     const a = enforceNaming({ tipo: "gaveta_frente", drawerIndex0: 0, drawerCount: 1 });
     expect(a?.codigo).toBe("gav_fren");
     expect(a?.nome).toBe("gaveta frente");

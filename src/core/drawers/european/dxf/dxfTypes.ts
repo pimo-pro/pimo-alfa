@@ -1,5 +1,5 @@
 /**
- * Tipos base de entidades DXF internas (em memÛria).
+ * Tipos base de entidades DXF internas (em mem√≥ria).
  */
 
 import type { EuropeanDxfLayerName } from "./dxfLayers";
@@ -19,7 +19,7 @@ export type DxfCircleEntity = {
   layer: EuropeanDxfLayerName;
   center: DxfPoint2;
   radius: number;
-  /** Profundidade do furo (mm) ó metadata, n„o gr·fica. */
+  /** Profundidade do furo (mm) ‚Äî metadata, n√£o gr√°fica. */
   depthMm?: number;
   diameterMm?: number;
   pieceCode?: string;

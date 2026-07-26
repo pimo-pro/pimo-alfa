@@ -1,5 +1,5 @@
 /**
- * Smoke P3 — IndustrialCenter Opção A.
+ * Smoke P3 â€” IndustrialCenter OpÃ§Ã£o A.
  * Fora de src/ para nao entrar no bundle Vite (node:fs/path).
  */
 import { readFileSync } from "node:fs";
@@ -66,7 +66,7 @@ function assertPdfDoc(doc: { output: (t: string) => ArrayBuffer | Uint8Array; sa
   expect(String.fromCharCode(bytes[0], bytes[1], bytes[2], bytes[3])).toBe("%PDF");
 }
 
-describe("P3 Smoke — IndustrialCenter", () => {
+describe("P3 Smoke â€” IndustrialCenter", () => {
   beforeEach(() => {
     clearLiveState();
   });
@@ -274,7 +274,7 @@ describe("P3 Smoke — IndustrialCenter", () => {
     }
   });
 
-  it("4 ProjectProviders: App(3) + NestingV3RoutePage(1) — hydratam live, nao crasham contrato", () => {
+  it("4 ProjectProviders: App(3) + NestingV3RoutePage(1) â€” hydratam live, nao crasham contrato", () => {
     const appSrc = readFileSync(join(process.cwd(), "src/App.tsx"), "utf8");
     const nestingRoute = readFileSync(
       join(process.cwd(), "src/app/nesting-v3/NestingV3RoutePage.tsx"),

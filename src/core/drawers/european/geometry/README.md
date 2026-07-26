@@ -2,4 +2,4 @@
 
 Geometria e layout das gavetas europeias (Modelo B).
 
-**Estado:** pasta reservada — sem implementação nesta fase.
+**Estado:** pasta reservada â€” sem implementaÃ§Ã£o nesta fase.

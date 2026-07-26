@@ -1,6 +1,6 @@
 /**
- * Verificação de runtime do binding Modelo B (produto).
- * Não altera industrial — só prova layers/DXF/CNC/overlay + gate do pipeline A.
+ * VerificaÃ§Ã£o de runtime do binding Modelo B (produto).
+ * NÃ£o altera industrial â€” sÃ³ prova layers/DXF/CNC/overlay + gate do pipeline A.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { WorkspaceBox } from "../types";
@@ -44,7 +44,7 @@ function baseBox(partial?: Partial<WorkspaceBox>): WorkspaceBox {
   } as WorkspaceBox;
 }
 
-describe("DRAWER_RUNTIME — Modelo B activo em produto", () => {
+describe("DRAWER_RUNTIME â€” Modelo B activo em produto", () => {
   beforeEach(() => {
     vi.spyOn(flags, "isDrawerModeloAActive").mockReturnValue(false);
   });
@@ -175,7 +175,7 @@ describe("DRAWER_RUNTIME — Modelo B activo em produto", () => {
   });
 });
 
-describe("DRAWER_RUNTIME — localStorage nao forca Modelo A legado", () => {
+describe("DRAWER_RUNTIME â€” localStorage nao forca Modelo A legado", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     __resetModeloBProductDefaultMigrationForTests();

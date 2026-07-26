@@ -1,7 +1,7 @@
 /**
- * src/core/pricing — Industrial Pricing Engine (Fase 18).
+ * src/core/pricing â€” Industrial Pricing Engine (Fase 18).
  * Camada de custo por cima do Modelo B / Kitchen Library.
- * Não altera geometry, furos, cutlist, DXF, CNC, Modelo A nem src/industrial/**.
+ * NÃ£o altera geometry, furos, cutlist, DXF, CNC, Modelo A nem src/industrial/**.
  */
 
 export {

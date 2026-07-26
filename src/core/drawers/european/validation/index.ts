@@ -1,5 +1,5 @@
 /**
- * validation/index.ts — Orquestra a camada de validacao industrial (Modelo B).
+ * validation/index.ts â€” Orquestra a camada de validacao industrial (Modelo B).
  *
  * Independente do Modelo A. Nao toca em src/industrial/**.
  */
@@ -30,7 +30,7 @@ export type RunEuropeanValidationInput = ValidateAllInput;
 
 /**
  * Executa todas as validacoes industriais e anexa auto-fixes seguros.
- * Delega a `validateAll` (um único passo consolidado).
+ * Delega a `validateAll` (um Ãºnico passo consolidado).
  */
 export function runEuropeanDrawerValidation(
   input: RunEuropeanValidationInput

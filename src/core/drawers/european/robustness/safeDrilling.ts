@@ -1,13 +1,13 @@
 /**
- * ProteÁ„o de furos emitidos (drilling).
+ * Prote√ß√£o de furos emitidos (drilling).
  */
 
 import type { EuropeanDrawerHole } from "../types";
 import { ensureArray, isFiniteNonNegative, isFinitePositive, robustDebug } from "./safeNumbers";
 
 /**
- * Emite apenas furos com coords finitas e ÿ/prof > 0.
- * Groove (ÿ=0) estrutural: permitir se profundidade > 0 e coords finitas.
+ * Emite apenas furos com coords finitas e ‚Äî/prof > 0.
+ * Groove (√ò=0) estrutural: permitir se profundidade > 0 e coords finitas.
  */
 export function sanitizeHoles(holes: EuropeanDrawerHole[] | null | undefined): EuropeanDrawerHole[] {
   const list = ensureArray(holes, "holes");
@@ -21,7 +21,7 @@ export function sanitizeHoles(holes: EuropeanDrawerHole[] | null | undefined): E
       : isFinitePositive(h.diameter) && isFinitePositive(h.depth);
 
     if (!coordsOk || !dimOk) {
-      robustDebug("drilling", "furo omitido (coords/dims inv·lidos)", h);
+      robustDebug("drilling", "furo omitido (coords/dims inv√°lidos)", h);
       continue;
     }
     out.push({

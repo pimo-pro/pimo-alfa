@@ -1,5 +1,5 @@
 /**
- * cornerModules.ts — Módulos canto industriais (L / diagonal).
+ * cornerModules.ts â€” MÃ³dulos canto industriais (L / diagonal).
  */
 
 import type { KitchenModuleSpec } from "../types";
@@ -9,7 +9,7 @@ export function buildCornerModules(): KitchenModuleSpec[] {
     {
       id: "corner-L-900",
       kind: "corner",
-      name: "Módulo canto L 900×900",
+      name: "MÃ³dulo canto L 900â€“900",
       widthMm: 900,
       heightMm: 720,
       depthMm: 560,
@@ -31,7 +31,7 @@ export function buildCornerModules(): KitchenModuleSpec[] {
     {
       id: "corner-diag-900",
       kind: "corner",
-      name: "Módulo canto diagonal 900",
+      name: "MÃ³dulo canto diagonal 900",
       widthMm: 900,
       heightMm: 720,
       depthMm: 560,
@@ -53,7 +53,7 @@ export function buildCornerModules(): KitchenModuleSpec[] {
     {
       id: "corner-L-1000-tall",
       kind: "corner",
-      name: "Módulo canto L alto 1000×2100",
+      name: "MÃ³dulo canto L alto 1000â€“2100",
       widthMm: 1000,
       heightMm: 2100,
       depthMm: 560,

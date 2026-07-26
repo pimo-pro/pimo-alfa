@@ -1,7 +1,7 @@
 /**
- * src/core/release-final ù PIMO.PRO-V5 Release Final (Fase 20).
+ * src/core/release-final ‚Äî PIMO.PRO-V5 Release Final (Fase 20).
  * Consolida Modelo B, DXF, CNC, overlay, docs, pricing, kitchen, planner.
- * Nùo altera Modelo A nem src/industrial/**.
+ * N√£o altera Modelo A nem src/industrial/**.
  */
 
 export {

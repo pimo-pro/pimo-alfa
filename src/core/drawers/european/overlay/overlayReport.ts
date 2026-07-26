@@ -1,5 +1,5 @@
 /**
- * overlayReport.ts — Relatório MC Overlay avançado (Fase 13).
+ * overlayReport.ts â€” RelatÃ©rio MC Overlay avanÃ§ado (Fase 13).
  */
 
 export type EuropeanOverlayStatus = "OVERLAY_OK" | "OVERLAY_WARN" | "OVERLAY_ERROR";
@@ -43,7 +43,7 @@ export function buildOverlayReport(input: {
 
 export function formatOverlayReportText(report: EuropeanOverlayReport): string {
   const lines = [
-    `European MC Overlay — ${report.status}`,
+    `European MC Overlay â€” ${report.status}`,
     `secoes: ${report.sections.join(", ")}`,
     `medidas: ${report.measureCount}`,
     `aberturas: ${report.aberturaCount}`,

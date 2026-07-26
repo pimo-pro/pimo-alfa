@@ -1,5 +1,5 @@
 /**
- * overlayRodaPe.ts — Roda-pé documental (somente leitura).
+ * overlayRodaPe.ts â€” Roda-pÃ© documental (somente leitura).
  */
 
 import type { EuropeanDrawerBoxInput, EuropeanDrawerResult } from "../types";
@@ -7,23 +7,23 @@ import type { EuropeanDrawerBoxInput, EuropeanDrawerResult } from "../types";
 export type EuropeanOverlayRodaPe = {
   heightMm: number;
   recessMm: number;
-  /** Posição relativa ao módulo (origem base exterior). */
+  /** PosiÃ§Ã£o relativa ao mÃ³dulo (origem base exterior). */
   relative: {
     originYMm: number;
     widthMm: number;
     depthMm: number;
   };
-  /** Vistas técnicas onde o roda-pé é relevante. */
+  /** Vistas tÃ©cnicas onde o roda-pÃ© â€” relevante. */
   technicalViews: Array<"front" | "side_right" | "side_left">;
   dxfLayer: "RODAPE";
 };
 
-/** Altura documental padrão de roda-pé (não altera geometry). */
+/** Altura documental padrÃ£o de roda-pÃ© (nÃ£o altera geometry). */
 export const OVERLAY_DEFAULT_RODAPE_HEIGHT_MM = 100;
 export const OVERLAY_DEFAULT_RODAPE_RECESS_MM = 0;
 
 /**
- * Roda-pé documental alinhado ao módulo.
+ * Roda-pÃ© documental alinhado ao mÃ³dulo.
  */
 export function buildOverlayRodaPe(
   result: EuropeanDrawerResult,

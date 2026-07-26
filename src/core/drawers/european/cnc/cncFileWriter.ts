@@ -1,5 +1,5 @@
 /**
- * cncFileWriter.ts — Escrita de ficheiros CNC físicos (Node FS).
+ * cncFileWriter.ts â€” Escrita de ficheiros CNC fÃ­sicos (Node FS).
  */
 
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -25,8 +25,8 @@ function canUseNodeFs(): boolean {
 }
 
 /**
- * Exporta ficheiros CNC físicos a partir de geometry + holes + dxf.
- * Não altera o result.
+ * Exporta ficheiros CNC fÃ­sicos a partir de geometry + holes + dxf.
+ * NÃ£o altera o result.
  */
 export function exportEuropeanCNCFiles(
   result: EuropeanDrawerResult,
@@ -57,7 +57,7 @@ export function exportEuropeanCNCFiles(
         );
       }
     } else if (write && !canUseNodeFs()) {
-      warnings.push(`Ambiente sem Node FS — ${f.fileName} gerado só em memória.`);
+      warnings.push(`Ambiente sem Node FS â€” ${f.fileName} gerado sÃ³ em memÃ³ria.`);
     }
 
     files.push({

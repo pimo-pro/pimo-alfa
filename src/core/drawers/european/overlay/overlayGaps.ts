@@ -1,5 +1,5 @@
 /**
- * overlayGaps.ts — Gaps industriais avançados (documentais).
+ * overlayGaps.ts â€” Gaps industriais avanÃ§ados (documentais).
  */
 
 import type { EuropeanDrawerResult } from "../types";
@@ -30,11 +30,11 @@ export type EuropeanOverlayGaps = {
 };
 
 const STACK_GAP_MM = 6;
-/** Gap industrial mínimo documental (folga lateral por lado). */
+/** Gap industrial mÃ­nimo documental (folga lateral por lado). */
 const INDUSTRIAL_MIN_GAP_MM = EUROPEAN_SIDE_CLEARANCE_EACH_MM;
 
 /**
- * Gaps avançados alinhados às aberturas / regras Modelo B.
+ * Gaps avanÃ§ados alinhados Ã s aberturas / regras Modelo B.
  */
 export function buildOverlayGaps(
   result: EuropeanDrawerResult,
@@ -76,7 +76,7 @@ export function buildOverlayGaps(
     },
     {
       id: "gap_industrial_min",
-      label: "Gap industrial mínimo",
+      label: "Gap industrial mÃ­nimo",
       valueMm: INDUSTRIAL_MIN_GAP_MM,
       technicalView: "exploded",
       dxfLayer: "CUT",

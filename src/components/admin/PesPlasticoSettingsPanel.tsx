@@ -67,7 +67,7 @@ export default function PesPlasticoSettingsPanel() {
 
       <div className="form-grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <div>
-          <div style={labelStyle}>Preço unitário (—)</div>
+          <div style={labelStyle}>Preço unitário (€)</div>
           <input
             className="input"
             type="number"

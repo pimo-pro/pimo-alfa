@@ -1,5 +1,5 @@
 /**
- * plannerReport.ts ó RelatÛrio do Kitchen Planner (Fase 19).
+ * plannerReport.ts ‚Äî Relat√©rio do Kitchen Planner (Fase 19).
  */
 
 import type { PlannerCollision } from "./plannerModules";
@@ -34,10 +34,10 @@ export function buildPlannerReport(input: {
   const industrialIntegrityOk = input.industrialIntegrityOk !== false;
 
   if (collisions.length > 0) {
-    warnings.push(`${collisions.length} colis„o(ıes) detectada(s) na planta.`);
+    warnings.push(`${collisions.length} colis√≥o(√µes) detectada(s) na planta.`);
   }
   if (input.moduleCount === 0) {
-    warnings.push("Nenhum mÛdulo colocado.");
+    warnings.push("Nenhum m√≥dulo colocado.");
   }
   if (input.pricing?.source === "empty") {
     warnings.push("Pricing da Kitchen Library ausente.");

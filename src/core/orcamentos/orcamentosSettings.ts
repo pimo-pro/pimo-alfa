@@ -1,6 +1,6 @@
 /**
- * P3.9 — defaults + normalização Orçamentos.
- * Day-1: € a 0, flags off, enableUnificacao false.
+ * P3.9 â€” defaults + normalizaÃ§Ã£o OrÃ§amentos.
+ * Day-1: â€” a 0, flags off, enableUnificacao false.
  */
 
 import type {

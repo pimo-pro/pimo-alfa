@@ -1,6 +1,6 @@
 /**
- * dxfFileNaming.ts — Nomes de ficheiros DXF alinhados aos códigos industriais.
- * Não altera códigos — apenas deriva nomes de ficheiro.
+ * dxfFileNaming.ts â€” Nomes de ficheiros DXF alinhados aos cÃ³digos industriais.
+ * NÃ£o altera cÃ³digos â€” apenas deriva nomes de ficheiro.
  */
 
 export type EuropeanDxfPieceKey =
@@ -11,7 +11,7 @@ export type EuropeanDxfPieceKey =
   | "costa"
   | "fundo";
 
-/** Código industrial ? chave de peça / ficheiro. */
+/** CÃ³digo industrial ? chave de peÃ§a / ficheiro. */
 export const INDUSTRIAL_CODE_TO_PIECE_KEY: Record<string, EuropeanDxfPieceKey> = {
   gav_fren: "front",
   gav_fre_int: "front_int",
@@ -21,7 +21,7 @@ export const INDUSTRIAL_CODE_TO_PIECE_KEY: Record<string, EuropeanDxfPieceKey> =
   gav_fun: "fundo",
 };
 
-/** Nome de ficheiro canónico por chave. */
+/** Nome de ficheiro canÃºnico por chave. */
 export const DXF_FILE_NAMES: Record<EuropeanDxfPieceKey, string> = {
   front: "GAVETA_FRONT.dxf",
   front_int: "GAVETA_FRONT_INT.dxf",
@@ -45,7 +45,7 @@ export function resolvePieceKeyFromCodigo(codigo: string): EuropeanDxfPieceKey |
 }
 
 /**
- * Constrói nome de ficheiro com prefixo opcional.
+ * ConstrÃ³i nome de ficheiro com prefixo opcional.
  * Ex.: prefix "CX01_" ? CX01_GAVETA_FRONT.dxf
  */
 export function buildDxfFileName(

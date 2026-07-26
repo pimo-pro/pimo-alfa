@@ -1,5 +1,5 @@
 /**
- * overlayMeasures.ts — Medidas internas avançadas (somente leitura).
+ * overlayMeasures.ts â€” Medidas internas avanÃ§adas (somente leitura).
  */
 
 import type { EuropeanDrawerBoxInput, EuropeanDrawerResult } from "../types";
@@ -13,19 +13,19 @@ import {
 } from "../measures";
 
 export type EuropeanOverlayMeasures = {
-  /** Largura interna útil do corpo (entre faces internas das laterais). */
+  /** Largura interna Ãºtil do corpo (entre faces internas das laterais). */
   internalUsefulWidthMm: number;
-  /** Profundidade interna útil (runner ? corpo, sem frente). */
+  /** Profundidade interna Ãºtil (runner ? corpo, sem frente). */
   internalUsefulDepthMm: number;
-  /** Altura útil por gaveta (sistema). */
+  /** Altura Ãºtil por gaveta (sistema). */
   usefulHeightPerDrawerMm: number;
-  /** Distância entre faces internas das laterais. */
+  /** DistÃ¢ncia entre faces internas das laterais. */
   distanceBetweenSidesMm: number;
-  /** Distância frente ? face frontal do corpo (sobreposição / slide). */
+  /** DistÃ¢ncia frente ? face frontal do corpo (sobreposiÃ§Ã£o / slide). */
   frontToBodyDistanceMm: number;
-  /** Distância fundo ? costa (vão interno Z do fundo). */
+  /** DistÃ¢ncia fundo ? costa (vÃ£o interno Z do fundo). */
   bottomToBackDistanceMm: number;
-  /** Medidas internas do módulo (se box disponível). */
+  /** Medidas internas do mÃ³dulo (se box disponÃ­vel). */
   moduleInternal?: {
     widthMm: number;
     heightMm: number;
@@ -41,7 +41,7 @@ export type EuropeanOverlayMeasures = {
 };
 
 /**
- * Extrai medidas internas avançadas a partir do resultado + box opcional.
+ * Extrai medidas internas avanÃ§adas a partir do resultado + box opcional.
  */
 export function buildOverlayMeasures(
   result: EuropeanDrawerResult,
@@ -73,7 +73,7 @@ export function buildOverlayMeasures(
       depthMm: box.dimensoes.profundidade,
       thicknessMm: box.espessura,
     };
-    // Validação documental: gap lateral industrial 7 mm
+    // ValidaÃ§Ã£o documental: gap lateral industrial 7 mm
     void EUROPEAN_SIDE_CLEARANCE_EACH_MM;
     void EUROPEAN_SIDE_THICKNESS_MM;
     void EUROPEAN_BACK_THICKNESS_MM;

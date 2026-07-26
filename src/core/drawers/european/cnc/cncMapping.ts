@@ -1,6 +1,6 @@
 /**
- * cncMapping.ts ó Mapeamento industrial DXF/furos ? operaÁıes CNC.
- * Sem recalcular geometry ou furos ó apenas converter.
+ * cncMapping.ts ‚Äî Mapeamento industrial DXF/furos ? opera√ß√µes CNC.
+ * Sem recalcular geometry ou furos ‚Äî apenas converter.
  */
 
 import type {
@@ -128,8 +128,8 @@ export function mapDxfLayerToCncGroup(layer: string): CncIndustrialGroup {
 }
 
 /**
- * Mapeia pieceRef de furo ? cÛdigo industrial da peÁa do Modelo B.
- * Furos de mÛdulo (module_*) ficam de fora das peÁas de gaveta.
+ * Mapeia pieceRef de furo ? c√≥digo industrial da pe√ßa do Modelo B.
+ * Furos de m√≥dulo (module_*) ficam de fora das pe√ßas de gaveta.
  */
 export function mapHolePieceRefToCodigo(pieceRef: string): string | null {
   const ref = (pieceRef || "").toLowerCase();
@@ -146,7 +146,7 @@ export function mapHolePieceRefToCodigo(pieceRef: string): string | null {
   return def?.code ?? null;
 }
 
-/** Contornos DXF ? operaÁıes CUT (LINEs no layer CUT). */
+/** Contornos DXF ? opera√ß√µes CUT (LINEs no layer CUT). */
 export function mapDxfEntitiesToCutOps(
   entities: DxfEntity[],
   origin?: { x: number; y: number }
@@ -174,7 +174,7 @@ export function mapDxfEntitiesToCutOps(
   return cuts;
 }
 
-/** Ret‚ngulo de peÁa ? 4 operaÁıes CUT (fallback se DXF ausente). */
+/** Ret√¢ngulo de pe√ßa ? 4 opera√ß√µes CUT (fallback se DXF ausente). */
 export function mapPieceBoxToCutOps(widthMm: number, heightMm: number): CncCutOperation[] {
   const w = round3(widthMm);
   const h = round3(heightMm);
@@ -200,7 +200,7 @@ export function mapPieceBoxToCutOps(widthMm: number, heightMm: number): CncCutOp
   ];
 }
 
-/** Furos ? operaÁıes DRILL (coordenadas locais da peÁa). */
+/** Furos ? opera√ß√µes DRILL (coordenadas locais da pe√ßa). */
 export function mapHolesToDrillOps(
   holes: EuropeanDrawerHole[],
   pieceCode: string
@@ -211,11 +211,11 @@ export function mapHolesToDrillOps(
     const code = mapHolePieceRefToCodigo(h.pieceRef);
     if (code !== pieceCode) continue;
     if (!(h.diameter > 0)) {
-      warnings.push(`Furo sem ÿ v·lido em ${pieceCode} @(${h.x},${h.y}).`);
+      warnings.push(`Furo sem ‚Äî v√°lido em ${pieceCode} @(${h.x},${h.y}).`);
       continue;
     }
     if (!(h.depth > 0)) {
-      warnings.push(`Furo sem profundidade v·lida em ${pieceCode} @(${h.x},${h.y}).`);
+      warnings.push(`Furo sem profundidade v√°lida em ${pieceCode} @(${h.x},${h.y}).`);
     }
     drills.push({
       type: "DRILL",
@@ -240,7 +240,7 @@ export type MappedCncPiece = {
 };
 
 /**
- * Mapeia result (geometry + holes + dxf opcional) para peÁas CNC.
+ * Mapeia result (geometry + holes + dxf opcional) para pe√ßas CNC.
  */
 export function mapEuropeanResultToCncPieces(
   result: EuropeanDrawerResult,

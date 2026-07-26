@@ -1,7 +1,7 @@
 /**
- * european/cnc — CNC Post-Processor / Industrial Mapping (Modelo B, Fase 17).
+ * european/cnc â€” CNC Post-Processor / Industrial Mapping (Modelo B, Fase 17).
  * API segura para browser (sem Node FS).
- * Para escrita física: importar `exportEuropeanCNCFiles` de `./cncFileWriter`.
+ * Para escrita fÃ­sica: importar `exportEuropeanCNCFiles` de `./cncFileWriter`.
  */
 
 export {

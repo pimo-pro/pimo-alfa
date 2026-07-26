@@ -11,7 +11,7 @@ export type { EuropeanDrawerValidationWarning } from "./warnings";
 
 /**
  * Accao de auto-correcao.
- * Nunca altera o catalogo oficial — apenas a config da caixa.
+ * Nunca altera o catalogo oficial â€” apenas a config da caixa.
  */
 export type EuropeanDrawerAutoFixAction = {
   code: string;

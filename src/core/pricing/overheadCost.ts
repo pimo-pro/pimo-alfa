@@ -1,5 +1,5 @@
 /**
- * overheadCost.ts — Custos operacionais (energia, ferramentas, manutenção, logística).
+ * overheadCost.ts â€” Custos operacionais (energia, ferramentas, manutenÃ§Ã£o, logÃ­stica).
  */
 
 export type OverheadCostConfig = {
@@ -8,7 +8,7 @@ export type OverheadCostConfig = {
   toolWearPercent: number;
   maintenancePercent: number;
   logisticsPercent: number;
-  /** Fixo € por projeto. */
+  /** Fixo â€” por projeto. */
   fixedPerProject: number;
 };
 

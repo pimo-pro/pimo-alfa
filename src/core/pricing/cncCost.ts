@@ -1,5 +1,5 @@
 /**
- * cncCost.ts — Custo CNC a partir de operações CUT/DRILL (Fase 17, somente leitura).
+ * cncCost.ts â€” Custo CNC a partir de operaÃ§Ãµes CUT/DRILL (Fase 17, somente leitura).
  */
 
 export type CncCostConfig = {

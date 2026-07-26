@@ -1,7 +1,7 @@
 /**
- * src/core/planner — Kitchen Planner (modo cliente, Fase 19).
- * Camada de composição visual sobre a Kitchen Library.
- * Não altera Modelo A, industrial/**, geometry, DXF ou CNC.
+ * src/core/planner â€” Kitchen Planner (modo cliente, Fase 19).
+ * Camada de composiÃ§Ã£o visual sobre a Kitchen Library.
+ * NÃ£o altera Modelo A, industrial/**, geometry, DXF ou CNC.
  */
 
 export {

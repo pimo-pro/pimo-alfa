@@ -1,6 +1,6 @@
 /**
- * european/dxf ù DXF Export + Technical Drawing Mode (Modelo B, Fase 12).
- * Camada somente-leitura ù nùo altera geometry/furos/viewer.
+ * european/dxf ‚Äî DXF Export + Technical Drawing Mode (Modelo B, Fase 12).
+ * Camada somente-leitura ‚Äî n√£o altera geometry/furos/viewer.
  */
 
 export { buildDxfLayerTable, EUROPEAN_DXF_LAYERS, EUROPEAN_DXF_LAYER_DEFS } from "./dxfLayers";

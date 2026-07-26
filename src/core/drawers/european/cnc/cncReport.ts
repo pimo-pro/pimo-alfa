@@ -1,5 +1,5 @@
 /**
- * cncReport.ts — Relatório de exportação CNC (Fase 17).
+ * cncReport.ts â€” RelatÃ©rio de exportaÃ§Ã£o CNC (Fase 17).
  */
 
 export type CncExportStatus = "CNC_OK" | "CNC_WARN" | "CNC_ERROR";
@@ -28,7 +28,7 @@ export type CncExportReport = {
   totalDrillOps: number;
   warnings: string[];
   errors: string[];
-  /** Confirma que a exportação só leu dados industriais existentes. */
+  /** Confirma que a exportaÃ§Ã£o sÃ³ leu dados industriais existentes. */
   industrialIntegrityOk: boolean;
 };
 

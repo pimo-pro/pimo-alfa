@@ -1,6 +1,6 @@
 /**
- * plannerExport.ts — Exportações documentais da cozinha planeada.
- * Não altera ficheiros DXF/CNC existentes — apenas referencia integrações.
+ * plannerExport.ts â€” ExportaÃ§Ãµes documentais da cozinha planeada.
+ * NÃ£o altera ficheiros DXF/CNC existentes â€” apenas referencia integraÃ§Ãµes.
  */
 
 import type { KitchenLibrary } from "../kitchen";
@@ -74,7 +74,7 @@ export function buildPlannerExport(input: {
     instanceId: m.instanceId,
     moduleId: m.moduleId,
     available: hasDxf,
-    note: `CNC referencial por modulo (${m.industrialCode}) — export fisico via Fase 17`,
+    note: `CNC referencial por modulo (${m.industrialCode}) â€” export fisico via Fase 17`,
   }));
 
   const pkg: PlannerExportPackage = {
@@ -124,7 +124,7 @@ export function buildPlannerExport(input: {
 
 export function formatPlannerExportText(pkg: PlannerExportPackage): string {
   const lines = [
-    `Kitchen Planner Export — ${pkg.summary.title}`,
+    `Kitchen Planner Export â€” ${pkg.summary.title}`,
     `generated: ${pkg.generatedAt}`,
     `modules: ${pkg.summary.moduleCount} | drawers: ${pkg.summary.drawerCount} | doors: ${pkg.summary.doorCount}`,
     `occupied: ${pkg.summary.occupiedWidthMm} mm`,

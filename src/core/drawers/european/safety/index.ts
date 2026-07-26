@@ -1,6 +1,6 @@
 /**
- * european/safety — Industrial Safety Gates & Runtime Guards (Modelo B).
- * Apenas bloqueio preventivo; sem auto-correção; sem alterar resultados válidos.
+ * european/safety â€” Industrial Safety Gates & Runtime Guards (Modelo B).
+ * Apenas bloqueio preventivo; sem auto-correÃ§Ã£o; sem alterar resultados vÃ¡lidos.
  */
 
 export {
@@ -43,7 +43,7 @@ import { runSafetyPdfGate } from "./safetyPdfGate";
 import { runSafetyViewerGate } from "./safetyViewerGate";
 import { buildSafetyReport, type EuropeanSafetyReport } from "./safetyReport";
 
-/** Gates pré-pipeline (config + medidas). */
+/** Gates prÃ©-pipeline (config + medidas). */
 export function runPrePipelineSafetyGates(
   config: EuropeanDrawerBoxConfig,
   box: EuropeanDrawerBoxInput,
@@ -55,7 +55,7 @@ export function runPrePipelineSafetyGates(
   ]);
 }
 
-/** Gates pós-pipeline (geometria, furos, cutlist, pdf, viewer). */
+/** Gates pÃ³s-pipeline (geometria, furos, cutlist, pdf, viewer). */
 export function runPostPipelineSafetyGates(input: {
   geometry: DrawerGeometry;
   holes: EuropeanDrawerHole[];
@@ -72,7 +72,7 @@ export function runPostPipelineSafetyGates(input: {
   ]);
 }
 
-/** Junta dois relatórios (pré + pós). */
+/** Junta dois relatÃ©rios (prÃ© + pÃ³s). */
 export function mergeSafetyReports(
   ...reports: EuropeanSafetyReport[]
 ): EuropeanSafetyReport {

@@ -1,6 +1,6 @@
 /**
- * european/qa — Auto QA Stress Testing (Modelo B).
- * Simulação interna: sem CNC, sem industrial/**, sem mutar projeto.
+ * european/qa â€” Auto QA Stress Testing (Modelo B).
+ * SimulaÃ§Ã£o interna: sem CNC, sem industrial/**, sem mutar projeto.
  */
 
 export type {

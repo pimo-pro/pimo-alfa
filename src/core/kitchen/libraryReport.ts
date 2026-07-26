@@ -1,5 +1,5 @@
 /**
- * libraryReport.ts — Relatório da Kitchen Library (Fase 15).
+ * libraryReport.ts â€” RelatÃ©rio da Kitchen Library (Fase 15).
  */
 
 export type KitchenLibraryStatus = "LIBRARY_OK" | "LIBRARY_WARN" | "LIBRARY_ERROR";
@@ -31,7 +31,7 @@ export function buildLibraryReport(input: {
   const warnings = [...(input.warnings ?? [])];
   const errors = [...(input.errors ?? [])];
   if (!input.modeloBIntegrated) {
-    warnings.push("Modelo B sample não integrou todas as camadas esperadas.");
+    warnings.push("Modelo B sample nÃ£o integrou todas as camadas esperadas.");
   }
   let status: KitchenLibraryStatus = "LIBRARY_OK";
   if (errors.length > 0) status = "LIBRARY_ERROR";

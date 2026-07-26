@@ -1,5 +1,5 @@
 /**
- * frontModels.ts — Frentes industriais (catalogo documental).
+ * frontModels.ts â€” Frentes industriais (catalogo documental).
  */
 
 import type { KitchenFrontModel } from "../types";
@@ -8,7 +8,7 @@ export function buildFrontModels(): KitchenFrontModel[] {
   return [
     {
       id: "front-standard",
-      name: "Frente padrão",
+      name: "Frente padrÃ£o",
       style: "standard",
       thicknessMm: 19,
       gapEachMm: 1,
@@ -35,7 +35,7 @@ export function buildFrontModels(): KitchenFrontModel[] {
     },
     {
       id: "front-tall",
-      name: "Frente módulo alto",
+      name: "Frente mÃ³dulo alto",
       style: "tall",
       thicknessMm: 19,
       gapEachMm: 1,
@@ -44,7 +44,7 @@ export function buildFrontModels(): KitchenFrontModel[] {
     },
     {
       id: "front-upper",
-      name: "Frente módulo superior",
+      name: "Frente mÃ³dulo superior",
       style: "upper",
       thicknessMm: 19,
       gapEachMm: 1,

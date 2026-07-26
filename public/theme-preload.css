@@ -1,14 +1,14 @@
 /* Tema aplicado antes do bundle: evita quadrado preto e flash do Viewer.
  * Alpha: regras .theme-dark / .theme-light (inalteradas).
- * Pi: só quando data-theme-template="pi" — especificidade maior, não afeta Alpha.
+ * Pi: s� quando data-theme-template="pi" � especificidade maior, n�o afeta Alpha.
  */
 
 /* ── Alpha (baseline) ───────────────────────────────────────────────────── */
 .theme-dark { --navy: #0f172a; --black: #0b0f17; --text-main: #e2e8f0; --text-muted: #94a3b8; --border: rgba(255,255,255,0.12); --button-ghost-bg: rgba(255,255,255,0.04); --radius: 6px; }
 .theme-light { --navy: #f1f5f9; --black: #f8fafc; --text-main: #0f172a; --text-muted: #64748b; --border: rgba(0,0,0,0.12); --button-ghost-bg: rgba(0,0,0,0.04); --radius: 6px; }
 
-/* ── Pi anti-FOUC (mínimo: superfícies, texto, primário, acentos, bordas) ──
- * Fonte: src/theme/palettes/piPalette.ts (subset crítico do primeiro paint).
+/* ── Pi anti-FOUC (m�nimo: superf�cies, texto, prim�rio, acentos, bordas) ──
+ * Fonte: src/theme/palettes/piPalette.ts (subset cr�tico do primeiro paint).
  * Sem --pi-btn-* (Passo 3/4). Sem escalas 7 tons.
  */
 html[data-theme-template="pi"].theme-dark {

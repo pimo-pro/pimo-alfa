@@ -1,5 +1,5 @@
 /**
- * releaseCollector.ts — Coletor de eventos industriais do Modelo B (somente leitura).
+ * releaseCollector.ts â€” Coletor de eventos industriais do Modelo B (somente leitura).
  */
 
 import type { EuropeanDrawerResult } from "../types";
@@ -22,13 +22,13 @@ export type EuropeanReleaseEvent = {
   source: string;
 };
 
-/** Catálogo estático das fases Modelo B (documental — não altera pipeline). */
+/** CatÃ¡logo estÃ¡tico das fases Modelo B (documental â€” nÃ£o altera pipeline). */
 export const EUROPEAN_RELEASE_PHASE_CATALOG: EuropeanReleaseEvent[] = [
   {
     id: "phase-consistency",
     kind: "feature",
-    title: "Consistência industrial de nomes/códigos (SSOT)",
-    detail: "european/consistency — enforceNaming em cutlist/PDF/drilling/viewer",
+    title: "ConsistÃªncia industrial de nomes/cÃ³digos (SSOT)",
+    detail: "european/consistency â€” enforceNaming em cutlist/PDF/drilling/viewer",
     component: "consistency",
     source: "catalog",
   },
@@ -36,7 +36,7 @@ export const EUROPEAN_RELEASE_PHASE_CATALOG: EuropeanReleaseEvent[] = [
     id: "phase-safety",
     kind: "feature",
     title: "Industrial Safety Gates & Runtime Guards",
-    detail: "european/safety — gates pré/pós pipeline sem auto-correção",
+    detail: "european/safety â€” gates prÃ©/pÃ³s pipeline sem auto-correÃ§Ã£o",
     component: "safety",
     source: "catalog",
   },
@@ -44,7 +44,7 @@ export const EUROPEAN_RELEASE_PHASE_CATALOG: EuropeanReleaseEvent[] = [
     id: "phase-docs",
     kind: "feature",
     title: "Full Industrial Documentation Generator",
-    detail: "european/docs — ficha técnica + PDF multi-páginas (estrutura)",
+    detail: "european/docs â€” ficha tÃ©cnica + PDF multi-pÃ¡ginas (estrutura)",
     component: "docs",
     source: "catalog",
   },
@@ -52,7 +52,7 @@ export const EUROPEAN_RELEASE_PHASE_CATALOG: EuropeanReleaseEvent[] = [
     id: "phase-dxf",
     kind: "feature",
     title: "DXF Export + Technical Drawing Mode",
-    detail: "european/dxf — contornos, furos, layers e vistas técnicas",
+    detail: "european/dxf â€” contornos, furos, layers e vistas tÃ©cnicas",
     component: "dxf",
     source: "catalog",
   },
@@ -60,7 +60,7 @@ export const EUROPEAN_RELEASE_PHASE_CATALOG: EuropeanReleaseEvent[] = [
     id: "phase-overlay",
     kind: "feature",
     title: "MC Overlay Advanced",
-    detail: "european/overlay — medidas, aberturas, gaps, remates, roda-pé",
+    detail: "european/overlay â€” medidas, aberturas, gaps, remates, roda-pÃ©",
     component: "overlay",
     source: "catalog",
   },
@@ -68,15 +68,15 @@ export const EUROPEAN_RELEASE_PHASE_CATALOG: EuropeanReleaseEvent[] = [
     id: "phase-release",
     kind: "feature",
     title: "Release Notes Auto-Generator",
-    detail: "european/release — notes industriais automáticas",
+    detail: "european/release â€” notes industriais automÃ¡ticas",
     component: "release",
     source: "catalog",
   },
   {
     id: "imp-hettich",
     kind: "improvement",
-    title: "Corrediças Hettich 300–600 com corpo = runner ? 10",
-    detail: "Folga lateral 7+7; profundidade útil estritamente maior que runner",
+    title: "CorrediÃ§as Hettich 300â€“600 com corpo = runner ? 10",
+    detail: "Folga lateral 7+7; profundidade Ãºtil estritamente maior que runner",
     component: "measures",
     source: "catalog",
   },
@@ -84,30 +84,30 @@ export const EUROPEAN_RELEASE_PHASE_CATALOG: EuropeanReleaseEvent[] = [
     id: "imp-robustness",
     kind: "improvement",
     title: "Camada de robustez transparente",
-    detail: "european/robustness — sanitização sem alterar regras de negócio",
+    detail: "european/robustness â€” sanitizaÃ§Ã£o sem alterar regras de negÃ³cio",
     component: "robustness",
     source: "catalog",
   },
   {
     id: "fix-hole-dia-zero",
     kind: "fix",
-    title: "Safety: Ø=0 em laterais tratado como aviso (não bloqueio)",
-    detail: "Marcadores Modelo A / industriais existentes não invalidam geração válida",
+    title: "Safety: â€”=0 em laterais tratado como aviso (nÃ£o bloqueio)",
+    detail: "Marcadores Modelo A / industriais existentes nÃ£o invalidam geraÃ§Ã£o vÃ¡lida",
     component: "safety",
     source: "catalog",
   },
   {
     id: "internal-perf",
     kind: "internal",
-    title: "Memoização e validateAll no pipeline europeu",
-    detail: "european/perf — menos passagens sem mudar resultados",
+    title: "MemoizaÃ§Ã£o e validateAll no pipeline europeu",
+    detail: "european/perf â€” menos passagens sem mudar resultados",
     component: "perf",
     source: "catalog",
   },
 ];
 
 /**
- * Recolhe eventos a partir do resultado atual + catálogo de fases.
+ * Recolhe eventos a partir do resultado atual + catÃ¡logo de fases.
  */
 export function collectEuropeanReleaseEvents(
   result: EuropeanDrawerResult
@@ -117,11 +117,11 @@ export function collectEuropeanReleaseEvents(
   // Componentes presentes no resultado
   const components: Array<{ key: string; present: boolean; label: string }> = [
     { key: "safety", present: Boolean(result.safetyReport), label: "Safety Gates" },
-    { key: "docs", present: Boolean(result.docs), label: "Documentação industrial" },
+    { key: "docs", present: Boolean(result.docs), label: "DocumentaÃ§Ã£o industrial" },
     { key: "dxf", present: Boolean(result.dxf), label: "DXF export" },
-    { key: "technical", present: Boolean(result.technical), label: "Desenho técnico" },
+    { key: "technical", present: Boolean(result.technical), label: "Desenho tÃ©cnico" },
     { key: "overlay", present: Boolean(result.overlay), label: "MC Overlay" },
-    { key: "consistency", present: result.cutlist.some((i) => Boolean(i.codigo)), label: "Códigos industriais cutlist" },
+    { key: "consistency", present: result.cutlist.some((i) => Boolean(i.codigo)), label: "CÃ³digos industriais cutlist" },
   ];
 
   for (const c of components) {
@@ -129,7 +129,7 @@ export function collectEuropeanReleaseEvents(
       id: `component-${c.key}`,
       kind: "component",
       title: c.present ? `${c.label} activo` : `${c.label} ausente`,
-      detail: c.present ? "Presente neste generateEuropeanDrawer" : "Não anexado neste resultado",
+      detail: c.present ? "Presente neste generateEuropeanDrawer" : "NÃ£o anexado neste resultado",
       component: c.key,
       source: "runtime",
     });
@@ -140,7 +140,7 @@ export function collectEuropeanReleaseEvents(
       id: "runtime-docs-status",
       kind: "industrial_note",
       title: `Docs: ${result.docs.report.status}`,
-      detail: `${result.docs.report.piecesDocumented} peças · ${result.docs.report.logicalPages} págs`,
+      detail: `${result.docs.report.piecesDocumented} peÃ§as â€” ${result.docs.report.logicalPages} pÃ¡gs`,
       component: "docs",
       source: "runtime",
     });
@@ -151,7 +151,7 @@ export function collectEuropeanReleaseEvents(
       id: "runtime-dxf-status",
       kind: "industrial_note",
       title: `DXF: ${result.dxf.report.status}`,
-      detail: `${result.dxf.report.contourCount} contornos · ${result.dxf.report.holeEntityCount} furos · ${result.dxf.report.viewCount} vistas`,
+      detail: `${result.dxf.report.contourCount} contornos â€” ${result.dxf.report.holeEntityCount} furos â€” ${result.dxf.report.viewCount} vistas`,
       component: "dxf",
       source: "runtime",
     });
@@ -162,7 +162,7 @@ export function collectEuropeanReleaseEvents(
       id: "runtime-overlay-status",
       kind: "industrial_note",
       title: `Overlay: ${result.overlay.report.status}`,
-      detail: `${result.overlay.report.aberturaCount} aberturas · ${result.overlay.report.gapCount} gaps`,
+      detail: `${result.overlay.report.aberturaCount} aberturas â€” ${result.overlay.report.gapCount} gaps`,
       component: "overlay",
       source: "runtime",
     });
@@ -172,7 +172,7 @@ export function collectEuropeanReleaseEvents(
     events.push({
       id: "runtime-technical-views",
       kind: "industrial_note",
-      title: `Vistas técnicas: ${result.technical.viewIds.join(", ")}`,
+      title: `Vistas tÃ©cnicas: ${result.technical.viewIds.join(", ")}`,
       component: "technical",
       source: "runtime",
     });
@@ -183,7 +183,7 @@ export function collectEuropeanReleaseEvents(
       id: "runtime-safety-status",
       kind: "safety",
       title: `Safety: ${result.safetyReport.status}`,
-      detail: `${result.safetyReport.gates.length} gates · ${result.safetyReport.totalDurationMs.toFixed(2)} ms`,
+      detail: `${result.safetyReport.gates.length} gates â€” ${result.safetyReport.totalDurationMs.toFixed(2)} ms`,
       component: "safety",
       source: "runtime",
     });
@@ -218,12 +218,12 @@ export function collectEuropeanReleaseEvents(
     });
   }
 
-  // “Commits” lógicos — fases documentadas (sem git runtime obrigatório)
+  // â€” CommitsÃ³ lÃ³gicos â€” fases documentadas (sem git runtime obrigatÃ©rio)
   events.push({
     id: "logical-commits",
     kind: "internal",
-    title: "Changelog lógico Modelo B (fases consistency?release)",
-    detail: "Eventos de catálogo alinhados às fases industriais B — sem alterar src/industrial/**",
+    title: "Changelog lÃ³gico Modelo B (fases consistency?release)",
+    detail: "Eventos de catÃ¡logo alinhados Ã s fases industriais B â€” sem alterar src/industrial/**",
     source: "logical-commits",
   });
 

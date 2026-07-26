@@ -1,7 +1,7 @@
 /**
- * P3.9 F3b — monetização desperdício + serragem.
- * Desperdício = percentual (pricing.json) × custo real dos painéis.
- * Serragem = m² × €/m² (flags Orçamentos).
+ * P3.9 F3b â€” monetizaÃ§Ã£o desperdÃ­cio + serragem.
+ * desperdÃ­cio = percentual (pricing.json) â€” custo real dos painÃ©is.
+ * Serragem = mÂ² Ã— â‚¬/mÂ² (flags OrÃ§amentos).
  */
 
 import type { CutListItemComPreco } from "../types";
@@ -14,7 +14,7 @@ export type DesperdicioSerragemTarifas = Pick<
   OrcamentosCustosIndustriaisSettings,
   "desperdicioEurPorM2" | "serragemEurPorM2" | "enableDesperdicio" | "enableSerragem"
 > & {
-  /** Fração 0–1 do custo de painéis (pricing.json desperdicio.percentual). */
+  /** FraÃ§Ã£o 0â€“1 do custo de painÃ©is (pricing.json desperdicio.percentual). */
   desperdicioPercentual?: number;
 };
 
@@ -43,7 +43,7 @@ function boolFlag(v: unknown, fallback: boolean): boolean {
   return typeof v === "boolean" ? v : fallback;
 }
 
-/** Percentual de desperdício (0–1) a partir do override ou pricing.json. */
+/** Percentual de desperdÃ­cio (0â€“1) a partir do override ou pricing.json. */
 export function resolveDesperdicioPercentual(override?: number | null): number {
   if (typeof override === "number" && Number.isFinite(override) && override >= 0) {
     return override;
@@ -79,7 +79,7 @@ export function resolveDesperdicioSerragemTarifas(
   };
 }
 
-/** Serragem estimada (kerf CNC × perímetro). Exportada — era privada no Unificado. */
+/** Serragem estimada (kerf CNC â€” perÃ­metro). Exportada â€” era privada no Unificado. */
 export function estimateSerragemM2(cutlist: CutListItemComPreco[]): number {
   let kerf = 0;
   try {
@@ -108,15 +108,15 @@ function pieceAreaMm2(item: CutListItemComPreco): number {
 }
 
 /**
- * Monetiza waste + serragem com flags Orçamentos; rateia por área às peças.
- * Desperdício € = percentual × custoPaineisEur (não usa wasteM2 × €/m²).
+ * Monetiza waste + serragem com flags OrÃ§amentos; rateia por Ã¡rea Ã s peÃ§as.
+ * desperdÃ­cio â‚¬ = percentual Ã— custoPaineisEur (nÃ£o usa wasteM2 Ã— â‚¬/mÂ²).
  */
 export function computeDesperdicioSerragemFinanceiras(input: {
   cutlist: CutListItemComPreco[];
-  /** m² de desperdício (métrica / nesting). Não entra no €. */
+  /** mÂ² de desperdÃ­cio (mÃ©trica / nesting). NÃ£o entra no â‚¬. */
   wasteM2: number;
   serragemM2?: number;
-  /** Custo real da linha Painéis (€). */
+  /** Custo real da linha PainÃ©is (â‚¬). */
   custoPaineisEur?: number;
   tarifas?: Partial<DesperdicioSerragemTarifas> | null;
 }): DesperdicioSerragemFinanceirasResult {
@@ -138,12 +138,12 @@ export function computeDesperdicioSerragemFinanceiras(input: {
 
   const warnings: string[] = [];
   if (!tarifas.enableDesperdicio) {
-    warnings.push("enableDesperdicio=false — custo desperdicio = 0");
+    warnings.push("enableDesperdicio=false â€” custo desperdicio = 0");
   } else if (!(custoPaineis > 0)) {
-    warnings.push("custoPaineisEur=0 — custo desperdicio = 0");
+    warnings.push("custoPaineisEur=0 â€” custo desperdicio = 0");
   }
   if (!tarifas.enableSerragem) {
-    warnings.push("enableSerragem=false — custo serragem = 0");
+    warnings.push("enableSerragem=false â€” custo serragem = 0");
   }
 
   const precoDesperdicio =

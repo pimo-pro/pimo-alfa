@@ -1,6 +1,6 @@
 /**
- * pdfMultiPageBuilder.ts — Estrutura PDF multi-páginas em memória (camada adicional).
- * NÃO substitui o PDF industrial existente (result.pdf).
+ * pdfMultiPageBuilder.ts â€” Estrutura PDF multi-pÃ¡ginas em memÃ³ria (camada adicional).
+ * NÃƒO substitui o PDF industrial existente (result.pdf).
  */
 
 import type { EuropeanDrawerBoxInput, EuropeanDrawerResult } from "../types";
@@ -22,10 +22,10 @@ export type EuropeanDocsPdfPage = {
 
 export type EuropeanMultiPagePdf = {
   title: string;
-  /** Camada adicional — não substitui result.pdf */
+  /** Camada adicional â€” nÃ£o substitui result.pdf */
   kind: "european-docs-multipage";
   pages: EuropeanDocsPdfPage[];
-  /** Referência leve ao PDF SSOT existente (somente leitura). */
+  /** ReferÃªncia leve ao PDF SSOT existente (somente leitura). */
   existingPdfTitle: string;
   existingPdfPieceRows: number;
   existingPdfHoleRows: number;
@@ -34,7 +34,7 @@ export type EuropeanMultiPagePdf = {
 function holesByPiece(result: EuropeanDrawerResult): Array<{ peca: string; count: number }> {
   const map = new Map<string, number>();
   for (const h of result.holes) {
-    const key = h.pieceRef || "—";
+    const key = h.pieceRef || "â€”";
     map.set(key, (map.get(key) ?? 0) + 1);
   }
   return [...map.entries()]
@@ -43,7 +43,7 @@ function holesByPiece(result: EuropeanDrawerResult): Array<{ peca: string; count
 }
 
 /**
- * Constrói estrutura multi-página a partir da ficha + pdf existente.
+ * ConstrÃ³i estrutura multi-pÃ¡gina a partir da ficha + pdf existente.
  */
 export function buildMultiPagePdf(
   result: EuropeanDrawerResult,
@@ -61,18 +61,18 @@ export function buildMultiPagePdf(
       sectionHeader("resumo", "Resumo industrial", [
         keyValueBlock([
           { label: "Modelo", value: meta.modelDisplayName },
-          { label: "Corrediça", value: `${meta.runnerFamily} · ${fmtMm(meta.runnerLengthMm)}` },
-          { label: "Nº gavetas", value: String(meta.drawerCount) },
+          { label: "CorrediÃ§a", value: `${meta.runnerFamily} â€” ${fmtMm(meta.runnerLengthMm)}` },
+          { label: "NÂº gavetas", value: String(meta.drawerCount) },
           { label: "Altura", value: fmtMm(meta.heightUsedMm) },
           {
-            label: "Corpo W×H×D",
-            value: `${fmtMm(geo.externalWidthMm)} × ${fmtMm(geo.usefulHeightMm)} × ${fmtMm(geo.bodyDepthMm)}`,
+            label: "Corpo WÃ—HÃ—D",
+            value: `${fmtMm(geo.externalWidthMm)} â€” ${fmtMm(geo.usefulHeightMm)} â€” ${fmtMm(geo.bodyDepthMm)}`,
           },
           ...(meta.box
             ? [
                 {
-                  label: "Caixa W×H×D",
-                  value: `${fmtMm(meta.box.widthMm)} × ${fmtMm(meta.box.heightMm)} × ${fmtMm(meta.box.depthMm)}`,
+                  label: "Caixa WÃ—HÃ—D",
+                  value: `${fmtMm(meta.box.widthMm)} â€” ${fmtMm(meta.box.heightMm)} â€” ${fmtMm(meta.box.depthMm)}`,
                 },
               ]
             : []),
@@ -83,14 +83,14 @@ export function buildMultiPagePdf(
 
   const page2: EuropeanDocsPdfPage = {
     pageNumber: 2,
-    title: "Tabela de peças",
+    title: "Tabela de peÃ§as",
     sections: [
-      sectionHeader("pecas", "Tabela de peças", [
+      sectionHeader("pecas", "Tabela de peÃ§as", [
         tableBlock(
-          ["Nome", "Código", "Material", "Espessura", "Qty"],
+          ["Nome", "CÃ³digo", "Material", "Espessura", "Qty"],
           meta.pieces.map((p) => [
             p.nome,
-            p.codigo || "—",
+            p.codigo || "â€”",
             p.material,
             fmtMm(p.espessuraMm),
             String(p.quantidade),
@@ -110,15 +110,15 @@ export function buildMultiPagePdf(
     pageNumber: 3,
     title: "Furos e drilling",
     sections: [
-      sectionHeader("furos", "Resumo de furos por peça", [
+      sectionHeader("furos", "Resumo de furos por peÃ§a", [
         tableBlock(
-          ["Peça", "Nº furos"],
+          ["PeÃ§a", "NÂº furos"],
           byPiece.map((r) => [r.peca, String(r.count)])
         ),
         keyValueBlock([{ label: "Total furos", value: String(result.holes.length) }]),
         textBlock(
-          safetyHoleNotes.length ? safetyHoleNotes : ["Sem observações de drilling no safetyReport."],
-          "Observações"
+          safetyHoleNotes.length ? safetyHoleNotes : ["Sem observaÃ§Ãµes de drilling no safetyReport."],
+          "ObservaÃ§Ãµes"
         ),
       ]),
     ],
@@ -134,25 +134,25 @@ export function buildMultiPagePdf(
       notes.push(`[safety-error/${e.gate}] ${e.message}`);
     }
   }
-  notes.push("Consistência: códigos industriais documentados a partir do cutlist pós-enforce.");
-  notes.push("Robustez: camada transparente — docs não alteram sanitização nem resultados.");
+  notes.push("ConsistÃªncia: cÃ³digos industriais documentados a partir do cutlist pÃ³s-enforce.");
+  notes.push("Robustez: camada transparente â€” docs nÃ£o alteram sanitizaÃ§Ã£o nem resultados.");
   for (const w of result.warnings ?? []) notes.push(w);
 
   const page4: EuropeanDocsPdfPage = {
     pageNumber: 4,
-    title: "Observações e notas",
+    title: "ObservaÃ§Ãµes e notas",
     sections: [
-      sectionHeader("notas", "Observações e notas", [
+      sectionHeader("notas", "ObservaÃ§Ãµes e notas", [
         textBlock(notes.length ? notes : ["Sem notas."]),
       ]),
     ],
   };
 
   return {
-    title: `PDF Multi-páginas (docs) — ${meta.modelDisplayName}`,
+    title: `PDF Multi-pÃ¡ginas (docs) â€” ${meta.modelDisplayName}`,
     kind: "european-docs-multipage",
     pages: [page1, page2, page3, page4],
-    existingPdfTitle: result.pdf?.title ?? "—",
+    existingPdfTitle: result.pdf?.title ?? "â€¦",
     existingPdfPieceRows: result.pdf?.pieceRows?.length ?? 0,
     existingPdfHoleRows: result.pdf?.holeRows?.length ?? 0,
   };

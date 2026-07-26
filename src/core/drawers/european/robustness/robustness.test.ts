@@ -1,5 +1,5 @@
 /**
- * Testes de robustez — proteção transparente sem alterar resultados válidos.
+ * Testes de robustez â€” proteÃ§Ã£o transparente sem alterar resultados vÃ¡lidos.
  */
 
 import { describe, expect, it, vi } from "vitest";
@@ -26,7 +26,7 @@ describe("european/robustness", () => {
     expect(ensureNonNegative(12.5, "t")).toBe(12.5);
   });
 
-  it("sanitizeHoles omite furos inválidos e mantém válidos", () => {
+  it("sanitizeHoles omite furos invÃ¡lidos e mantÃ©m vÃ¡lidos", () => {
     const holes: EuropeanDrawerHole[] = [
       { x: 10, y: 20, z: 0, diameter: 5, depth: 12, holeType: "corredica", face: "A", pieceRef: "front" },
       { x: NaN, y: 20, z: 0, diameter: 5, depth: 12, holeType: "corredica", face: "A", pieceRef: "front" },
@@ -101,7 +101,7 @@ describe("european/robustness", () => {
     expect(cfg.depthMm).toBeLessThanOrEqual(600);
   });
 
-  it("cenário válido: fingerprint industrial estável (sem alteração de resultado)", () => {
+  it("cenÃ¡rio vÃ¡lido: fingerprint industrial estÃ¡vel (sem alteraÃ§Ã£o de resultado)", () => {
     vi.spyOn(flags, "isDrawerModeloAActive").mockReturnValue(false);
     clearRobustDebugLog();
     const box = {

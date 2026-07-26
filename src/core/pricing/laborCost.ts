@@ -1,10 +1,10 @@
 /**
- * laborCost.ts — Mão de obra (hora / operação / projeto).
+ * laborCost.ts â€” MÃ£o de obra (hora / operaÃ§Ã£o / projeto).
  */
 
 export type LaborCostConfig = {
   costPerHour: number;
-  /** Minutos de mão de obra de projeto além de montagem (setup, QA). */
+  /** Minutos de mÃ£o de obra de projeto alÃ©m de montagem (setup, QA). */
   projectOverheadMinutes: number;
 };
 

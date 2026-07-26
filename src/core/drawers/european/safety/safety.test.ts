@@ -42,7 +42,7 @@ const goodConfig = {
   dualFront: false,
 };
 
-describe("safety gates  bloqueio de invalidos", () => {
+describe("safety gates â€” bloqueio de invalidos", () => {
   it("config: bloqueia runner >= profundidade util", () => {
     const r = runSafetyConfigGate({ ...goodConfig, depthMm: 500 }, goodBox, model);
     expect(r.ok).toBe(false);
@@ -265,7 +265,7 @@ describe("safety gates  bloqueio de invalidos", () => {
   });
 });
 
-describe("safety  resultados validos intactos", () => {
+describe("safety â€” resultados validos intactos", () => {
   it("generateEuropeanDrawer valido inclui safetyReport VALID", () => {
     vi.spyOn(flags, "isDrawerModeloAActive").mockReturnValue(false);
     const result = generateEuropeanDrawer("hettich-innotech-atira", goodBox, goodConfig);

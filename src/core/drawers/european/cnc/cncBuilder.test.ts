@@ -8,7 +8,7 @@ describe("cnc/cncBuilder", () => {
     vi.restoreAllMocks();
   });
 
-  it("constrói programas CNC com CUT/DRILL a partir de result", () => {
+  it("constrÃ³i programas CNC com CUT/DRILL a partir de result", () => {
     vi.spyOn(flags, "isDrawerModeloAActive").mockReturnValue(false);
 
     const result = generateEuropeanDrawer(
@@ -54,7 +54,7 @@ describe("cnc/cncBuilder", () => {
       true
     );
 
-    // Sem mutação industrial
+    // Sem mutaÃ§Ã£o industrial
     expect(result.geometry.externalWidthMm).toBeGreaterThan(0);
     expect(result.holes.length).toBeGreaterThan(0);
   });

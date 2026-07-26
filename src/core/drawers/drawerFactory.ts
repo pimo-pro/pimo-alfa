@@ -1,11 +1,11 @@
 /**
- * drawerFactory.ts — Binding de geração de gavetas para UI / providers.
+ * drawerFactory.ts â€” Binding de geraÃ§Ã£o de gavetas para UI / providers.
  *
- * Por omissão (Modelo A off) usa `generateEuropeanDrawer` (Modelo B).
- * O pipeline Modelo A (`generateDrawerGroup`) permanece no código e só é
- * usado quando `isDrawerModeloAActive()` é true (via boxLayersService).
+ * Por omissÃ£o (Modelo A off) usa `generateEuropeanDrawer` (Modelo B).
+ * O pipeline Modelo A (`generateDrawerGroup`) permanece no cÃ³digo e sÃ³ â€”
+ * usado quando `isDrawerModeloAActive()` â€” true (via boxLayersService).
  *
- * NÃO altera geometria/furos/cutlist — apenas o ponto de entrada do factory.
+ * NÃƒO altera geometria/furos/cutlist â€” apenas o ponto de entrada do factory.
  */
 
 import { isDrawerModeloAActive } from "./drawerSystemFlags";
@@ -27,12 +27,12 @@ export function resolveDrawerFactoryMode(): DrawerFactoryMode {
 }
 
 /**
- * Registo explícito do gerador activo.
- * Equivalente a `drawerFactory.use(generateEuropeanDrawer)` quando Modelo B está activo.
+ * Registo explÃ­cito do gerador activo.
+ * Equivalente a `drawerFactory.use(generateEuropeanDrawer)` quando Modelo B estÃ¡ activo.
  */
 export const drawerFactory = {
   mode: resolveDrawerFactoryMode,
-  /** Gerador europeu (Modelo B) — binding de produto. */
+  /** Gerador europeu (Modelo B) â€” binding de produto. */
   use: generateEuropeanDrawer,
   generateEuropeanDrawer,
   drawerEuropeanGenerate,

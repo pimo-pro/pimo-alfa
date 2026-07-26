@@ -1,5 +1,5 @@
 /**
- * dxfGeometry.ts — Contornos DXF a partir da geometry existente (somente leitura).
+ * dxfGeometry.ts â€” Contornos DXF a partir da geometry existente (somente leitura).
  */
 
 import type { DrawerGeometry, DrawerPieceBox, EuropeanDrawerResult } from "../types";
@@ -62,7 +62,7 @@ function buildPieceContour(
 }
 
 /**
- * Gera contornos DXF das peças principais (layout em grelha 2D, sem alterar geometry).
+ * Gera contornos DXF das peÃ§as principais (layout em grelha 2D, sem alterar geometry).
  */
 export function buildDxfGeometryContours(result: EuropeanDrawerResult): {
   contours: DxfPieceContour[];

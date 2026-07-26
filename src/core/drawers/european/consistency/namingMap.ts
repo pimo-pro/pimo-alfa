@@ -1,9 +1,9 @@
 /**
- * namingMap.ts — SSOT imutável de nomes/códigos industriais (Modelo B).
- * Nunca gerar nomes/códigos fora deste mapa.
+ * namingMap.ts â€” SSOT imutÃ¡vel de nomes/cÃ³digos industriais (Modelo B).
+ * Nunca gerar nomes/cÃ³digos fora deste mapa.
  */
 
-/** Códigos industriais canónicos de peças de madeira da gaveta. */
+/** CÃ³digos industriais canÃºnicos de peÃ§as de madeira da gaveta. */
 export const EUROPEAN_INDUSTRIAL_CODES = [
   "gav",
   "gav_fren",
@@ -16,7 +16,7 @@ export const EUROPEAN_INDUSTRIAL_CODES = [
 
 export type EuropeanIndustrialBaseCode = (typeof EUROPEAN_INDUSTRIAL_CODES)[number];
 
-/** Nomes industriais canónicos (display). */
+/** Nomes industriais canÃºnicos (display). */
 export const EUROPEAN_INDUSTRIAL_NAMES = {
   gav: "gaveta",
   gav_fren: "gaveta frente",
@@ -28,8 +28,8 @@ export const EUROPEAN_INDUSTRIAL_NAMES = {
 } as const satisfies Record<EuropeanIndustrialBaseCode, string>;
 
 /**
- * Alias ? código base canónico.
- * Inclui tipos internos cutlist, pieceRefs antigos e variações proibidas.
+ * Alias ? cÃ³digo base canÃºnico.
+ * Inclui tipos internos cutlist, pieceRefs antigos e variaÃ§Ãµes proibidas.
  */
 export const EUROPEAN_CODE_ALIASES: Readonly<Record<string, EuropeanIndustrialBaseCode | "module" | "hardware">> =
   Object.freeze({
@@ -73,7 +73,7 @@ export const EUROPEAN_CODE_ALIASES: Readonly<Record<string, EuropeanIndustrialBa
     gaveta_fundo: "gav_fun",
     bottom: "gav_fun",
     fundo: "gav_fun",
-    // módulo (não é peça de gaveta — preservar)
+    // mÃ³dulo (nÃ£o â€” peÃ§a de gaveta â€” preservar)
     module_lat_esq: "module",
     module_lat_dir: "module",
     // hardware
@@ -97,7 +97,7 @@ export function isCanonicalEuropeanCode(code: string): boolean {
   return isIndexedBodyCode(code) || isIndexedFrontCode(code);
 }
 
-/** Resolve código base a partir de alias / código indexado. */
+/** Resolve cÃ³digo base a partir de alias / cÃ³digo indexado. */
 export function resolveBaseCode(raw: string | undefined | null): EuropeanIndustrialBaseCode | null {
   if (!raw) return null;
   const key = String(raw).trim().toLowerCase();
@@ -120,9 +120,9 @@ export function displayNameForBaseCode(base: EuropeanIndustrialBaseCode, drawerI
 }
 
 /**
- * Código industrial indexado conforme regras Modelo B.
- * body: gav / gav_1…
- * front: gav_fren (1 gaveta) ou gav_1_fren… (N)
+ * CÃ³digo industrial indexado conforme regras Modelo B.
+ * body: gav / gav_1â€¦
+ * front: gav_fren (1 gaveta) ou gav_1_frenâ€¦ (N)
  */
 export function resolveIndexedCode(
   base: EuropeanIndustrialBaseCode,

@@ -3,7 +3,7 @@ import { enforcePdfIdentity } from "./enforcePdfIdentity";
 import type { DrawerPDFSection } from "../types";
 
 describe("consistency/pdf", () => {
-  it("normaliza nomes de peças e pieceRef de furos", () => {
+  it("normaliza nomes de peÃ§as e pieceRef de furos", () => {
     const pdf: DrawerPDFSection = {
       title: "T",
       measureRows: [],

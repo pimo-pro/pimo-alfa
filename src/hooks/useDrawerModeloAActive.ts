@@ -8,7 +8,7 @@ import {
   subscribeDrawerModeloAFlags,
 } from "../core/drawers/drawerSystemFlags";
 
-/** @returns true se o Sistema Atual (Modelo A) está ativo. */
+/** @returns true se o Sistema Atual (Modelo A) estÃ¡ ativo. */
 export function useDrawerModeloAActive(): boolean {
   const [active, setActive] = useState(() => isDrawerModeloAActive());
 

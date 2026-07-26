@@ -5,7 +5,7 @@ import { buildMultiPagePdf } from "./pdfMultiPageBuilder";
 import { buildEuropeanIndustrialDocs } from "./index";
 
 describe("docs/pdfMultiPageBuilder", () => {
-  it("gera 4 páginas lógicas sem substituir pdf existente", () => {
+  it("gera 4 pÃ¡ginas lÃ³gicas sem substituir pdf existente", () => {
     vi.spyOn(flags, "isDrawerModeloAActive").mockReturnValue(false);
     const box = {
       id: "cx",

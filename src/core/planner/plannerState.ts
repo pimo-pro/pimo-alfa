@@ -1,5 +1,5 @@
 /**
- * plannerState.ts — Estado do Kitchen Planner (modo cliente).
+ * plannerState.ts â€” Estado do Kitchen Planner (modo cliente).
  */
 
 import { buildKitchenLibrary, type KitchenLibrary } from "../kitchen";
@@ -62,7 +62,7 @@ export function createPlannerState(options?: {
 
 function refreshPlannerDerived(state: PlannerState): PlannerState {
   const collisions = detectCollisions(state.modules);
-  const overlay = undefined; // overlay por módulo sob demanda na UI
+  const overlay = undefined; // overlay por mÃ³dulo sob demanda na UI
   const measurements = buildPlannerMeasurements(state.modules, state.grid.config, overlay);
   const pricing = buildPlannerPricing(state.modules, state.library.pricing);
   const report = buildPlannerReport({
@@ -86,7 +86,7 @@ export function plannerAddModule(
       ...state,
       report: buildPlannerReport({
         moduleCount: state.modules.length,
-        errors: [`Módulo desconhecido: ${moduleId}`],
+        errors: [`MÃ³dulo desconhecido: ${moduleId}`],
         industrialIntegrityOk: true,
       }),
     };

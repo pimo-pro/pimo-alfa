@@ -1,5 +1,5 @@
 /**
- * warnings.ts — Codigos e factories de avisos industriais (Modelo B).
+ * warnings.ts â€” Codigos e factories de avisos industriais (Modelo B).
  */
 
 export type EuropeanDrawerValidationWarning = {

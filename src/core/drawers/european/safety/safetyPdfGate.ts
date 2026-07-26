@@ -1,5 +1,5 @@
 /**
- * safetyPdfGate.ts ù Bloqueia secùùes PDF incompletas / sem identidade.
+ * safetyPdfGate.ts ‚Äî Bloqueia sec√ß√µes PDF incompletas / sem identidade.
  */
 
 import type { DrawerPDFSection } from "../types";

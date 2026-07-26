@@ -1,5 +1,5 @@
 /**
- * technicalViews.ts — Vistas industriais 2D (estrutura JSON).
+ * technicalViews.ts â€” Vistas industriais 2D (estrutura JSON).
  */
 
 import type { EuropeanDrawerResult } from "../types";
@@ -50,7 +50,7 @@ export function buildFrontView(result: EuropeanDrawerResult): EuropeanTechnicalV
       layer: "DIMENSIONS",
       position: { x: 4, y: h + 8 },
       height: 10,
-      value: "gav_fren — vista frontal",
+      value: "gav_fren â€” vista frontal",
       pieceCode: "gav_fren",
     },
   ];
@@ -102,7 +102,7 @@ export function buildSideView(
       layer: "DIMENSIONS",
       position: { x: 4, y: h + 8 },
       height: 10,
-      value: `${code} — vista lateral ${side === "right" ? "direita" : "esquerda"}`,
+      value: `${code} â€” vista lateral ${side === "right" ? "direita" : "esquerda"}`,
       pieceCode: code,
     },
   ];
@@ -185,7 +185,7 @@ export function buildExplodedView(result: EuropeanDrawerResult): EuropeanTechnic
   const g = result.geometry;
   return {
     id: "exploded",
-    title: "Vista explode (layout peças)",
+    title: "Vista explode (layout peÃ§as)",
     widthMm: contours.reduce((acc, c) => Math.max(acc, c.origin.x + c.widthMm), 0),
     heightMm: Math.max(...contours.map((c) => c.heightMm), g.usefulHeightMm),
     industrialCodes: codesFromResult(result),

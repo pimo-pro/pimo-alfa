@@ -1,5 +1,5 @@
 /**
- * safetyViewerGate.ts — Bloqueia dados de viewer inválidos.
+ * safetyViewerGate.ts â€” Bloqueia dados de viewer invÃ¡lidos.
  */
 
 import type { EuropeanDrawerViewerData } from "../types";
@@ -7,7 +7,7 @@ import { runSafetyGeometryGate } from "./safetyGeometryGate";
 import { finalizeGate, issue, type EuropeanSafetyGateResult } from "./safetyReport";
 
 /**
- * Gate de viewer: posições NaN, dims negativas, escala inválida, fora do espaço.
+ * Gate de viewer: posiÃ§Ãµes NaN, dims negativas, escala invÃ¡lida, fora do espaÃ§o.
  */
 export function runSafetyViewerGate(viewer: EuropeanDrawerViewerData): EuropeanSafetyGateResult {
   const t0 = performance.now();

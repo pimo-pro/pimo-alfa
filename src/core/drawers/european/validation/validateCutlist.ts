@@ -1,5 +1,5 @@
 /**
- * validateCutlist.ts — Cutlist Modelo B (nomes/códigos industriais).
+ * validateCutlist.ts â€” Cutlist Modelo B (nomes/cÃ³digos industriais).
  */
 
 import type { DrawerCutlistItem, DrawerEuropeanModel, DrawerGeometry } from "../types";
@@ -15,7 +15,7 @@ const REQUIRED_WOOD_TIPOS = [
 ] as const;
 
 /**
- * Valida peças de madeira/hardware do cutlist europeu.
+ * Valida peÃ§as de madeira/hardware do cutlist europeu.
  */
 export function validateCutlist(
   _model: DrawerEuropeanModel,
@@ -29,7 +29,7 @@ export function validateCutlist(
   for (const tipo of REQUIRED_WOOD_TIPOS) {
     if (!woodTipos.has(tipo)) {
       result.errors.push(
-        euError(EU_ERROR_CODES.CUT_WOOD, `Cutlist sem peça obrigatória "${tipo}".`, `cutlist.${tipo}`)
+        euError(EU_ERROR_CODES.CUT_WOOD, `Cutlist sem peÃ§a obrigatÃ©ria "${tipo}".`, `cutlist.${tipo}`)
       );
     }
   }
@@ -37,24 +37,24 @@ export function validateCutlist(
   for (const item of cutlist) {
     if (item.quantidade < 1) {
       result.errors.push(
-        euError(EU_ERROR_CODES.CUT_QTY, `Quantidade inválida em "${item.nome}".`, `cutlist.${item.id}`)
+        euError(EU_ERROR_CODES.CUT_QTY, `Quantidade invÃ¡lida em "${item.nome}".`, `cutlist.${item.id}`)
       );
     }
     if (item.kind !== "optional" && (!item.material || !String(item.material).trim())) {
       result.errors.push(
-        euError(EU_ERROR_CODES.CUT_MATERIAL, `Material inválido em "${item.nome}".`, `cutlist.${item.id}`)
+        euError(EU_ERROR_CODES.CUT_MATERIAL, `Material invÃ¡lido em "${item.nome}".`, `cutlist.${item.id}`)
       );
     }
 
     if (item.kind === "wood") {
       if (item.larguraMm <= 0 || item.alturaMm <= 0 || item.espessuraMm <= 0) {
         result.errors.push(
-          euError(EU_ERROR_CODES.CUT_DIM, `Dimensão <= 0 em peça madeira "${item.nome}".`, `cutlist.${item.id}`)
+          euError(EU_ERROR_CODES.CUT_DIM, `DimensÃ³o <= 0 em peÃ§a madeira "${item.nome}".`, `cutlist.${item.id}`)
         );
       }
       if (!item.codigo) {
         result.errors.push(
-          euError(EU_ERROR_CODES.CUT_WOOD, `Código industrial em falta em "${item.nome}".`, `cutlist.${item.id}`)
+          euError(EU_ERROR_CODES.CUT_WOOD, `CÃ³digo industrial em falta em "${item.nome}".`, `cutlist.${item.id}`)
         );
       }
       if (item.tipo === "gaveta_frente") {

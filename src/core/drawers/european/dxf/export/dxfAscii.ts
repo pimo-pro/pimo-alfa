@@ -1,5 +1,5 @@
 /**
- * dxfAscii.ts — Serialização ASCII DXF (sem Node FS; seguro para browser).
+ * dxfAscii.ts â€” SerializaÃ§Ã£o ASCII DXF (sem Node FS; seguro para browser).
  */
 
 import type { DxfEntity } from "../dxfTypes";

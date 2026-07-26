@@ -1,5 +1,5 @@
 /**
- * summaryReporter.ts — Resumo industrial do stress test Modelo B.
+ * summaryReporter.ts â€” Resumo industrial do stress test Modelo B.
  */
 
 import type { EuropeanQaScenarioResult, EuropeanQaSummary } from "../types";
@@ -82,8 +82,8 @@ export function buildQaSummary(results: EuropeanQaScenarioResult[]): EuropeanQaS
 export function formatQaSummaryText(summary: EuropeanQaSummary): string {
   const lines = [
     `Total: ${summary.total} (ran=${summary.ran}, skipped=${summary.skipped})`,
-    `Válidos: ${summary.valid} (${summary.pctValid}%)`,
-    `Inválidos: ${summary.invalid} (${summary.pctInvalid}%)`,
+    `VÃ¡lidos: ${summary.valid} (${summary.pctValid}%)`,
+    `InvÃ¡lidos: ${summary.invalid} (${summary.pctInvalid}%)`,
     `AutoFix: ${summary.autoFixed} (${summary.pctAutoFixed}%)`,
     "Top erros:",
     ...summary.topErrors.map((e) => `  - [${e.count}] ${e.message}`),

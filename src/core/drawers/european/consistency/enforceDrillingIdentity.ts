@@ -1,5 +1,5 @@
 /**
- * enforceDrillingIdentity.ts — pieceRef de furos alinhado ao SSOT.
+ * enforceDrillingIdentity.ts â€” pieceRef de furos alinhado ao SSOT.
  */
 
 import type { EuropeanDrawerHole } from "../types";
@@ -7,8 +7,8 @@ import { enforceNaming } from "./enforceNaming";
 import { resolveBaseCode } from "./namingMap";
 
 /**
- * Corrige pieceRef de peças de gaveta para códigos industriais.
- * module_lat_* e refs de hardware/módulo preservados.
+ * Corrige pieceRef de peÃ§as de gaveta para cÃ³digos industriais.
+ * module_lat_* e refs de hardware/mÃ³dulo preservados.
  */
 export function enforceDrillingIdentity(
   holes: EuropeanDrawerHole[],

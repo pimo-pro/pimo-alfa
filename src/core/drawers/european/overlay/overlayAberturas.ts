@@ -1,5 +1,5 @@
 /**
- * overlayAberturas.ts — Aberturas industriais (documentais).
+ * overlayAberturas.ts â€” Aberturas industriais (documentais).
  */
 
 import type { EuropeanDrawerBoxInput, EuropeanDrawerResult } from "../types";
@@ -13,7 +13,7 @@ export type EuropeanOverlayAbertura = {
   id: string;
   label: string;
   valueMm: number;
-  /** Vista técnica associada. */
+  /** Vista tÃ©cnica associada. */
   technicalView: "front" | "side_right" | "side_left" | "top" | "exploded";
   axis: "X" | "Y" | "Z";
 };
@@ -30,7 +30,7 @@ const STACK_GAP_MM = 6;
 const BASE_OFFSET_MM = 41;
 
 /**
- * Aberturas industriais derivadas da geometry/box (sem alterar peças).
+ * Aberturas industriais derivadas da geometry/box (sem alterar peÃ§as).
  */
 export function buildOverlayAberturas(
   result: EuropeanDrawerResult,

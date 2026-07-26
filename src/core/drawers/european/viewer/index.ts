@@ -1,5 +1,5 @@
 /**
- * viewer/ — Dados de renderização do Sistema Europeu (Modelo B).
+ * viewer/ â€” Dados de renderizaÃ§Ã£o do Sistema Europeu (Modelo B).
  */
 
 import type {

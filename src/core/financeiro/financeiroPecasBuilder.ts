@@ -1,5 +1,5 @@
 /**
- * P3.7/P3.8 ù Builder SSOT ù Financeiro pecas.
+ * P3.7/P3.8 ‚Äî Builder SSOT ‚Äî Financeiro pecas.
  * Linhas por peca: cutlist + indicadores + breakdown de preco.
  * Nao altera CNC/TCN, IVA, ADM, montagem nem portes.
  */
@@ -44,7 +44,7 @@ import { computeOperacoesIndustriaisAvancadas } from "./computeOperacoesIndustri
 import { computeChapasReal } from "../industrial/computeChapasReal";
 import { FINANCEIRO_PIECE_MATERIAL_KEYS } from "./financeiroUnificadoTypes";
 
-/** @deprecated P3.9 F3a ù tarifas passam a Orùamentos (defaults 0). Mantido para compat. */
+/** @deprecated P3.9 F3a ‚Äî tarifas passam a Or√ßamentos (defaults 0). Mantido para compat. */
 export const FINANCEIRO_PECAS_CNC_EUR_POR_UNIDADE = 0;
 export const FINANCEIRO_PECAS_DRILL_EUR_POR_FURO = 0;
 
@@ -73,17 +73,17 @@ export type FinanceiroPecaRow = {
   precoFerragens: number;
   /** CNC + Drill (+ especiais futuros). */
   precoOperacoes: number;
-  /** P3.9 F3b ù quota desperdicio (rateio area). */
+  /** P3.9 F3b ‚Äî quota desperdicio (rateio area). */
   precoDesperdicio: number;
-  /** P3.9 F3b ù quota serragem (rateio area). */
+  /** P3.9 F3b ‚Äî quota serragem (rateio area). */
   precoSerragem: number;
-  /** P3.9 F3c ù quota chapas reais (0 se por_peca). */
+  /** P3.9 F3c ‚Äî quota chapas reais (0 se por_peca). */
   precoChapasShare: number;
-  /** P3.9 F3c ù quota mao de obra. */
+  /** P3.9 F3c ‚Äî quota mao de obra. */
   precoMaoDeObra: number;
-  /** P3.9 F3c ù quota logistica (peso/area). */
+  /** P3.9 F3c ‚Äî quota logistica (peso/area). */
   precoLogistica: number;
-  /** P3.9 F4 ù ops industriais avanùadas (foros/grupos/rasgo/corte/quadrilha). */
+  /** P3.9 F4 ‚Äî ops industriais avan√ßadas (foros/grupos/rasgo/corte/quadrilha). */
   precoOperacoesAvancadas: number;
   precoForos: number;
   precoGrupos: number;

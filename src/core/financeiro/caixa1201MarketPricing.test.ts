@@ -11,7 +11,7 @@ import type { DoorLayerItem as DoorLayer } from "../../models/BoxLayers";
  * Proxy CAIXA 1201: modulo 600x720x560, porta dupla, 1 prateleira, sem gavetas.
  * Alvo mercado: paineis ~66, orla ~3, ferragens ~10-12, CNC ~12-18, total 180-260.
  */
-describe("CAIXA 1201 ù precos de mercado", () => {
+describe("CAIXA 1201 ‚Äî precos de mercado", () => {
   it("costa 10mm usa 20 EUR/m2; 19mm usa 31 EUR/m2", () => {
     expect(getPrecoPorMaterial("mdf_branco", 19)).toBe(31);
     expect(getPrecoPorMaterial("mdf_branco", 10)).toBe(20);
@@ -110,15 +110,15 @@ describe("CAIXA 1201 ù precos de mercado", () => {
     expect(c.orla, diag).toBeLessThan(6);
     expect(c.ferragens, diag).toBeGreaterThan(7);
     expect(c.ferragens, diag).toBeLessThan(15);
-    // CNC/Drill a 50% das tarifas anteriores (~2ñ12)
+    // CNC/Drill a 50% das tarifas anteriores (~2‚Äì12)
     expect(c.operacoes, diag).toBeGreaterThan(2);
     expect(c.operacoes, diag).toBeLessThan(12);
     expect(c.operacoesAvancadas ?? 0, diag).toBeLessThan(3);
-    // ADM 5% (n„o 10%)
+    // ADM 5% (n√£o 10%)
     expect(c.adm, diag).toBeGreaterThan(0);
     expect(c.adm / Math.max(1e-6, snap.subtotal), diag).toBeCloseTo(0.05, 2);
 
-    // Materiais+servicos tipicos: 100ù280 (UI com IVA ~180ù260)
+    // Materiais+servicos tipicos: 100‚Äì280 (UI com IVA ~180‚Äì260)
     expect(total, diag).toBeGreaterThan(90);
     expect(total, diag).toBeLessThan(280);
   });

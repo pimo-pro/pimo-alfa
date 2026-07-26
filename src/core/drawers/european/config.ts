@@ -1,8 +1,8 @@
 /**
- * european/config.ts ó Binding de configuraÁ„o do Modelo B para UI/factories.
+ * european/config.ts ‚Äî Binding de configura√ß√£o do Modelo B para UI/factories.
  *
- * Tipos e cat·logo (folhas). Aliases `drawerEuropeanConfig` / `drawerEuropeanGenerate`
- * est„o em `./index` e em `../drawerFactory` para evitar ciclos de import.
+ * Tipos e cat√°logo (folhas). Aliases `drawerEuropeanConfig` / `drawerEuropeanGenerate`
+ * est√£o em `./index` e em `../drawerFactory` para evitar ciclos de import.
  */
 
 export {

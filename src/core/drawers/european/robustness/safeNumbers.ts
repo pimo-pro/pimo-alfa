@@ -1,6 +1,6 @@
 /**
- * safeNumbers.ts ó ProteÁ„o numÈrica transparente (Modelo B).
- * N„o altera fÛrmulas; apenas impede NaN/Infinity/negativos na emiss„o.
+ * safeNumbers.ts ‚Äî Prote√ß√£o num√©rica transparente (Modelo B).
+ * N√£o altera f√≥rmulas; apenas impede NaN/Infinity/negativos na emiss√≥o.
  */
 
 export type RobustDebugEntry = {
@@ -22,7 +22,7 @@ function isDebugEnabled(): boolean {
   }
 }
 
-/** Registo interno (debug); nunca lanÁa. */
+/** Registo interno (debug); nunca lan√ßa. */
 export function robustDebug(context: string, message: string, value?: unknown): void {
   const entry: RobustDebugEntry = { at: Date.now(), context, message, value };
   DEBUG_RING.push(entry);
@@ -41,7 +41,7 @@ export function clearRobustDebugLog(): void {
   DEBUG_RING.length = 0;
 }
 
-/** Garante n˙mero finito; fallback default (0). */
+/** Garante n√∫mero finito; fallback default (0). */
 export function ensureFiniteNumber(
   value: unknown,
   context: string,
@@ -49,7 +49,7 @@ export function ensureFiniteNumber(
 ): number {
   const n = typeof value === "number" ? value : Number(value);
   if (Number.isFinite(n)) return n;
-  robustDebug(context, `valor n„o finito ? ${fallback}`, value);
+  robustDebug(context, `valor n√£o finito ? ${fallback}`, value);
   return fallback;
 }
 
@@ -62,8 +62,8 @@ export function ensureNonNegative(value: unknown, context: string): number {
 }
 
 /**
- * Garante dimens„o crÌtica > 0.
- * Se inv·lido ? fallback (default 1 mm) para n„o quebrar pipeline.
+ * Garante dimens√≥o cr√≠tica > 0.
+ * Se inv√°lido ? fallback (default 1 mm) para n√£o quebrar pipeline.
  */
 export function ensureDimensionPositive(
   value: unknown,
@@ -72,14 +72,14 @@ export function ensureDimensionPositive(
 ): number {
   const n = ensureFiniteNumber(value, context, fallback);
   if (n > 0) return n;
-  robustDebug(context, `dimens„o ? 0 ? ${fallback}`, value);
+  robustDebug(context, `dimens√≥o ? 0 ? ${fallback}`, value);
   return fallback;
 }
 
 /** Garante array (nunca null/undefined). */
 export function ensureArray<T>(value: T[] | null | undefined, context?: string): T[] {
   if (Array.isArray(value)) return value;
-  if (context) robustDebug(context, "valor n„o-array ? []", value);
+  if (context) robustDebug(context, "valor n√£o-array ? []", value);
   return [];
 }
 

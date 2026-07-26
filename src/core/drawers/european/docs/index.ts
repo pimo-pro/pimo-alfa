@@ -1,6 +1,6 @@
 /**
- * european/docs — Full Industrial Documentation Generator (Modelo B, Fase 11).
- * Camada somente-leitura por cima do resultado industrial — não altera pipeline.
+ * european/docs â€” Full Industrial Documentation Generator (Modelo B, Fase 11).
+ * Camada somente-leitura por cima do resultado industrial â€” nÃ£o altera pipeline.
  */
 
 export {
@@ -55,7 +55,7 @@ export type EuropeanIndustrialDocs = {
 };
 
 /**
- * Agrega metadata + ficha + PDF multi-página + relatório (somente leitura).
+ * Agrega metadata + ficha + PDF multi-pÃ¡gina + relatÃ©rio (somente leitura).
  */
 export function buildEuropeanIndustrialDocs(
   result: EuropeanDrawerResult,
@@ -71,15 +71,15 @@ export function buildEuropeanIndustrialDocs(
 
     const woodPieces = metadata.pieces.filter((p) => p.funcao !== "corpo" || p.codigo);
     for (const p of woodPieces) {
-      if (!p.codigo || p.codigo === "—") {
-        warnings.push(`Peça sem código industrial: ${p.nome}`);
+      if (!p.codigo || p.codigo === "â€”") {
+        warnings.push(`PeÃ§a sem cÃ³digo industrial: ${p.nome}`);
       }
-      if (!p.material || p.material === "—") {
-        warnings.push(`Peça sem material: ${p.nome || p.codigo}`);
+      if (!p.material || p.material === "â€”") {
+        warnings.push(`PeÃ§a sem material: ${p.nome || p.codigo}`);
       }
     }
     if (!result.valid) {
-      warnings.push("Resultado industrial marcado como invalid — documentação gerada a partir do estado disponível.");
+      warnings.push("Resultado industrial marcado como invalid â€” documentaÃ§Ã£o gerada a partir do estado disponÃ­vel.");
     }
 
     const report = buildDocsReport({
@@ -106,16 +106,16 @@ export function buildEuropeanIndustrialDocs(
     return {
       metadata: emptyMeta,
       fichaTecnica: {
-        title: "Ficha Técnica — erro",
+        title: "Ficha TÃ©cnica â€” erro",
         generatedAt: new Date().toISOString(),
         metadata: emptyMeta,
         sections: [],
       },
       multiPagePdf: {
-        title: "PDF docs — erro",
+        title: "PDF docs â€” erro",
         kind: "european-docs-multipage",
         pages: [],
-        existingPdfTitle: result.pdf?.title ?? "—",
+        existingPdfTitle: result.pdf?.title ?? "â€¦",
         existingPdfPieceRows: 0,
         existingPdfHoleRows: 0,
       },

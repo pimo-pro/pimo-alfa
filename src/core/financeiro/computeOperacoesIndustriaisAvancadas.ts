@@ -1,6 +1,6 @@
 /**
- * P3.9 F4 ù SSOT operaùùes industriais avanùadas (tarifas tipadas).
- * Lù cutlist drillHoles / metadata; nùo altera CNC/TCN/cutlist/drill/PDFs.
+ * P3.9 F4 ‚Äî SSOT opera√ß√µes industriais avan√ßadas (tarifas tipadas).
+ * L√™ cutlist drillHoles / metadata; n√£o altera CNC/TCN/cutlist/drill/PDFs.
  */
 
 import type { CutListItemComPreco, PanelDrillHole } from "../types";
@@ -11,7 +11,7 @@ import {
   normalizeOperacoesAvancadasSettings,
 } from "../orcamentos/orcamentosSettings";
 
-/** Mapeamentos documentais (IDs internos ? heurùstica cutlist). */
+/** Mapeamentos documentais (IDs internos ? heur√≠stica cutlist). */
 export const OPS_ADV_MAP = {
   foro5mm: "furo_5mm",
   cavilha10x13: "cavilha_10x13_frente",
@@ -79,7 +79,7 @@ function resolveTarifas(
     ...fromSettings,
     ...override,
   });
-  // Foros/cavilhas/corte manual ja cobrados em CNC/Drill ó forcar 0
+  // Foros/cavilhas/corte manual ja cobrados em CNC/Drill ‚Äî forcar 0
   // (excepto override explicito em testes/caller).
   const o = override && typeof override === "object" ? override : null;
   return {
@@ -117,7 +117,7 @@ function classifyCavilha(
   const d = Number(h.diameter) || 0;
   const depth = Number(h.depth) || 0;
   if (!(approx(d, 10, 1.5) || d === 0)) {
-    // cavilha tipada sem diùmetro explùcito ù classifica sù por depth
+    // cavilha tipada sem di√¢metro expl√≠cito ‚Äî classifica s√≥ por depth
     if (approx(depth, 13, 3)) return "cavilha10x13";
     if (approx(depth, 30, 4)) return "cavilha10x30";
     return null;
@@ -168,7 +168,7 @@ function pricePiece(
 
   for (const h of holes) {
     if (isGroove(h)) {
-      // Rasgos sù em peùas de gaveta reais ù nùo inventar em laterais/portas.
+      // Rasgos s√≥ em pe√ßas de gaveta reais ‚Äî n√£o inventar em laterais/portas.
       const t = String(item.tipo ?? "").toLowerCase();
       if (t.includes("gav") || t.includes("gaveta") || t.includes("drawer")) {
         nRasgo += 1;
@@ -251,7 +251,7 @@ function pricePiece(
 }
 
 /**
- * Calcula custos tipados F4 a partir da cutlist e tarifas Orùamentos.
+ * Calcula custos tipados F4 a partir da cutlist e tarifas Or√ßamentos.
  */
 export function computeOperacoesIndustriaisAvancadas(
   cutlist: CutListItemComPreco[],

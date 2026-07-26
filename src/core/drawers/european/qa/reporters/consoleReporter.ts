@@ -1,5 +1,5 @@
 /**
- * consoleReporter.ts — Log legível por cenário.
+ * consoleReporter.ts â€” Log legÃ­vel por cenÃ¡rio.
  */
 
 import type { EuropeanQaScenarioResult } from "../types";

@@ -1,6 +1,6 @@
 /**
- * src/core/kitchen — Industrial Kitchen Library (Fase 15 / PIMO.PRO-V5 Fase 10).
- * Camada documental por cima do Modelo B — não altera industrial/** nem Modelo A.
+ * src/core/kitchen â€” Industrial Kitchen Library (Fase 15 / PIMO.PRO-V5 Fase 10).
+ * Camada documental por cima do Modelo B â€” nÃ£o altera industrial/** nem Modelo A.
  */
 
 export { buildKitchenLibrary, KITCHEN_LIBRARY_VERSION } from "./libraryBuilder";

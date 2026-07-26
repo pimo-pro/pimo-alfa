@@ -1,5 +1,5 @@
 /**
- * finalDocumentation.ts — Documentação completa do release PIMO.PRO-V5.
+ * finalDocumentation.ts â€” DocumentaÃ§Ã£o completa do release PIMO.PRO-V5.
  */
 
 import type { EuropeanDrawerResult } from "../drawers/european/types";
@@ -22,17 +22,17 @@ export type FinalDocumentationBundle = {
 
 const PHASE_NOTES: Array<{ phase: string; title: string; summary: string }> = [
   { phase: "1-9", title: "Modelo B base", summary: "Sistemas Blum/Hettich/Grass, geometry, drilling, cutlist, PDF, viewer." },
-  { phase: "10", title: "Safety Gates", summary: "Validação industrial pós-pipeline." },
-  { phase: "11", title: "Docs industriais", summary: "Ficha técnica e PDF multipágina." },
-  { phase: "12", title: "DXF + technical", summary: "DXF em memória e vistas técnicas." },
-  { phase: "13", title: "MC Overlay", summary: "Medidas, aberturas, gaps, remates, rodapé." },
-  { phase: "14", title: "Release Notes B", summary: "Notas automáticas do Modelo B." },
-  { phase: "15", title: "Kitchen Library", summary: "Catálogo de módulos, frentes, portas, remates." },
-  { phase: "16", title: "DXF físico", summary: "Exportação .dxf por peça." },
+  { phase: "10", title: "Safety Gates", summary: "ValidaÃ§Ã£o industrial pÃ³s-pipeline." },
+  { phase: "11", title: "Docs industriais", summary: "Ficha tÃ©cnica e PDF multipÃ¡gina." },
+  { phase: "12", title: "DXF + technical", summary: "DXF em memÃ³ria e vistas tÃ©cnicas." },
+  { phase: "13", title: "MC Overlay", summary: "Medidas, aberturas, gaps, remates, rodapÃ©." },
+  { phase: "14", title: "Release Notes B", summary: "Notas automÃ¡ticas do Modelo B." },
+  { phase: "15", title: "Kitchen Library", summary: "CatÃ¡logo de mÃ³dulos, frentes, portas, remates." },
+  { phase: "16", title: "DXF fÃ­sico", summary: "ExportaÃ§Ã£o .dxf por peÃ§a." },
   { phase: "17", title: "CNC Post-Processor", summary: "cnc/xml/mpr/cix/bpp a partir de geometry+holes+dxf." },
-  { phase: "18", title: "Pricing Engine", summary: "Custo industrial e preço final." },
+  { phase: "18", title: "Pricing Engine", summary: "Custo industrial e preÃ§o final." },
   { phase: "19", title: "Kitchen Planner", summary: "Configurador cliente sobre a library." },
-  { phase: "20", title: "Release Final", summary: "Consolidação PIMO.PRO-V5.0." },
+  { phase: "20", title: "Release Final", summary: "ConsolidaÃ§Ã£o PIMO.PRO-V5.0." },
 ];
 
 export function buildFinalDocumentation(input: {
@@ -45,20 +45,20 @@ export function buildFinalDocumentation(input: {
   const productAnnouncement = getModeloBProductAnnouncement();
 
   const technical = [
-    `# Documentação técnica — ${PIMO_PRO_V5_VERSION}`,
+    `# DocumentaÃ§Ã£o tÃ©cnica â€” ${PIMO_PRO_V5_VERSION}`,
     ``,
     `- Vistas: ${(result?.technical?.viewIds ?? library?.drawers.modeloB.viewIds ?? []).join(", ") || "n/d"}`,
     `- DXF: ${result?.dxf?.report?.status ?? library?.drawers.modeloB.dxfStatus ?? "n/d"}`,
     `- Overlay: ${result?.overlay?.report?.status ?? "n/d"}`,
-    `- CNC: pipeline Fase 17 (CUT/DRILL) disponível quando geometry+holes+dxf OK`,
+    `- CNC: pipeline Fase 17 (CUT/DRILL) disponÃ­vel quando geometry+holes+dxf OK`,
     `- Medidas amostra: runner=${result?.config.depthMm ?? library?.drawers.modeloB.summary.runnerMm ?? "n/d"} mm`,
   ].join("\n");
 
   const industrial = [
-    `# Documentação industrial — ${PIMO_PRO_V5_VERSION}`,
+    `# DocumentaÃ§Ã£o industrial â€” ${PIMO_PRO_V5_VERSION}`,
     ``,
     `- Sistema: ${result?.systemId ?? library?.drawers.modeloB.systemId ?? "n/d"}`,
-    `- Cutlist peças: ${result?.cutlist?.length ?? 0}`,
+    `- Cutlist peÃ§as: ${result?.cutlist?.length ?? 0}`,
     `- Furos: ${result?.holes?.length ?? library?.drawers.modeloB.summary.holes ?? 0}`,
     `- Safety: ${result?.safetyReport?.status ?? "n/d"}`,
     `- Docs: ${result?.docs?.report?.status ?? library?.drawers.modeloB.docsStatus ?? "n/d"}`,
@@ -66,37 +66,37 @@ export function buildFinalDocumentation(input: {
   ].join("\n");
 
   const commercial = [
-    `# Documentação comercial — ${PIMO_PRO_V5_VERSION}`,
+    `# DocumentaÃ§Ã£o comercial â€” ${PIMO_PRO_V5_VERSION}`,
     ``,
     `- Moeda: ${result?.pricing?.currency ?? library?.pricing?.currency ?? "EUR"}`,
     `- Custo industrial: ${result?.pricing?.totals.costIndustrial ?? library?.pricing?.totals.costIndustrial ?? "n/d"}`,
-    `- Preço final: ${result?.pricing?.totals.priceFinal ?? library?.pricing?.totals.priceFinal ?? "n/d"}`,
+    `- PreÃ§o final: ${result?.pricing?.totals.priceFinal ?? library?.pricing?.totals.priceFinal ?? "n/d"}`,
     `- Margem: ${Math.round((result?.pricing?.margin.marginPercent ?? library?.pricing?.margin.marginPercent ?? 0) * 100)}%`,
-    `- Módulos library: ${library?.modules.all.length ?? 0}`,
-    `- Preço/módulo: ${library?.pricing?.totals.pricePerModule ?? result?.pricing?.totals.pricePerModule ?? "n/d"}`,
+    `- MÃ³dulos library: ${library?.modules.all.length ?? 0}`,
+    `- PreÃ§o/mÃ³dulo: ${library?.pricing?.totals.pricePerModule ?? result?.pricing?.totals.pricePerModule ?? "n/d"}`,
   ].join("\n");
 
   const planner = [
-    `# Documentação planner — ${PIMO_PRO_V5_VERSION}`,
+    `# DocumentaÃ§Ã£o planner â€” ${PIMO_PRO_V5_VERSION}`,
     ``,
     plannerExport
       ? [
-          `- Título: ${plannerExport.summary.title}`,
-          `- Módulos: ${plannerExport.summary.moduleCount}`,
+          `- TÃ­tulo: ${plannerExport.summary.title}`,
+          `- MÃ³dulos: ${plannerExport.summary.moduleCount}`,
           `- Gavetas: ${plannerExport.summary.drawerCount}`,
-          `- Preço plano: ${plannerExport.summary.priceFinal} ${plannerExport.summary.currency}`,
+          `- PreÃ§o plano: ${plannerExport.summary.priceFinal} ${plannerExport.summary.currency}`,
           `- Vistas: ${plannerExport.technicalViews.join(", ")}`,
         ].join("\n")
-      : `- Planner disponível em /kitchen-planner (sem export nesta amostra).`,
+      : `- Planner disponÃ­vel em /kitchen-planner (sem export nesta amostra).`,
   ].join("\n");
 
   const releaseNotesPhases = [
-    `# Release Notes — fases 1–20 (${PIMO_PRO_V5_VERSION})`,
+    `# Release Notes â€” fases 1â€“20 (${PIMO_PRO_V5_VERSION})`,
     ``,
     `Hash: ${manifest.logicalHash}`,
     `Data: ${manifest.releasedAt}`,
     ``,
-    ...PHASE_NOTES.map((p) => `## Fase ${p.phase} — ${p.title}\n${p.summary}`),
+    ...PHASE_NOTES.map((p) => `## Fase ${p.phase} â€” ${p.title}\n${p.summary}`),
     ``,
     `## Componentes`,
     ...manifest.components.map((c) => `- [${c.status}] ${c.label} (fase ${c.phase})`),

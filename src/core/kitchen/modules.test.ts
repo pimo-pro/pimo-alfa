@@ -5,7 +5,7 @@ import { buildUpperModules } from "./modules/upperModules";
 import { buildCornerModules } from "./modules/cornerModules";
 
 describe("kitchen/modules", () => {
-  it("gera base 300–1200, altos, superiores e canto", () => {
+  it("gera base 300â€“1200, altos, superiores e canto", () => {
     const base = buildBaseModules();
     expect(base.every((m) => m.kind === "base")).toBe(true);
     expect(base.map((m) => m.widthMm)).toContain(300);

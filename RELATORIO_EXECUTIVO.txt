@@ -1,42 +1,42 @@
 ================================================================================
-RELATÓRIO TÉCNICO EXECUTIVO - PIMO v3
+RELAT�RIO T�CNICO EXECUTIVO - PIMO v3
 ================================================================================
 
 DATA: Fevereiro de 2026
-VERSÃO: 1.0
-STATUS: Análise Técnica Sênior Completa
+VERS�O: 1.0
+STATUS: An�lise T�cnica S�nior Completa
 
 ================================================================================
-1. INFORMAÇÕES DO PROJETO
+1. INFORMA��ES DO PROJETO
 ================================================================================
 
 Nomedo Projeto:       PIMO v3
 Tipo:                 React + TypeScript + Vite + Three.js
 Local:                c:\Users\Mofreita\pimo-v3
 Arquivos Analisados:  182 arquivos TypeScript/TSX
-Linhas de Código:     ~17.410 linhas
+Linhas de C�digo:     ~17.410 linhas
 Componentes React:    35+
-Módulos Core:         25+
+M�dulos Core:         25+
 Hooks Customizados:   12
 
 ================================================================================
 2. ESTADO GERAL DO PROJETO
 ================================================================================
 
-✅ ESTADO: BOAS CONDIÇÕES
+✅ ESTADO: BOAS CONDI��ES
 
 Aspectos Positivos:
-  ✓ Arquitetura bem organizada com clara separação de camadas
-  ✓ Código TypeScript tipado fortemente
-  ✓ Padrões React modernos implementados (hooks, context, custom hooks)
-  ✓ Documentação técnica detalhada nos .md
+  ✓ Arquitetura bem organizada com clara separa�o de camadas
+  ✓ C�digo TypeScript tipado fortemente
+  ✓ Padr�es React modernos implementados (hooks, context, custom hooks)
+  ✓ Documenta�o t�cnica detalhada nos .md
   ✓ Gerenciamento de estado coerente (Zustand + Context)
   ✓ Fluxo de dados bem definido
 
 Áreas de Melhoria:
-  ⚠ Dead code e arquivos não utilizados (2 críticos)
+  ⚠ Dead code e arquivos n�o utilizados (2 cr�ticos)
   ⚠ APIs incompletas (ViewerSync)
-  ⚠ Duplicação de nomes e funcionalidades
+  ⚠ Duplica�o de nomes e funcionalidades
   ⚠ Estilos inconsistentes (inline vs arquivos .ts vs CSS)
 
 ================================================================================
@@ -45,55 +45,55 @@ Aspectos Positivos:
 
 CRÍTICOS (Remover Imediatamente):
 
-  🔴 1. Documentation.tsx — ARQUIVO VAZIO (0 linhas)
-     Localização: src/pages/Documentation.tsx
-     Status: Não utilizado, duplica Documentacao.tsx
-     Ação: rm src/pages/Documentation.tsx
+  🔴 1. Documentation.tsx � ARQUIVO VAZIO (0 linhas)
+     Localiza�o: src/pages/Documentation.tsx
+     Status: N�o utilizado, duplica Documentacao.tsx
+     A�o: rm src/pages/Documentation.tsx
 
-  🔴 2. ProjectRoadmapStyles_new.ts — 1.092 LINHAS NÃO UTILIZADAS
-     Localização: src/pages/ProjectRoadmapStyles_new.ts
-     Status: Nunca é importado em lugar algum
-     Impacto: +1.000 linhas de código morto
-     Ação: rm src/pages/ProjectRoadmapStyles_new.ts
+  🔴 2. ProjectRoadmapStyles_new.ts � 1.092 LINHAS N�O UTILIZADAS
+     Localiza�o: src/pages/ProjectRoadmapStyles_new.ts
+     Status: Nunca � importado em lugar algum
+     Impacto: +1.000 linhas de c�digo morto
+     A�o: rm src/pages/ProjectRoadmapStyles_new.ts
 
 ESTRUTURAIS (8 Problemas):
 
-  🟡 3. useViewerSync — API INCOMPLETA
-     Problema: saveViewerSnapshot(), enable2DView(), renderScene() não funcionam
+  🟡 3. useViewerSync � API INCOMPLETA
+     Problema: saveViewerSnapshot(), enable2DView(), renderScene() n�o funcionam
      Arquivo: src/hooks/useViewerSync.ts
-     Ação: Implementar ou remover
+     A�o: Implementar ou remover
 
-  🟡 4. RoomBuilder.ts — STUB DESABILITADO
-     Problema: Sistema de sala removido, métodos retornam valores vazios
+  🟡 4. RoomBuilder.ts � STUB DESABILITADO
+     Problema: Sistema de sala removido, m�todos retornam valores vazios
      Arquivo: src/3d/room/RoomBuilder.ts
-     Ação: Deletar ou documentar como "em desenvolvimento"
+     A�o: Deletar ou documentar como "em desenvolvimento"
 
-  🟡 5. ThreeViewer — 6 PROPS NÃO UTILIZADAS
+  🟡 5. ThreeViewer � 6 PROPS N�O UTILIZADAS
      Problema: cubeCount, cubeSize, animationEnabled, materialId, showFloor, colorize
      Arquivo: src/components/ThreeViewer.tsx
-     Ação: Remover props não utilizadas
+     A�o: Remover props n�o utilizadas
 
-  🟡 6. Duplicação de Nomes
+  🟡 6. Duplica�o de Nomes
      Problema: updateWorkspacePosition vs updateWorkspaceBoxPosition (aliases)
      Arquivo: src/context/ProjectProvider.tsx
-     Ação: Remover um dos aliases
+     A�o: Remover um dos aliases
 
   🟡 7. Nomes de Hooks Semelhantes
      Problema: useMaterial vs useMaterials, useCadModels vs useCadModelsSync
-     Ação: Documentar diferenças
+     A�o: Documentar diferen�as
 
-  🟡 8. Referência Desatualizada
-     Problema: Docs mencionam PimoViewerClean.ts que não existe
+  🟡 8. Refer�ncia Desatualizada
+     Problema: Docs mencionam PimoViewerClean.ts que n�o existe
      Arquivo: docs/auditoria-tecnica.md
-     Ação: Remover referências
+     A�o: Remover refer�ncias
 
-  🟡 9. Código de Desenvolvimento em pages/
-     Problema: DevPimoTest.tsx e DevActionsTest.tsx com console.log e lógica teste
-     Ação: Mover para src/__dev__/
+  🟡 9. C�digo de Desenvolvimento em pages/
+     Problema: DevPimoTest.tsx e DevActionsTest.tsx com console.log e l�gica teste
+     A�o: Mover para src/__dev__/
 
   🟡 10. Estilos Inconsistentes
      Problema: Mistura inline, arquivos .ts e CSS classes
-     Ação: Padronizar estratégia
+     A�o: Padronizar estrat�gia
 
 ================================================================================
 4. ARQUIVOS PARA REMOVER
@@ -103,123 +103,123 @@ PRIORIDADE 1 (Remover Hoje):
   ❌ src/pages/Documentation.tsx             (0 bytes, vazio)
   ❌ src/pages/ProjectRoadmapStyles_new.ts   (1.092 linhas)
 
-PRIORIDADE 2 (Próximas 2 semanas):
+PRIORIDADE 2 (Pr�ximas 2 semanas):
   ⚠️  src/3d/room/RoomBuilder.ts             (50 linhas, stub)
   ⚠️  src/pages/DevPimoTest.tsx              (50 linhas, dev)
   ⚠️  src/pages/DevActionsTest.tsx           (30 linhas, dev)
 
-TOTAL A REMOVER: ~1.258 linhas (~7% do código total)
+TOTAL A REMOVER: ~1.258 linhas (~7% do c�digo total)
 
 ================================================================================
-5. CÓDIGO MORTO IDENTIFICADO
+5. C�DIGO MORTO IDENTIFICADO
 ================================================================================
 
-Funções Nunca Chamadas:
+Fun�es Nunca Chamadas:
   • RoomBuilder.addDoorByIndex()
   • RoomBuilder.addWindow()
   • RoomBuilder.updateElementConfig()
   • useViewerSync.extractStateFromViewer()
   • useViewerSync.applyStateToViewer()
 
-Props Não Utilizadas:
+Props N�o Utilizadas:
   • ThreeViewer: 6 props (cubeCount, cubeSize, animationEnabled,materialId,
     showFloor, colorize)
 
-Imports Não Utilizados:
+Imports N�o Utilizados:
   ✅ NENHUM ENCONTRADO (Projeto bem mantido)
 
-Dependências Não Utilizadas:
+Depend�ncias N�o Utilizadas:
   ✅ NENHUMA ENCONTRADA (package.json bem limpo)
 
 ================================================================================
-6. PLANO DE AÇÃO
+6. PLANO DE A��O
 ================================================================================
 
-IMEDIATO (Próximas 24 horas):
+IMEDIATO (Pr�ximas 24 horas):
   ✔️ Remover src/pages/Documentation.tsx
   ✔️ Remover src/pages/ProjectRoadmapStyles_new.ts
-  ✔️ Atualizar docs (remover referências a PimoViewerClean)
+  ✔️ Atualizar docs (remover refer�ncias a PimoViewerClean)
   Tempo Estimado: 30 minutos
 
-CURTO PRAZO (Próximas 2 semanas):
+CURTO PRAZO (Pr�ximas 2 semanas):
   ✔️ Unificar updateWorkspacePosition / updateWorkspaceBoxPosition
   ✔️ Implementar ou remover useViewerSync APIs completas
-  ✔️ Remover props não utilizadas em ThreeViewer
+  ✔️ Remover props n�o utilizadas em ThreeViewer
   ✔️ Decidir sobre RoomBuilder (deletar ou arquivar)
   Tempo Estimado: 4 horas
 
-MÉDIO PRAZO (Próximo mês):
-  ✔️ Separar código dev em src/__dev__/
-  ✔️ Padronizar estratégia de estilos
-  ✔️ Consolidar páginas de documentação
+M�DIO PRAZO (Pr�ximo m�s):
+  ✔️ Separar c�digo dev em src/__dev__/
+  ✔️ Padronizar estrat�gia de estilos
+  ✔️ Consolidar p�ginas de documenta�o
   ✔️ Implementar lazy loading de componentes
   Tempo Estimado: 8 horas
 
 ================================================================================
-7. SUGESTÕES DE OTIMIZAÇÃO
+7. SUGEST�ES DE OTIMIZA��O
 ================================================================================
 
 Performance:
   • Lazy loading de componentes (5-10 KB economia no bundle inicial)
-  • Memoização em useCalculadoraSync para dependências pesadas
+  • Memoiza�o em useCalculadoraSync para depend�ncias pesadas
   • Carregamento sob demanda de texturas
 
 Arquitetura:
   • Unificar ViewerSync com PimoViewerContext
-  • Criar pasta __dev__ para código de desenvolvimento
-  • Consolidar páginas de documentação
+  • Criar pasta __dev__ para c�digo de desenvolvimento
+  • Consolidar p�ginas de documenta�o
 
 Linting:
   • Adicionar 'no-unused-vars' rule ao ESLint
   • Adicionar 'no-console' rule (aviso em prod)
-  • Adicionar 'import/no-unused-modules' (detectar exports não usados)
+  • Adicionar 'import/no-unused-modules' (detectar exports n�o usados)
 
 ================================================================================
-8. CONCLUSÃO E RECOMENDAÇÕES FINAIS
+8. CONCLUS�O E RECOMENDA��ES FINAIS
 ================================================================================
 
 ESTADO GERAL: ✅ BOM ESTADO
 
 O projeto PIMO v3 demonstra:
-  • Arquitetura sólida e escalável
-  • Código profissional bem estruturado
-  • Padrões React modernos bem aplicados
-  • Separação de responsabilidades clara
+  • Arquitetura s�lida e escal�vel
+  • C�digo profissional bem estruturado
+  • Padr�es React modernos bem aplicados
+  • Separa�o de responsabilidades clara
   • Fluxo de dados bem definido
 
-AÇÕES IMEDIATAS:
-  1. Remover 2 arquivos críticos (~1.100 linhas dead code)
-  2. Completar implementação de APIs incompletas
-  3. Remover código duplicado
-  4. Separar código dev em pasta dedicada
+A��ES IMEDIATAS:
+  1. Remover 2 arquivos cr�ticos (~1.100 linhas dead code)
+  2. Completar implementa�o de APIs incompletas
+  3. Remover c�digo duplicado
+  4. Separar c�digo dev em pasta dedicada
 
-APÓS ESSAS AÇÕES:
-  • Nenhum dead code crítico restante
+AP�S ESSAS A��ES:
+  • Nenhum dead code cr�tico restante
   • Build mais limpo e eficiente
-  • Código base pronto para expansão contínua
+  • C�digo base pronto para expans�o cont�nua
   • Melhor manutenibilidade para novos desenvolvedores
 
-PRÓXIMA REVISÃO RECOMENDADA: Junho de 2026
+PR�XIMA REVIS�O RECOMENDADA: Junho de 2026
 
 ================================================================================
-9. CONTATOS E DOCUMENTAÇÃO
+9. CONTATOS E DOCUMENTA��O
 ================================================================================
 
 Arquivos Relacionados:
-  • RELATORIO_TECNICO_COMPLETO.md (versão completa em Markdown)
-  • RELATORIO_TECNICO_COMPLETO.html (versão formatada em HTML)
+  • RELATORIO_TECNICO_COMPLETO.md (vers�o completa em Markdown)
+  • RELATORIO_TECNICO_COMPLETO.html (vers�o formatada em HTML)
   • docs/auditoria-tecnica.md (auditoria detalhada anterior)
-  • docs/dynamic-rules-reference.md (regras dinâmicas)
-  • docs/viewer-integration-reference.md (integração viewer)
+  • docs/dynamic-rules-reference.md (regras din�micas)
+  • docs/viewer-integration-reference.md (integra�o viewer)
 
-Repositório: c:\Users\Mofreita\pimo-v3
+Reposit�rio: c:\Users\Mofreita\pimo-v3
 Package.json: c:\Users\Mofreita\pimo-v3\package.json
 Vite Config: c:\Users\Mofreita\pimo-v3\vite.config.ts
 
 ================================================================================
-FIM DO RELATÓRIO
+FIM DO RELAT�RIO
 ================================================================================
 
-Relatório Gerado: Fevereiro de 2026
-Engenheiro: Análise Técnica Sênior
-Status: COMPLETO E PRONTO PARA AÇÃO
+Relat�rio Gerado: Fevereiro de 2026
+Engenheiro: An�lise T�cnica S�nior
+Status: COMPLETO E PRONTO PARA A��O

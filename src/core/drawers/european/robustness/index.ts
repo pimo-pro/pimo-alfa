@@ -1,6 +1,6 @@
 /**
- * european/robustness — Camada de proteção transparente (Modelo B).
- * Sem alterar regras de negócio nem resultados válidos.
+ * european/robustness â€” Camada de proteÃ§Ã£o transparente (Modelo B).
+ * Sem alterar regras de negÃ³cio nem resultados vÃ¡lidos.
  */
 
 export {

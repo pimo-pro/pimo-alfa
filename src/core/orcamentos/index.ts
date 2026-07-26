@@ -1,5 +1,5 @@
 /**
- * P3.9 — Orçamentos (tarifas Admin).
+ * P3.9 â€” OrÃ§amentos (tarifas Admin).
  */
 
 export type {

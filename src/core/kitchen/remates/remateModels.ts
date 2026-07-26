@@ -1,5 +1,5 @@
 /**
- * remateModels.ts — Remates industriais (documentais).
+ * remateModels.ts â€” Remates industriais (documentais).
  */
 
 import type { KitchenRemateModel } from "../types";

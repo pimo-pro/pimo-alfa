@@ -1,5 +1,5 @@
 /**
- * safeCutlist.ts — Filtra peças cutlist inválidas sem alterar válidas.
+ * safeCutlist.ts â€” Filtra peÃ§as cutlist invÃ¡lidas sem alterar vÃ¡lidas.
  */
 
 import type { DrawerCutlistItem } from "../types";
@@ -26,14 +26,14 @@ function isWoodPieceValid(item: DrawerCutlistItem): boolean {
 }
 
 /**
- * Remove peças madeira com dims ?0 / NaN. Mantém restantes intactas.
+ * Remove peÃ§as madeira com dims ?0 / NaN. MantÃ©m restantes intactas.
  */
 export function sanitizeCutlist(items: DrawerCutlistItem[] | null | undefined): DrawerCutlistItem[] {
   const list = ensureArray(items, "cutlist");
   const out: DrawerCutlistItem[] = [];
   for (const item of list) {
     if (!isWoodPieceValid(item)) {
-      robustDebug("cutlist", `peça omitida (dims/qty inválidos)`, {
+      robustDebug("cutlist", `peÃ§a omitida (dims/qty invÃ¡lidos)`, {
         id: item.id,
         tipo: item.tipo,
         L: item.larguraMm,

@@ -1,11 +1,11 @@
 /**
- * safetyDrillingGate.ts ù Bloqueia furos industriais invùlidos.
+ * safetyDrillingGate.ts ‚Äî Bloqueia furos industriais inv√°lidos.
  */
 
 import type { DrawerGeometry, EuropeanDrawerHole } from "../types";
 import { finalizeGate, issue, type EuropeanSafetyGateResult } from "./safetyReport";
 
-/** Margem: bloquear sù claramente fora (coordenada negativa ou alùm da peùa). */
+/** Margem: bloquear s√≥ claramente fora (coordenada negativa ou al√©m da pe√ßa). */
 const EDGE_FORBIDDEN_MM = -0.5;
 
 function pieceBounds(
@@ -14,7 +14,7 @@ function pieceBounds(
 ): { w: number; h: number } | null {
   if (!geometry) return null;
   const ref = pieceRef.toLowerCase();
-  // Apenas frente/fundo (furos gerados localmente). Laterais/costa/mùdulo: eixos Modelo A ù nùo forùar.
+  // Apenas frente/fundo (furos gerados localmente). Laterais/costa/m√≥dulo: eixos Modelo A ‚Äî n√£o for√ßar.
   if (ref.includes("fren") || ref === "front") {
     return { w: geometry.front.widthMm, h: geometry.front.heightMm };
   }
@@ -25,7 +25,7 @@ function pieceBounds(
 }
 
 /**
- * Gate de furacao: ù/profundidade, NaN, fora da peca, zonas proibidas.
+ * Gate de furacao: ‚Äî/profundidade, NaN, fora da peca, zonas proibidas.
  */
 export function runSafetyDrillingGate(
   holes: EuropeanDrawerHole[],
@@ -46,7 +46,7 @@ export function runSafetyDrillingGate(
         issue("drilling", "error", "HOLE_DIA_INVALID", `Diametro NaN/negativo: ${h.diameter}`, tag)
       );
     } else if (h.diameter === 0) {
-      // Alguns furos Modelo A / marcadores industriais emitem ÿ=0 ó aviso, nao bloqueio
+      // Alguns furos Modelo A / marcadores industriais emitem ‚Äî=0 ‚Äî aviso, nao bloqueio
       warnings.push(
         issue("drilling", "warning", "HOLE_DIA_ZERO", `Diametro 0 (marcador)`, tag)
       );

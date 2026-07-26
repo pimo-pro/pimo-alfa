@@ -1,15 +1,15 @@
 /**
- * materialCost.ts — Custo de materiais (cutlist + metadata, somente leitura).
+ * materialCost.ts â€” Custo de materiais (cutlist + metadata, somente leitura).
  */
 
 export type MaterialPriceTable = Record<string, number>;
 
 export type MaterialCostConfig = {
-  /** Preço €/m² por material (canonical id). */
+  /** PreÃ§o â‚¬/mÂ² por material (canonical id). */
   pricePerSqm: MaterialPriceTable;
-  /** Fallback €/m² se material desconhecido. */
+  /** Fallback â‚¬/mÂ² se material desconhecido. */
   defaultPricePerSqm: number;
-  /** Multiplicador de desperdício (ex.: 1.15 = +15%). */
+  /** Multiplicador de desperdÃ­cio (ex.: 1.15 = +15%). */
   wasteFactor: number;
 };
 
@@ -56,7 +56,7 @@ export const DEFAULT_MATERIAL_COST_CONFIG: MaterialCostConfig = {
 };
 
 function pieceFaceAreaM2(item: CutlistLikeItem): number {
-  // Face principal aproximada: max das faces (largura×altura, largura×prof, altura×prof)
+  // Face principal aproximada: max das faces (larguraÃ—altura, larguraÃ—prof, alturaÃ—prof)
   const a = (item.larguraMm * item.alturaMm) / 1_000_000;
   const b = (item.larguraMm * item.profundidadeMm) / 1_000_000;
   const c = (item.alturaMm * item.profundidadeMm) / 1_000_000;
@@ -73,7 +73,7 @@ function resolvePrice(material: string, cfg: MaterialCostConfig): number {
 }
 
 /**
- * Calcula custo de madeira a partir da cutlist (peças kind=wood).
+ * Calcula custo de madeira a partir da cutlist (peÃ§as kind=wood).
  */
 export function calculateMaterialCost(
   cutlist: CutlistLikeItem[],

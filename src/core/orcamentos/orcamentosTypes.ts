@@ -1,5 +1,5 @@
 /**
- * P3.9 — tipos Orçamentos (tarifas Admin).
+ * P3.9 â€” tipos OrÃ§amentos (tarifas Admin).
  * Fase 1: schema. Fase 2: ferragens.enableUnificacao.
  * Fase 4: operacoesAvancadas.
  */
@@ -45,35 +45,35 @@ export type OrcamentosMargemGanhoSettings = {
   valor: number;
 };
 
-/** P3.9 F2 — unificação ferragens A?B. */
+/** P3.9 F2 â€” unificaÃ§Ã£o ferragens A?B. */
 export type OrcamentosFerragensSettings = {
   /**
-   * false (default): Unificado=Via A, Peças=Via B (comportamento actual).
-   * true: ambos usam catálogo B + fallback A + STRICT warnings.
+   * false (default): Unificado=Via A, PeÃ§as=Via B (comportamento actual).
+   * true: ambos usam catÃ¡logo B + fallback A + STRICT warnings.
    */
   enableUnificacao: boolean;
 };
 
-/** P3.9 F4 — operação extra dinâmica (reserva). */
+/** P3.9 F4 â€” operaÃ§Ã£o extra dinÃ¢mica (reserva). */
 export type OperacaoAvancada = {
   id: string;
   label: string;
   preco: number;
 };
 
-/** P3.9 F4 — operações industriais avançadas (tarifas tipadas). */
+/** P3.9 F4 â€” operaÃ§Ãµes industriais avanÃ§adas (tarifas tipadas). */
 export type OrcamentosOperacoesAvancadasSettings = {
   precoForo5mm: number;
   precoForoCavilha10x13: number;
   precoForoCavilha10x30: number;
-  /** Grupo de 3 furos calço = 1×. */
+  /** Grupo de 3 furos calÃ§o = 1â‚¬. */
   precoForoCalcoGrupo: number;
-  /** Grupo dobradiça (1 caneco + 2 fixação) = 1×. */
+  /** Grupo dobradiÃ§a (1 caneco + 2 fixaÃ§Ã£o) = 1â‚¬. */
   precoForoDobradicaGrupo: number;
   precoRasgoGaveta: number;
   precoCorteManualPorMetro: number;
   precoMeQuadrilha: number;
-  /** Reserva futura — lista dinâmica. */
+  /** Reserva futura â€” lista dinÃ¢mica. */
   operacoesExtras?: OperacaoAvancada[];
 };
 

@@ -1,5 +1,5 @@
 /**
- * errors.ts — Codigos e factories de erros industriais (Modelo B).
+ * errors.ts â€” Codigos e factories de erros industriais (Modelo B).
  */
 
 export type EuropeanDrawerValidationError = {

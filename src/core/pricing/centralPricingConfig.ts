@@ -1,7 +1,7 @@
 /**
- * SSOT de tarifas de fùbrica ù public/config/pricing.json
- * Local e produùùo leem o mesmo ficheiro (Vite public/ + deploy FTP).
- * Schema de mercado (chapas/orlas/ù) mapeia para Orùamentos + Financeiro ADMIN.
+ * SSOT de tarifas de f√°brica ‚Äî public/config/pricing.json
+ * Local e produ√ß√£o leem o mesmo ficheiro (Vite public/ + deploy FTP).
+ * Schema de mercado (chapas/orlas/‚Ç¨) mapeia para Or√ßamentos + Financeiro ADMIN.
  */
 
 import {
@@ -230,7 +230,7 @@ function mapMarketToLegacy(src: CentralPricingFile): {
         : {}),
     },
     custosIndustriais: {
-      // Desperdùcio monetizado em % do custo de painùis (pricing.json desperdicio.percentual).
+      // desperd√≠cio monetizado em % do custo de pain√©is (pricing.json desperdicio.percentual).
       desperdicioEurPorM2: 0,
       serragemEurPorM2: serragem,
       custoChapaReal: 0,
@@ -252,7 +252,7 @@ function mapMarketToLegacy(src: CentralPricingFile): {
       ...(typeof src.orcamentos === "object" && src.orcamentos && "operacoesAvancadas" in src.orcamentos
         ? (src.orcamentos as { operacoesAvancadas?: object }).operacoesAvancadas
         : {}),
-      // Foros/cavilhas/corte manual jù cobrados em CNC/Drill ù forùar 0 (apùs spread).
+      // Foros/cavilhas/corte manual j√° cobrados em CNC/Drill ‚Äî for√ßar 0 (ap√≥s spread).
       precoForo5mm: 0,
       precoForoCavilha10x13: 0,
       precoForoCavilha10x30: 0,
@@ -277,7 +277,7 @@ function mapMarketToLegacy(src: CentralPricingFile): {
       valor: num(mao.montagem_caixa_m2, 17),
     },
     portes: {
-      // Tarifas disponùveis; cobranùa no projeto sù com incluirPortes (ativoSomenteComEscolha).
+      // Tarifas dispon√≠veis; cobran√ßa no projeto s√≥ com incluirPortes (ativoSomenteComEscolha).
       enabled: !portesSoComEscolha,
       taxaBase: num(portes.local_caixa, 12),
       porKg: num(portes.local_kg, 3.5),
@@ -389,7 +389,7 @@ export function normalizeCentralPricing(raw: unknown): CentralPricingFile {
   };
 }
 
-/** Fetch /config/pricing.json (idempotente). Falha ? builtin (mesmos nùmeros). */
+/** Fetch /config/pricing.json (idempotente). Falha ? builtin (mesmos n√∫meros). */
 export async function loadCentralPricing(url = CENTRAL_PRICING_URL): Promise<CentralPricingFile> {
   if (cached) return cached;
   if (loadPromise) {
@@ -445,7 +445,7 @@ export function ivaPctFromCentral(pricing?: CentralPricingFile | null): number {
   return typeof n === "number" && Number.isFinite(n) && n >= 0 ? n : 23;
 }
 
-/** Famùlia viewer / canonical ? chave de chapa no pricing de mercado. */
+/** Fam√≠lia viewer / canonical ? chave de chapa no pricing de mercado. */
 const CHAPA_KEY_BY_FAMILY: Record<string, string> = {
   mdf_branco: "MDF_BRANCO_LAMINADO_19",
   mdf_preto: "MDF_PRETO_LAMINADO_19",
@@ -459,9 +459,9 @@ const CHAPA_KEY_BY_FAMILY: Record<string, string> = {
 };
 
 /**
- * Preùo ù/mù a partir de chapas do pricing.json.
- * Costa / painùis ?10 mm ? MDF_BRANCO_10 / MDF_CRU (20 ù/mù).
- * Espessuras intermùdias (&lt;19) aplicam espessuraReducaoPct.
+ * Pre√ßo ‚Ç¨/m¬≤ a partir de chapas do pricing.json.
+ * Costa / pain√©is ?10 mm ? MDF_BRANCO_10 / MDF_CRU (20 ‚Ç¨/m¬≤).
+ * Espessuras interm√©dias (&lt;19) aplicam espessuraReducaoPct.
  */
 export function chapaEurM2FromCentral(
   materialKey: string,
@@ -479,7 +479,7 @@ export function chapaEurM2FromCentral(
   const family = keyNorm.replace(/-\d+(\.\d+)?$/, "").replace(/_\d+(\.\d+)?$/, "");
   const chapaKey = CHAPA_KEY_BY_FAMILY[family] ?? CHAPA_KEY_BY_FAMILY[keyNorm];
 
-  // Costa / 10 mm: preùo dedicado (nùo 31ù0.95).
+  // Costa / 10 mm: pre√ßo dedicado (n√£o 31‚Äì0.95).
   if (espessuraMm > 0 && espessuraMm <= 10.5) {
     const thinBranco = num(
       (chapas as Record<string, number>).MDF_BRANCO_10,

@@ -21,20 +21,20 @@ describe("cnc/cncMapping", () => {
     expect(mapDxfLayerToCncGroup("DIMENSIONS")).toBe("META");
   });
 
-  it("mapeia pieceRef de furos para códigos industriais", () => {
+  it("mapeia pieceRef de furos para cÃ³digos industriais", () => {
     expect(mapHolePieceRefToCodigo("front")).toBe("gav_fren");
     expect(mapHolePieceRefToCodigo("gav_lat_dir")).toBe("gav_lat_dir");
     expect(mapHolePieceRefToCodigo("bottom")).toBe("gav_fun");
     expect(mapHolePieceRefToCodigo("module_lat_esq")).toBeNull();
   });
 
-  it("gera 4 CUT a partir de retângulo", () => {
+  it("gera 4 CUT a partir de retÃ¢ngulo", () => {
     const cuts = mapPieceBoxToCutOps(100, 50);
     expect(cuts).toHaveLength(4);
     expect(cuts.every((c) => c.type === "CUT" && c.group === "CUT")).toBe(true);
   });
 
-  it("naming CNC alinha com códigos industriais", () => {
+  it("naming CNC alinha com cÃ³digos industriais", () => {
     expect(resolveCncPieceKeyFromCodigo("gav_fren")).toBe("front");
     expect(resolveCncPieceKeyFromCodigo("gav_fun")).toBe("fundo");
     expect(buildCncFileName("gav_fren")).toBe("gav_fren.cnc");

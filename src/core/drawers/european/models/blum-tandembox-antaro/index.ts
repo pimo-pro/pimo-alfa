@@ -1,5 +1,5 @@
 /**
- * Blum TandemBox Antaro — Modelo B
+ * Blum TandemBox Antaro â€” Modelo B
  */
 
 export { BLUM_TANDEMBOX_ANTARO as model, BLUM_TANDEMBOX_ANTARO } from "../../catalog";

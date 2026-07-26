@@ -1,0 +1,89 @@
+/**
+ * Verificação 3D Modelo B —peças dentro da caixa, costa atrás, fundo em baixo.
+ */
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import * as flags from "../drawerSystemFlags";
+import { generateEuropeanDrawer } from "../european";
+import { europeanResultToLayerItems } from "../european/adapter";
+import { drawerEuropeanPlacement } from "../european/placement";
+import { drawerEuropeanTransforms } from "../european/transforms";
+import { buildDrawerSpecs } from "../../../3d/objects/DrawerFactory";
+
+describe("DRAWER_3D Modelo B placement", () => {
+  beforeEach(() => {
+    vi.spyOn(flags, "isDrawerModeloAActive").mockReturnValue(false);
+  });
+
+  it("3 gavetas —stack Y crescente e dentro da caixa; costa atrás; fundo em baixo", () => {
+    const result = generateEuropeanDrawer(
+      "hettich-innotech-atira",
+      {
+        id: "box-3d",
+        nome: "CX3D",
+        dimensoes: { largura: 600, altura: 720, profundidade: 560 },
+        espessura: 19,
+        gavetas: 3,
+        material: "mdf_branco",
+        profundidadeInternaUtilMm: 500,
+      },
+      {
+        systemId: "hettich-innotech-atira",
+        heightMm: 144,
+        depthMm: 450,
+        softClose: true,
+        pushOpen: false,
+        count: 3,
+      }
+    );
+    expect(result.valid, result.errors.join(" | ")).toBe(true);
+
+    const layers = europeanResultToLayerItems(result, "box-3d", {
+      material: "mdf_branco",
+      frontMaterial: "mdf_branco",
+    });
+    expect(layers).toHaveLength(3);
+    expect(layers.every((l) => l.metadata?.modeloB === true)).toBe(true);
+
+    const specs = buildDrawerSpecs(layers);
+    expect(specs).toHaveLength(3);
+
+    const boxHalfH = 0.36;
+    for (let i = 0; i < specs.length; i++) {
+      const s = specs[i]!;
+      expect(s.modeloB).toBe(true);
+      expect(s.y).toBeGreaterThan(-boxHalfH);
+      expect(s.y).toBeLessThan(boxHalfH);
+      if (i > 0) expect(s.y).toBeGreaterThan(specs[i - 1]!.y);
+      expect(s.frontPosX ?? 0).toBeCloseTo(0, 5);
+      expect(s.frontPosY ?? 0).toBeCloseTo(0, 5);
+      expect(s.frontPosZ ?? 0).toBeCloseTo(0, 5);
+      expect(s.backPosZ!).toBeLessThan(-0.05);
+      expect(s.bottomPosY!).toBeLessThan(0);
+      expect(s.leftSidePosX!).toBeLessThan(0);
+      expect(s.rightSidePosX!).toBeGreaterThan(0);
+      expect(s.z).toBeCloseTo(0.56 / 2 + 0.019 / 2, 3);
+      expect(s.metalBoxType).toBe("Nenhuma");
+    }
+
+    const map = drawerEuropeanTransforms.build(result.viewer.drawers[0]!.geometry);
+    expect(map.front.xMm).toBe(0);
+    expect(map.front.yMm).toBe(0);
+    expect(map.front.zMm).toBe(0);
+    expect(map.back.zMm).toBeLessThan(0);
+    expect(map.bottom.yMm).toBeLessThan(0);
+
+    const y0 = drawerEuropeanPlacement.calculateVerticalStack({
+      boxHeightMm: 720,
+      boxThicknessMm: 19,
+      usefulHeightMm: 144,
+      stackIndex: 0,
+    });
+    const y1 = drawerEuropeanPlacement.calculateVerticalStack({
+      boxHeightMm: 720,
+      boxThicknessMm: 19,
+      usefulHeightMm: 144,
+      stackIndex: 1,
+    });
+    expect(y1).toBeGreaterThan(y0);
+  });
+});

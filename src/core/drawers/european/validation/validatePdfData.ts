@@ -1,5 +1,5 @@
 /**
- * validatePdfData.ts — Dados PDF Modelo B.
+ * validatePdfData.ts â€” Dados PDF Modelo B.
  */
 
 import type { DrawerPDFSection, EuropeanDrawerHole, DrawerGeometry } from "../types";
@@ -24,7 +24,7 @@ export function validatePdfData(
     if (isBlank(row.label) || isBlank(row.value)) {
       result.errors.push(euError(EU_ERROR_CODES.PDF_NULL, "Linha de medidas PDF com valor nulo.", "pdf.measureRows"));
     }
-    if (/-?\d+(\.\d+)?/.test(row.value) && row.value.includes("-") && /-\d/.test(row.value.replace(/–/g, "-"))) {
+    if (/-?\d+(\.\d+)?/.test(row.value) && row.value.includes("-") && /-\d/.test(row.value.replace(/\u2013/g, "-").replace(/\u2014/g, "-"))) {
       // valores negativos explicitos tipo "-5 mm"
       if (/:\s*-\d/.test(`${row.label}: ${row.value}`) || /^\s*-\d/.test(row.value)) {
         result.errors.push(euError(EU_ERROR_CODES.PDF_DIM, `Medida negativa no PDF: ${row.label}.`, "pdf.measureRows"));

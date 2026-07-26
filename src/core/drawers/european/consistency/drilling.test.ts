@@ -3,7 +3,7 @@ import { enforceDrillingIdentity } from "./enforceDrillingIdentity";
 import type { EuropeanDrawerHole } from "../types";
 
 describe("consistency/drilling", () => {
-  it("converte pieceRef de gaveta para códigos SSOT e preserva módulo", () => {
+  it("converte pieceRef de gaveta para cÃ³digos SSOT e preserva mÃ³dulo", () => {
     const holes: EuropeanDrawerHole[] = [
       { x: 1, y: 2, z: 0, diameter: 5, depth: 12, holeType: "corredica", face: "A", pieceRef: "front" },
       { x: 1, y: 2, z: 0, diameter: 5, depth: 12, holeType: "corredica", face: "A", pieceRef: "gav_lat_esq" },

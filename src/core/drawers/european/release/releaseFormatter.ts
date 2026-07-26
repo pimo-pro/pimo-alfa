@@ -1,5 +1,5 @@
 /**
- * releaseFormatter.ts — Formatação industrial das Release Notes.
+ * releaseFormatter.ts â€” FormataÃ§Ã£o industrial das Release Notes.
  */
 
 import type { EuropeanReleaseEvent } from "./releaseCollector";
@@ -36,12 +36,12 @@ const SECTION_DEFS: Array<{
   },
   {
     id: "correcoes",
-    title: "Correções",
+    title: "CorreÃ§Ãµes",
     kinds: ["fix"],
   },
   {
     id: "alteracoes_internas",
-    title: "Alterações internas",
+    title: "AlteraÃ§Ãµes internas",
     kinds: ["internal"],
   },
   {
@@ -51,7 +51,7 @@ const SECTION_DEFS: Array<{
   },
   {
     id: "avisos_seguranca",
-    title: "Avisos de segurança",
+    title: "Avisos de seguranÃ§a",
     kinds: ["safety"],
   },
   {
@@ -62,7 +62,7 @@ const SECTION_DEFS: Array<{
 ];
 
 /**
- * Agrupa eventos em secções industriais.
+ * Agrupa eventos em secÃ§Ãµes industriais.
  */
 export function formatEuropeanReleaseSections(
   events: EuropeanReleaseEvent[]
@@ -81,7 +81,7 @@ export function formatEuropeanReleaseSections(
 }
 
 /**
- * Texto industrial legível (markdown-lite).
+ * Texto industrial legÃ­vel (markdown-lite).
  */
 export function formatEuropeanReleaseText(input: {
   version: string;
@@ -90,7 +90,7 @@ export function formatEuropeanReleaseText(input: {
   sections: EuropeanReleaseSection[];
 }): string {
   const lines = [
-    `# Release Notes — Modelo B ${input.version}`,
+    `# Release Notes â€” Modelo B ${input.version}`,
     `Autor: ${input.author}`,
     `Gerado: ${input.generatedAt}`,
     "",

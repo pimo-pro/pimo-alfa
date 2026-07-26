@@ -1,5 +1,5 @@
 /**
- * baseModules.ts — Módulos base industriais (300–1200 mm).
+ * baseModules.ts â€” MÃ³dulos base industriais (300â€“1200 mm).
  */
 
 import type { KitchenModuleSpec } from "../types";
@@ -22,7 +22,7 @@ export function buildBaseModules(): KitchenModuleSpec[] {
   return BASE_WIDTHS.map((w) => ({
     id: `base-${w}`,
     kind: "base" as const,
-    name: `Módulo base ${w} mm`,
+    name: `MÃ³dulo base ${w} mm`,
     widthMm: w,
     heightMm: BASE_HEIGHT_MM,
     depthMm: BASE_DEPTH_MM,

@@ -1,5 +1,5 @@
 /**
- * european/release — Release Notes Auto-Generator (Modelo B, Fase 14).
+ * european/release â€” Release Notes Auto-Generator (Modelo B, Fase 14).
  */
 
 export {

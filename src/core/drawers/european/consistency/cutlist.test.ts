@@ -4,7 +4,7 @@ import { isCanonicalEuropeanCode } from "./namingMap";
 import type { DrawerCutlistItem } from "../types";
 
 describe("consistency/cutlist", () => {
-  it("corrige nomes/códigos errados sem alterar dims/materiais", () => {
+  it("corrige nomes/cÃ³digos errados sem alterar dims/materiais", () => {
     const items: DrawerCutlistItem[] = [
       {
         id: "x-eu-bad-1",

@@ -1,30 +1,30 @@
-# ✅ REWRITE COMPLETO — SISTEMA DE GAVETAS MARCENARIA REAL
+# ✅ REWRITE COMPLETO � SISTEMA DE GAVETAS MARCENARIA REAL
 
 **Data:** 2026-02-26  
 **Status:** ✅ IMPLEMENTADO E VALIDADO  
-**Objetivo:** Reconstrução completa do sistema de gavetas com regras reais de marcenaria e BOM funcional.
+**Objetivo:** Reconstru�o completa do sistema de gavetas com regras reais de marcenaria e BOM funcional.
 
 ---
 
 ## 🎯 PROBLEMAS RESOLVIDOS
 
 ### ❌ Antes do Rewrite:
-1. ❌ Gavetas gigantes ou minúsculas (distribuição errada)
+1. ❌ Gavetas gigantes ou min�sculas (distribui�o errada)
 2. ❌ Laterais com altura do box inteiro
 3. ❌ Frente pequena e afastada do box
 4. ❌ **APENAS frente aparecia na lista de corte** (BOM incompleta)
-5. ❌ 3D mudava ao abrir gaveta (reconstrução desnecessária)
-6. ❌ Peças não encostadas (gaps irreais)
-7. ❌ Fórmula de altura incorreta (base offset desnecessário)
+5. ❌ 3D mudava ao abrir gaveta (reconstru�o desnecess�ria)
+6. ❌ Pe�as n�o encostadas (gaps irreais)
+7. ❌ F�rmula de altura incorreta (base offset desnecess�rio)
 
 ### ✅ Depois do Rewrite:
 1. ✅ Gavetas proporcionais: `(boxHeight / N) - 6mm`
-2. ✅ Laterais com altura do corpo (não do box)
+2. ✅ Laterais com altura do corpo (n�o do box)
 3. ✅ Frente flush com box, cobrindo abertura
-4. ✅ **TODAS as 5 peças aparecem na lista de corte**
-5. ✅ 3D estável (apenas translateZ no grupo)
-6. ✅ Peças encostadas corretamente
-7. ✅ Fórmula de altura correta (sem base offset)
+4. ✅ **TODAS as 5 pe�as aparecem na lista de corte**
+5. ✅ 3D est�vel (apenas translateZ no grupo)
+6. ✅ Pe�as encostadas corretamente
+7. ✅ F�rmula de altura correta (sem base offset)
 
 ---
 
@@ -35,7 +35,7 @@
 largura = boxInternalWidth - 2mm    // 1mm folga cada lado
 altura = drawerHeight - 2mm         // 1mm folga
 espessura = 19mm                    // Fixo
-posição = FLUSH com box             // Sem afastamento
+posi�o = FLUSH com box             // Sem afastamento
 ```
 
 **Exemplo (box 600mm):**
@@ -44,9 +44,9 @@ posição = FLUSH com box             // Sem afastamento
 
 ### 2. CORPO DA GAVETA
 ```typescript
-largura = boxInternalWidth - 14mm         // 7mm cada lado (corrediças)
+largura = boxInternalWidth - 14mm         // 7mm cada lado (corredi�as)
 altura = drawerHeight - 6mm               // Respiro vertical
-profundidade = boxInternalDepth - 30mm    // Espaço corrediças traseiras
+profundidade = boxInternalDepth - 30mm    // Espa�o corredi�as traseiras
 ```
 
 **Exemplo (box 600x300x500, 3 gavetas):**
@@ -60,7 +60,7 @@ profundidade = boxInternalDepth - 30mm    // Espaço corrediças traseiras
 espessura = 15mm
 altura = alturaCorpo                      // Mesma altura
 profundidade = profundidadeCorpo          // Mesma profundidade
-posição = Encostadas no corpo             // Sem gaps
+posi�o = Encostadas no corpo             // Sem gaps
 ```
 
 ### 4. FUNDO
@@ -68,7 +68,7 @@ posição = Encostadas no corpo             // Sem gaps
 espessura = 10mm
 largura = larguraCorpo - 10mm             // 5mm cada lado (encaixe)
 profundidade = profundidadeCorpo - 10mm   // 5mm frente+traseira
-posição = Embaixo do corpo                // Entre laterais
+posi�o = Embaixo do corpo                // Entre laterais
 ```
 
 **Encaixes (marcenaria real):**
@@ -81,19 +81,19 @@ posição = Embaixo do corpo                // Entre laterais
 largura = larguraCorpo                    // Mesma largura
 altura = alturaCorpo - 10mm               // 10mm mais curta
 espessura = 15mm                          // Fixo
-posição = No fundo do corpo               // Entre laterais
+posi�o = No fundo do corpo               // Entre laterais
 ```
 
-**Razão:** O fundo passa por baixo da traseira e é parafusado (marcenaria real).
+**Raz�o:** O fundo passa por baixo da traseira e � parafusado (marcenaria real).
 
 ---
 
-## 🔢 DISTRIBUIÇÃO DE ALTURAS
+## 🔢 DISTRIBUI��O DE ALTURAS
 
-### Fórmula Corrigida
+### F�rmula Corrigida
 ```typescript
 // ANTES (INCORRETO):
-availableHeight = boxHeight - 10  // base offset desnecessário
+availableHeight = boxHeight - 10  // base offset desnecess�rio
 drawerHeight = availableHeight / N
 bodyHeight = drawerHeight - 4mm
 
@@ -110,7 +110,7 @@ boxHeight = 300mm
 drawerCount = 3
 ```
 
-**Distribuição:**
+**Distribui�o:**
 ```
 drawerHeight = 300 / 3 = 100mm
 bodyHeight = 100 - 6 = 94mm
@@ -120,7 +120,7 @@ Gaveta 2: altura corpo = 94mm ✅
 Gaveta 3: altura corpo = 94mm ✅
 ```
 
-**Total:** 3 × 94mm = 282mm de altura útil (18mm de folgas) ✅
+**Total:** 3 × 94mm = 282mm de altura �til (18mm de folgas) ✅
 
 ---
 
@@ -129,17 +129,17 @@ Gaveta 3: altura corpo = 94mm ✅
 ### Problema Original
 ```
 ❌ Cutlist mostrava APENAS a frente da gaveta
-❌ Laterais, fundo e traseira NÃO apareciam
-❌ Impossível gerar PDF técnico completo
-❌ Impossível fabricar (peças faltando)
+❌ Laterais, fundo e traseira N�O apareciam
+❌ Imposs�vel gerar PDF t�cnico completo
+❌ Imposs�vel fabricar (pe�as faltando)
 ```
 
-### Solução Implementada
+### Solu�o Implementada
 
 **Novo Arquivo:** `src/services/drawerCutlistAdapter.ts`
 
 ```typescript
-// Extrai TODAS as peças de cada gaveta:
+// Extrai TODAS as pe�as de cada gaveta:
 function drawerLayerItemToCutList(item, drawerIndex): CutListItem[] {
   return [
     // 1. FRENTE
@@ -160,10 +160,10 @@ function drawerLayerItemToCutList(item, drawerIndex): CutListItem[] {
 }
 ```
 
-**Integração:** `src/context/projectState.ts`
+**Integra�o:** `src/context/projectState.ts`
 
 ```typescript
-// Extrai peças das gavetas se existirem
+// Extrai pe�as das gavetas se existirem
 const drawerCutlist = (box.drawersLayer && box.drawersLayer.length > 0)
   ? extractDrawerCutlistFromLayerItems(box.drawersLayer, prev.material.tipo)
   : [];
@@ -183,15 +183,15 @@ const combinedCutList = [...design.cutList, ...drawerCutlist];
 ✅ Traseira: 586 x 84 x 15mm (MDF)
 ```
 
-**Total:** 5 peças de madeira + ferragens (corrediças, parafusos, puxador) ✅
+**Total:** 5 pe�as de madeira + ferragens (corredi�as, parafusos, puxador) ✅
 
 ---
 
-## 🎨 RENDERIZAÇÃO 3D COMPLETA
+## 🎨 RENDERIZA��O 3D COMPLETA
 
-### BoxBuilder.ts — Renderiza Todas as Peças
+### BoxBuilder.ts � Renderiza Todas as Pe�as
 
-**Verificação:**
+**Verifica�o:**
 ```typescript
 // ✅ FRENTE (linha 484)
 const front = createPanel(spec.widthM, spec.heightM, spec.frontThicknessM);
@@ -220,19 +220,19 @@ drawerGroup.add(back);
 ```
 
 **Garantias:**
-- ✅ Todas as 5 peças renderizadas no Three.js
-- ✅ Posições calculadas pelo domínio (DrawerParametrics + Drawer)
-- ✅ BoxBuilder NÃO recalcula dimensões (apenas renderiza)
-- ✅ Geometria estável (não muda ao abrir/fechar)
+- ✅ Todas as 5 pe�as renderizadas no Three.js
+- ✅ Posi�es calculadas pelo dom�nio (DrawerParametrics + Drawer)
+- ✅ BoxBuilder N�O recalcula dimens�es (apenas renderiza)
+- ✅ Geometria est�vel (n�o muda ao abrir/fechar)
 
 ---
 
 ## 🔄 MOVIMENTO ESTÁVEL
 
-### DrawerMotionService — Abertura Individual
+### DrawerMotionService � Abertura Individual
 
 ```typescript
-// ✅ Apenas a gaveta com drawerId específico se move
+// ✅ Apenas a gaveta com drawerId espec�fico se move
 export function setDrawerOpenInGroup(
   group: DrawerGroup,
   drawerId: string,
@@ -241,14 +241,14 @@ export function setDrawerOpenInGroup(
   const updatedDrawers = group.drawers.map((drawer) =>
     drawer.id === drawerId
       ? { ...drawer, motion: { ...drawer.motion, isOpen } }
-      : drawer  // ✅ Outras gavetas NÃO mudam
+      : drawer  // ✅ Outras gavetas N�O mudam
   );
   
   return { ...group, drawers: updatedDrawers };
 }
 ```
 
-### BoxBuilder — Animação Suave
+### BoxBuilder � Anima�o Suave
 
 ```typescript
 // ✅ Apenas translateZ aplicado ao grupo da gaveta
@@ -259,7 +259,7 @@ if (shouldAnimate) {
   animateDrawer(spec.id, startPosition, targetPullOffset, drawerGroup);
 }
 
-// ✅ Função de animação com RAF e easing
+// ✅ Fun�o de anima�o com RAF e easing
 function animateDrawer(id, start, target, group) {
   const duration = 1500; // ms
   const startTime = performance.now();
@@ -279,8 +279,8 @@ function animateDrawer(id, start, target, group) {
 
 **Garantias:**
 - ✅ Abertura individual (apenas gaveta clicada)
-- ✅ Animação suave (1500ms, easeInOutCubic)
-- ✅ 3D NÃO reconstrói geometria
+- ✅ Anima�o suave (1500ms, easeInOutCubic)
+- ✅ 3D N�O reconstr�i geometria
 - ✅ Apenas translateZ no grupo
 
 ---
@@ -288,16 +288,16 @@ function animateDrawer(id, start, target, group) {
 ## 📂 ARQUIVOS MODIFICADOS
 
 ### 1. DrawerParametrics.ts
-**Mudanças:**
+**Mudan�as:**
 ```diff
 - const BODY_HEIGHT_REDUCTION_MM = 4;
 + const BODY_HEIGHT_REDUCTION_MM = 6;  // ← Corrigido para regra (altura/N - 6mm)
 ```
 
-**Impacto:** Altura do corpo agora segue fórmula correta.
+**Impacto:** Altura do corpo agora segue f�rmula correta.
 
 ### 2. DrawerGroup.ts
-**Mudanças:**
+**Mudan�as:**
 ```diff
 const heights = calculateDrawerHeights(
   group.drawers.length,
@@ -315,10 +315,10 @@ const positions = calculateDrawerPositions(
 );
 ```
 
-**Impacto:** Distribuição proporcional correta sem offset desnecessário.
+**Impacto:** Distribui�o proporcional correta sem offset desnecess�rio.
 
 ### 3. DrawerGenerationService.ts
-**Mudanças:**
+**Mudan�as:**
 ```diff
 - const baseOffset = 10;
 - const availableHeight = Math.max(1, boxHeight - baseOffset);
@@ -338,10 +338,10 @@ const positions = calculateDrawerPositions(
 );
 ```
 
-**Impacto:** Geração de gavetas com altura proporcional correta.
+**Impacto:** Gera�o de gavetas com altura proporcional correta.
 
 ### 4. drawerCutlistAdapter.ts (NOVO)
-**Função Principal:**
+**Fun�o Principal:**
 ```typescript
 export function extractDrawerCutlistFromLayerItems(
   layerItems: DrawerLayerItem[],
@@ -356,14 +356,14 @@ export function extractDrawerCutlistFromLayerItems(
 - ✅ Fundo (se tipo "normal")
 - ✅ Traseira (sempre)
 
-**Impacto:** BOM agora contém todas as peças das gavetas.
+**Impacto:** BOM agora cont�m todas as pe�as das gavetas.
 
 ### 5. projectState.ts
-**Mudanças:**
+**Mudan�as:**
 ```diff
 + import { extractDrawerCutlistFromLayerItems } from "../services/drawerCutlistAdapter";
 
-+ // Extrai peças das gavetas se existirem
++ // Extrai pe�as das gavetas se existirem
 + const drawerCutlist = (box.drawersLayer && box.drawersLayer.length > 0)
 +   ? extractDrawerCutlistFromLayerItems(box.drawersLayer, prev.material.tipo)
 +   : [];
@@ -375,11 +375,11 @@ export function extractDrawerCutlistFromLayerItems(
 + cutList: combinedCutList,
 ```
 
-**Impacto:** Cutlist do projeto agora inclui todas as peças das gavetas.
+**Impacto:** Cutlist do projeto agora inclui todas as pe�as das gavetas.
 
 ---
 
-## ✅ VALIDAÇÕES NUMÉRICAS
+## ✅ VALIDA��ES NUM�RICAS
 
 ### Teste 1: Box 600x300x500mm, 1 Gaveta
 
@@ -391,7 +391,7 @@ boxInternalDepth = 500mm
 drawerCount = 1
 ```
 
-**Saída Esperada:**
+**Sa�da Esperada:**
 ```typescript
 FRENTE:
   width = 598mm ✅ (600 - 2)
@@ -418,16 +418,16 @@ TRASEIRA:
   height = 284mm ✅ (294 - 10)
   thickness = 15mm ✅
 
-DIFERENÇAS:
-  frontWidth - bodyWidth = 12mm ✅ (1mm gap frente + 7mm gap corrediça) x 2
-  frontHeight - bodyHeight = 4mm ✅ (2mm gap frente + 6mm redução corpo) - 2mm gap frente
+DIFEREN�AS:
+  frontWidth - bodyWidth = 12mm ✅ (1mm gap frente + 7mm gap corredi�a) x 2
+  frontHeight - bodyHeight = 4mm ✅ (2mm gap frente + 6mm redu�o corpo) - 2mm gap frente
   bodyWidth - bottomWidth = 10mm ✅ (5mm encaixe cada lado)
   bodyHeight - backHeight = 10mm ✅ (fundo passa por baixo)
 ```
 
 ### Teste 2: Box 600x900mm, 3 Gavetas
 
-**Distribuição Equal:**
+**Distribui�o Equal:**
 ```typescript
 drawerHeight = 900 / 3 = 300mm
 
@@ -448,20 +448,20 @@ TOTAL: 3 × 294mm = 882mm ✅ (18mm de folgas)
 
 ---
 
-## 📊 COMPARAÇÃO ANTES × DEPOIS
+## 📊 COMPARA��O ANTES × DEPOIS
 
 | Aspecto | ANTES | DEPOIS |
 |---------|-------|--------|
 | **Altura do corpo** | (boxHeight - 10) / N - 4mm ❌ | boxHeight / N - 6mm ✅ |
-| **Diferença frente-corpo** | Variável/incorreta ❌ | 12mm fixo ✅ |
+| **Diferen�a frente-corpo** | Vari�vel/incorreta ❌ | 12mm fixo ✅ |
 | **Laterais** | Altura do box ❌ | Altura do corpo ✅ |
 | **Frente** | Afastada ❌ | Flush com box ✅ |
-| **Gaps** | Inconsistentes ❌ | Peças encostadas ✅ |
-| **Distribuição** | Com base offset ❌ | Proporcional (altura/N) ✅ |
-| **Abertura** | Reconstrói 3D ❌ | Apenas translateZ ✅ |
-| **BOM** | Apenas frente ❌ | Todas as 5 peças ✅ |
+| **Gaps** | Inconsistentes ❌ | Pe�as encostadas ✅ |
+| **Distribui�o** | Com base offset ❌ | Proporcional (altura/N) ✅ |
+| **Abertura** | Reconstr�i 3D ❌ | Apenas translateZ ✅ |
+| **BOM** | Apenas frente ❌ | Todas as 5 pe�as ✅ |
 | **Cutlist** | Incompleta ❌ | Completa ✅ |
-| **PDF Técnico** | Impossível ❌ | Funcional ✅ |
+| **PDF T�cnico** | Imposs�vel ❌ | Funcional ✅ |
 
 ---
 
@@ -469,36 +469,36 @@ TOTAL: 3 × 294mm = 882mm ✅ (18mm de folgas)
 
 ### Teste Visual no Viewer 3D
 
-**Criar box de referência:**
+**Criar box de refer�ncia:**
 ```typescript
 Box interno: 600 x 300 x 500mm
 Espessura: 19mm
 Gavetas: 1
 ```
 
-**Validações visuais:**
+**Valida�es visuais:**
 - [ ] Frente cobre quase toda a abertura (598mm de 600mm)
 - [ ] Corpo claramente menor que a frente (586mm vs 598mm)
-- [ ] Laterais têm altura do corpo (294mm, não 300mm)
-- [ ] Frente está flush com o box (não afastada)
-- [ ] Todas as 5 peças visíveis e encaixadas
-- [ ] Fundo entra 5mm em todas as peças
+- [ ] Laterais t�m altura do corpo (294mm, n�o 300mm)
+- [ ] Frente est�flush com o box (n�o afastada)
+- [ ] Todas as 5 pe�as vis�veis e encaixadas
+- [ ] Fundo entra 5mm em todas as pe�as
 - [ ] Traseira 10mm mais curta que o corpo
 
 ### Teste de Abertura
 
-**Ações:**
+**A�es:**
 1. Clicar na gaveta para abrir
 2. Observar o movimento
 
-**Validações:**
+**Valida�es:**
 - [ ] Apenas a gaveta clicada se move
 - [ ] Movimento suave para fora (1500ms)
-- [ ] 3D não "treme" ou muda de posição
+- [ ] 3D n�o "treme" ou muda de posi�o
 - [ ] Frente e corpo movem juntos
-- [ ] Outras gavetas permanecem estáticas
+- [ ] Outras gavetas permanecem est�ticas
 
-### Teste com Múltiplas Gavetas
+### Teste com M�ltiplas Gavetas
 
 **Criar box:**
 ```typescript
@@ -506,43 +506,43 @@ Box interno: 600 x 900 x 500mm
 Gavetas: 3
 ```
 
-**Validações:**
-- [ ] Todas as gavetas têm altura similar (~300mm cada)
-- [ ] Gavetas empilhadas sem sobreposição
+**Valida�es:**
+- [ ] Todas as gavetas t�m altura similar (~300mm cada)
+- [ ] Gavetas empilhadas sem sobreposi�o
 - [ ] Frentes de todas cobrem as aberturas
-- [ ] Abrir gaveta 1 não afeta gavetas 2 e 3
-- [ ] Abrir gaveta 2 não afeta gavetas 1 e 3
+- [ ] Abrir gaveta 1 n�o afeta gavetas 2 e 3
+- [ ] Abrir gaveta 2 n�o afeta gavetas 1 e 3
 - [ ] Abrir todas simultaneamente funciona
 
 ### Teste de BOM/Cutlist
 
 **Exportar cutlist:**
 1. Criar projeto com 1 gaveta
-2. Abrir lista de peças
+2. Abrir lista de pe�as
 3. Verificar itens
 
-**Validações:**
+**Valida�es:**
 - [ ] Frente listada (598 x 298 x 19mm)
 - [ ] Laterais listadas (2x: 15 x 294 x 470mm)
 - [ ] Fundo listado (576 x 10 x 460mm)
 - [ ] Traseira listada (586 x 284 x 15mm)
-- [ ] Total: 5 peças de madeira por gaveta
+- [ ] Total: 5 pe�as de madeira por gaveta
 - [ ] Materiais corretos (MDF/material selecionado)
 - [ ] Quantidades corretas (1 de cada exceto laterais)
 
-### Teste de PDF Técnico
+### Teste de PDF T�cnico
 
 **Gerar PDF:**
 1. Criar projeto com gavetas
-2. Exportar PDF técnico
-3. Verificar seções
+2. Exportar PDF t�cnico
+3. Verificar se�es
 
-**Validações:**
-- [ ] Lista de corte contém todas as peças
-- [ ] Dimensões corretas impressas
-- [ ] Ferragens listadas (corrediças, parafusos)
+**Valida�es:**
+- [ ] Lista de corte cont�m todas as pe�as
+- [ ] Dimens�es corretas impressas
+- [ ] Ferragens listadas (corredi�as, parafusos)
 - [ ] Agrupamento por gaveta claro
-- [ ] QR codes gerados (se aplicável)
+- [ ] QR codes gerados (se aplic�vel)
 
 ---
 
@@ -552,78 +552,78 @@ Gavetas: 3
 
 **Regras de Marcenaria:**
 - ✅ Todas as 5 regras implementadas corretamente
-- ✅ Dimensões verificáveis e fabricáveis
+- ✅ Dimens�es verific�veis e fabric�veis
 - ✅ Encaixes reais (fundo com 5mm)
-- ✅ Proporções corretas (front - body = 12mm)
+- ✅ Propor�es corretas (front - body = 12mm)
 
 **BOM Completa:**
-- ✅ Todas as 5 peças aparecem na cutlist
-- ✅ Laterais, fundo e traseira agora incluídos
-- ✅ Conversão para CutListItem funcional
-- ✅ Integração com PDF técnico pronta
+- ✅ Todas as 5 pe�as aparecem na cutlist
+- ✅ Laterais, fundo e traseira agora inclu�dos
+- ✅ Convers�o para CutListItem funcional
+- ✅ Integra�o com PDF t�cnico pronta
 
-**Renderização 3D:**
-- ✅ Todas as 5 peças renderizadas no Three.js
-- ✅ Posições calculadas pelo domínio
-- ✅ BoxBuilder não recalcula (apenas renderiza)
-- ✅ Geometria estável (não muda ao abrir)
+**Renderiza�o 3D:**
+- ✅ Todas as 5 pe�as renderizadas no Three.js
+- ✅ Posi�es calculadas pelo dom�nio
+- ✅ BoxBuilder n�o recalcula (apenas renderiza)
+- ✅ Geometria est�vel (n�o muda ao abrir)
 
 **Movimento:**
 - ✅ Abertura individual por gaveta
-- ✅ Animação suave (1500ms, easing)
-- ✅ Apenas translateZ (sem reconstrução)
+- ✅ Anima�o suave (1500ms, easing)
+- ✅ Apenas translateZ (sem reconstru�o)
 - ✅ Estado persistente entre renders
 
-**Fórmula de Altura:**
+**F�rmula de Altura:**
 - ✅ `bodyHeight = (boxHeight / N) - 6mm`
-- ✅ Sem base offset desnecessário
-- ✅ Distribuição proporcional correta
-- ✅ Validação numérica OK
+- ✅ Sem base offset desnecess�rio
+- ✅ Distribui�o proporcional correta
+- ✅ Valida�o num�rica OK
 
 ---
 
-## 📚 PRÓXIMOS PASSOS
+## 📚 PR�XIMOS PASSOS
 
-### Testes de Integração
+### Testes de Integra�o
 1. Testar com box de 1 gaveta (altura 100-800mm)
 2. Testar com box de 3 gavetas (altura 900mm)
 3. Testar com box de 5 gavetas (altura 1500mm)
-4. Verificar PDF com gavetas incluídas
-5. Validar exportação para CNC/fábrica
+4. Verificar PDF com gavetas inclu�das
+5. Validar exporta�o para CNC/f�brica
 
 ### Melhorias Futuras (Opcionais)
 - [ ] Suporte para gavetas progressivas (top pequena, bottom grande)
-- [ ] Customização de espessuras por gaveta
-- [ ] Gavetas tipo "PRO" com laterais de alumínio
-- [ ] Calculadora de corrediças (comprimento ideal)
-- [ ] Preview de montagem (instruções passo-a-passo)
+- [ ] Customiza�o de espessuras por gaveta
+- [ ] Gavetas tipo "PRO" com laterais de alum�nio
+- [ ] Calculadora de corredi�as (comprimento ideal)
+- [ ] Preview de montagem (instru�es passo-a-passo)
 
-### Documentação
-- [x] Relatório técnico completo
-- [ ] Vídeo tutorial de uso
+### Documenta�o
+- [x] Relat�rio t�cnico completo
+- [ ] V�deo tutorial de uso
 - [ ] Guia de troubleshooting
-- [ ] FAQ para usuários finais
+- [ ] FAQ para usu�rios finais
 
 ---
 
 ## 📞 SUPORTE
 
-**Arquivos de Referência:**
-- [DrawerParametrics.ts](src/core/drawers/DrawerParametrics.ts) - Cálculos de dimensões
+**Arquivos de Refer�ncia:**
+- [DrawerParametrics.ts](src/core/drawers/DrawerParametrics.ts) - C�lculos de dimens�es
 - [Drawer.ts](src/core/drawers/Drawer.ts) - Entidade da gaveta
-- [DrawerGenerationService.ts](src/core/drawers/DrawerGenerationService.ts) - Geração de gavetas
-- [DrawerMotionService.ts](src/core/drawers/DrawerMotionService.ts) - Movimento/animação
-- [drawerCutlistAdapter.ts](src/services/drawerCutlistAdapter.ts) - Extração para BOM
-- [BoxBuilder.ts](src/3d/objects/BoxBuilder.ts) - Renderização 3D
+- [DrawerGenerationService.ts](src/core/drawers/DrawerGenerationService.ts) - Gera�o de gavetas
+- [DrawerMotionService.ts](src/core/drawers/DrawerMotionService.ts) - Movimento/anima�o
+- [drawerCutlistAdapter.ts](src/services/drawerCutlistAdapter.ts) - Extra�o para BOM
+- [BoxBuilder.ts](src/3d/objects/BoxBuilder.ts) - Renderiza�o 3D
 
-**Domínio Drawers:**
-- [README.md](src/core/drawers/README.md) - Documentação do domínio
-- [index.ts](src/core/drawers/index.ts) - Exports públicos
+**Dom�nio Drawers:**
+- [README.md](src/core/drawers/README.md) - Documenta�o do dom�nio
+- [index.ts](src/core/drawers/index.ts) - Exports p�blicos
 
 ---
 
-**Data de conclusão:** 2026-02-26  
-**Versão:** 4.0 (Rewrite Completo - BOM + Marcenaria Real)  
-**Status:** ✅ PRONTO PARA PRODUÇÃO  
-**Compilação:** ✅ Zero erros  
-**Testes:** ⏳ Aguardando validação visual do usuário
+**Data de conclus�o:** 2026-02-26  
+**Vers�o:** 4.0 (Rewrite Completo - BOM + Marcenaria Real)  
+**Status:** ✅ PRONTO PARA PRODU��O  
+**Compila�o:** ✅ Zero erros  
+**Testes:** ⏳ Aguardando valida�o visual do usu�rio

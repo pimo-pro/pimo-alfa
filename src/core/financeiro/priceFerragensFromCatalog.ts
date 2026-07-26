@@ -1,6 +1,6 @@
 /**
- * P3.9 F2 ù SSOT preùo ferragens via catùlogo B + fallback Via A + STRICT.
- * Nunca throw: avisos em warnings[]; cùlculo continua.
+ * P3.9 F2 ‚Äî SSOT pre√ßo ferragens via cat√°logo B + fallback Via A + STRICT.
+ * Nunca throw: avisos em warnings[]; c√°lculo continua.
  */
 
 import type { ComponentType } from "../components/componentTypes";
@@ -35,7 +35,7 @@ const TIPO_TO_COMPONENT_ID: Record<string, string> = {
 const JOINT_FERRAGEM_IDS = new Set(["cavilha_8mm", "cavilha_10mm", "parafuso_4x50"]);
 const JOINT_COUNT_PIECE_TIPOS = new Set(["cima", "fundo"]);
 
-/** Preùos unitùrios Via A (boxManufacturing.gerarFerragens) mapeados a ids do catùlogo B. */
+/** Pre√ßos unit√°rios Via A (boxManufacturing.gerarFerragens) mapeados a ids do cat√°logo B. */
 const FALLBACK_PRECO_A_STATIC: Record<string, number> = {
   dobradica_35mm: 2.5,
   corredica_esq: 9.5,
@@ -126,7 +126,7 @@ export function loadComponentTypesForPricing(): ComponentType[] {
   }
 }
 
-/** Resolve preùo unitùrio A para um id B (inclui pe/calùo dinùmicos). */
+/** Resolve pre√ßo unit√°rio A para um id B (inclui pe/cal√ßo din√¢micos). */
 export function resolveFallbackPrecoA(ferragemId: string): number | null {
   if (ferragemId in FALLBACK_PRECO_A_STATIC) {
     return FALLBACK_PRECO_A_STATIC[ferragemId];
@@ -157,7 +157,7 @@ function resolveUnitPrice(
       code: "FERRAGEM_ID_MISSING_IN_CATALOG",
       pieceId,
       ferragemId,
-      message: `ferragemId "${ferragemId}" ausente no catùlogo B`,
+      message: `ferragemId "${ferragemId}" ausente no cat√°logo B`,
     });
   }
 
@@ -172,7 +172,7 @@ function resolveUnitPrice(
       code: "PRECO_B_MISSING_FALLBACK_A",
       pieceId,
       ferragemId,
-      message: `Sem preùo B para "${ferragemId}"; fallback A = ${precoA}`,
+      message: `Sem pre√ßo B para "${ferragemId}"; fallback A = ${precoA}`,
       precoFallbackA: precoA,
     });
     fallbacks.push({ pieceId, ferragemId, precoA, qtd });
@@ -183,7 +183,7 @@ function resolveUnitPrice(
     code: "PRECO_A_FALLBACK_MISSING",
     pieceId,
     ferragemId,
-    message: `Sem preùo B nem fallback A para "${ferragemId}"; usando 0`,
+    message: `Sem pre√ßo B nem fallback A para "${ferragemId}"; usando 0`,
   });
   return { unit: 0, usedFallbackA: false };
 }
@@ -236,7 +236,7 @@ function iterDefsForItem(
 }
 
 /**
- * Preùo ferragens SSOT (catùlogo B + fallback A). STRICT: sù warnings.
+ * Pre√ßo ferragens SSOT (cat√°logo B + fallback A). STRICT: s√≥ warnings.
  */
 export function priceFerragensFromCatalog(input: {
   cutlist: CutListItemComPreco[];
@@ -295,7 +295,7 @@ export function priceFerragensFromCatalog(input: {
   };
 }
 
-/** Diagnùstico ? Via A (boxes) vs catùlogo B (cutlist). */
+/** Diagn√≥stico ? Via A (boxes) vs cat√°logo B (cutlist). */
 export function compareFerragensAvsB(
   boxes: BoxModule[],
   rules: RulesConfig,
@@ -309,7 +309,7 @@ export function compareFerragensAvsB(
     totalEurA = round2(viaA.reduce((s, a) => s + (Number(a.precoTotal) || 0), 0));
     totalQtyA = viaA.reduce((s, a) => s + (Number(a.quantidade) || 0), 0);
   } catch {
-    /* STRICT: Via A indisponivel ó Delta parcial */
+    /* STRICT: Via A indisponivel ‚Äî Delta parcial */
   }
   return {
     totalEurA,

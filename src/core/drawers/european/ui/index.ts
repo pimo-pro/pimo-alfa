@@ -1,5 +1,5 @@
 /**
- * ui/ ù exports UI Modelo B
+ * ui/ ‚Äî exports UI Modelo B
  */
 
 export { EuropeanDrawerConfigPanel, type EuropeanDrawerConfigPanelProps } from "./EuropeanDrawerConfigPanel";

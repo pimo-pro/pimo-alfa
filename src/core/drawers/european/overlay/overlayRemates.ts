@@ -1,5 +1,5 @@
 /**
- * overlayRemates.ts — Remates industriais documentais (+ layer REMATE para DXF).
+ * overlayRemates.ts â€” Remates industriais documentais (+ layer REMATE para DXF).
  */
 
 import type { EuropeanDrawerBoxInput, EuropeanDrawerResult } from "../types";
@@ -10,7 +10,7 @@ export type EuropeanOverlayRemate = {
   thicknessMm: number;
   recessMm: number;
   lengthMm: number;
-  /** Entidade documental para integração DXF (layer REMATE). */
+  /** Entidade documental para integraÃ§Ã£o DXF (layer REMATE). */
   dxfLayer: "REMATE";
 };
 
@@ -24,7 +24,7 @@ const DEFAULT_REMATE_THICKNESS_MM = 19;
 const DEFAULT_REMATE_RECESS_MM = 0;
 
 /**
- * Remates documentais em torno do módulo — não gera peças reais.
+ * Remates documentais em torno do mÃ³dulo â€” nÃ£o gera peÃ§as reais.
  */
 export function buildOverlayRemates(
   result: EuropeanDrawerResult,

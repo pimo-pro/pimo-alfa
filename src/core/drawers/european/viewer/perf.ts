@@ -1,6 +1,6 @@
 /**
- * viewer/perf.ts — Chaves e cache de dados de viewer Modelo B.
- * Não toca em meshes Three.js / industrial — só estruturas de dados.
+ * viewer/perf.ts â€” Chaves e cache de dados de viewer Modelo B.
+ * NÃ£o toca em meshes Three.js / industrial â€” sÃ³ estruturas de dados.
  */
 
 import type { DrawerGeometry, EuropeanDrawerHole, EuropeanDrawerViewerData } from "../types";
@@ -69,7 +69,7 @@ const buildEuropeanViewerDataMemo = memo(buildViewerDataCore, {
   maxSize: 128,
 });
 
-/** Viewer data com cache — mesmo resultado que buildEuropeanViewerData. */
+/** Viewer data com cache â€” mesmo resultado que buildEuropeanViewerData. */
 export function getCachedEuropeanViewerData(
   drawers: Array<{
     id: string;

@@ -1,5 +1,5 @@
 /**
- * safetyMeasuresGate.ts ù Bloqueia relaùùes de medidas industriais impossùveis.
+ * safetyMeasuresGate.ts ‚Äî Bloqueia rela√ß√µes de medidas industriais imposs√≥veis.
  */
 
 import type { DrawerEuropeanModel, EuropeanDrawerBoxConfig, EuropeanDrawerBoxInput } from "../types";

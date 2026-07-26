@@ -1,5 +1,5 @@
 /**
- * Versao publicada (version.json) — Footer + Deploy Info.
+ * Versao publicada (version.json) â€” Footer + Deploy Info.
  * Fonte unica: ficheiro gerado/estampado no deploy (tag GitHub).
  */
 

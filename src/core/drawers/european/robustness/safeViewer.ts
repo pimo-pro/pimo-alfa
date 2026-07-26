@@ -1,5 +1,5 @@
 /**
- * safeViewer.ts ó Filtra drawers/peÁas inv·lidas no viewer data.
+ * safeViewer.ts ‚Äî Filtra drawers/pe√ßas inv√°lidas no viewer data.
  */
 
 import type { DrawerGeometry, DrawerPieceBox, EuropeanDrawerViewerData } from "../types";
@@ -39,7 +39,7 @@ export function sanitizeViewerData(data: EuropeanDrawerViewerData): EuropeanDraw
   const drawers = ensureArray(data.drawers, "viewer.drawers")
     .map((d) => {
       if (!d?.geometry || !geometryRenderable(d.geometry)) {
-        robustDebug("viewer", "drawer omitido (geometria inv·lida)", {
+        robustDebug("viewer", "drawer omitido (geometria inv√°lida)", {
           id: d?.id,
           index: d?.index,
         });
@@ -47,7 +47,7 @@ export function sanitizeViewerData(data: EuropeanDrawerViewerData): EuropeanDraw
       }
       let maxPullMm = d.maxPullMm;
       if (!Number.isFinite(maxPullMm) || maxPullMm < 0) {
-        robustDebug("viewer", "maxPullMm inv·lido ? clamp", maxPullMm);
+        robustDebug("viewer", "maxPullMm inv√°lido ? clamp", maxPullMm);
         maxPullMm = 100;
       }
       return { ...d, maxPullMm };

@@ -1,5 +1,5 @@
 /**
- * geometry/ ù Geometria pura do Sistema Europeu (Modelo B).
+ * geometry/ ‚Äî Geometria pura do Sistema Europeu (Modelo B).
  * Corpo em madeira: laterais/costa/fundo + frente externa (sobreposta).
  */
 
@@ -83,7 +83,7 @@ function buildEuropeanDrawerGeometryCore(
   const yCenter = startY + usefulHeightMm / 2 + stackIndex * (usefulHeightMm + gapMm);
 
   const boxHalfD = box.dimensoes.profundidade / 2;
-  // Frente fora da caixa (sobreposta ù estrutura frontal)
+  // Frente fora da caixa (sobreposta ‚Äî estrutura frontal)
   const front: DrawerPieceBox = {
     widthMm: frontW,
     heightMm: frontH,
@@ -178,7 +178,7 @@ function buildEuropeanDrawerGeometryCore(
   });
 }
 
-/** Geometria memoizada (funùùo pura ù transparente). */
+/** Geometria memoizada (fun√ß√£o pura ‚Äî transparente). */
 export const buildEuropeanDrawerGeometry = memo(buildEuropeanDrawerGeometryCore, {
   namespace: "eu.geometry",
   maxSize: 256,

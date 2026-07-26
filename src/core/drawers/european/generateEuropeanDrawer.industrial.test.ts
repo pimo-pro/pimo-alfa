@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import * as flags from "../drawerSystemFlags";
 import { generateEuropeanDrawer } from "./index";
 
-describe("generateEuropeanDrawer — regras industriais", () => {
+describe("generateEuropeanDrawer â€” regras industriais", () => {
   it("aplica Hettich, folga 7+7, corpo?10 e nomes industriais", () => {
     vi.spyOn(flags, "isDrawerModeloAActive").mockReturnValue(false);
 

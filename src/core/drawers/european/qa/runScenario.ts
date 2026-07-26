@@ -1,6 +1,6 @@
 /**
- * runScenario.ts — Executa um cenário QA Modelo B (simulação pura).
- * Import dinâmico de generateEuropeanDrawer para evitar ciclo com european/index.
+ * runScenario.ts â€” Executa um cenÃ¡rio QA Modelo B (simulaÃ§Ã£o pura).
+ * Import dinÃ¢mico de generateEuropeanDrawer para evitar ciclo com european/index.
  */
 
 import { isDrawerModeloAActive } from "../../drawerSystemFlags";
@@ -23,7 +23,7 @@ function buildSimulatedBox(scenario: EuropeanQaScenario): EuropeanDrawerBoxInput
     dimensoes: {
       largura: larguraInternaMm + 2 * WALL_THICKNESS_MM,
       altura: alturaInternaMm + 2 * WALL_THICKNESS_MM,
-      // P externa ? P útil + costa + frente (espessuras)
+      // P externa ? P Ãºtil + costa + frente (espessuras)
       profundidade: profundidadeInternaMm + WALL_THICKNESS_MM + WALL_THICKNESS_MM,
     },
     espessura: WALL_THICKNESS_MM,
@@ -83,7 +83,7 @@ function nowMs(): number {
 }
 
 /**
- * Executa um cenário: generateEuropeanDrawer + métricas.
+ * Executa um cenÃ¡rio: generateEuropeanDrawer + mÃ©tricas.
  * Nunca altera projeto / CNC / industrial.
  */
 export async function runScenario(scenario: EuropeanQaScenario): Promise<EuropeanQaScenarioResult> {
@@ -103,7 +103,7 @@ export async function runScenario(scenario: EuropeanQaScenario): Promise<Europea
       ...baseMeta,
       valid: false,
       skipped: true,
-      skipReason: "Modelo A ainda activo — desactivar em Admin ? Produtos ? Gavetas.",
+      skipReason: "Modelo A ainda activo â€” desactivar em Admin ? Produtos ? Gavetas.",
       errors: ["QA bloqueado: Modelo A activo."],
       warnings: [],
       autoFixes: [],
@@ -119,7 +119,7 @@ export async function runScenario(scenario: EuropeanQaScenario): Promise<Europea
     return {
       ...baseMeta,
       valid: false,
-      errors: ["Cenário sem gavetas."],
+      errors: ["CenÃ¡rio sem gavetas."],
       warnings: [],
       autoFixes: [],
       autoFixed: false,

@@ -140,7 +140,7 @@ export type DrawerSpec = {
   metalBoxHeightMm?: number;
   softClose?: boolean;
   showDrillingMarkers?: boolean;
-  /** true quando a pe�a veio do Sistema Europeu (Modelo B). */
+  /** true quando a peça veio do Sistema Europeu (Modelo B). */
   modeloB?: boolean;
   drawerDisplayName?: string;
   frontDisplayName?: string;

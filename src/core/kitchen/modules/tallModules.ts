@@ -1,5 +1,5 @@
 /**
- * tallModules.ts — Módulos altos industriais (1500–2200 mm).
+ * tallModules.ts â€” MÃ³dulos altos industriais (1500â€“2200 mm).
  */
 
 import type { KitchenModuleSpec } from "../types";
@@ -15,7 +15,7 @@ export function buildTallModules(): KitchenModuleSpec[] {
       out.push({
         id: `tall-${w}x${h}`,
         kind: "tall",
-        name: `Módulo alto ${w}×${h} mm`,
+        name: `MÃ³dulo alto ${w}â€“${h} mm`,
         widthMm: w,
         heightMm: h,
         depthMm: TALL_DEPTH_MM,

@@ -20,7 +20,7 @@ describe("cnc/cncFileWriter", () => {
     }
   });
 
-  it("gera ficheiros CNC físicos a partir de geometry+holes+dxf", async () => {
+  it("gera ficheiros CNC fÃ­sicos a partir de geometry+holes+dxf", async () => {
     vi.spyOn(flags, "isDrawerModeloAActive").mockReturnValue(false);
     tempDir = mkdtempSync(join(tmpdir(), "eu-cnc-"));
 
@@ -77,7 +77,7 @@ describe("cnc/cncFileWriter", () => {
       expect(text).toContain(f.pieceCode.includes("fun") ? "gav_fun" : f.pieceCode);
     }
 
-    // formatos alternativos em memória
+    // formatos alternativos em memÃ³ria
     for (const format of ["xml", "mpr", "cix", "bpp"] as const) {
       const alt = exportEuropeanCNCFiles(result, {
         outputDir: join(tempDir, format),

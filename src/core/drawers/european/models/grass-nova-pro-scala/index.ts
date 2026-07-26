@@ -1,5 +1,5 @@
 /**
- * Grass Nova Pro Scala — Modelo B
+ * Grass Nova Pro Scala â€” Modelo B
  */
 
 export { GRASS_NOVA_PRO_SCALA as model, GRASS_NOVA_PRO_SCALA } from "../../catalog";

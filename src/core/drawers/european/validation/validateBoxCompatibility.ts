@@ -1,5 +1,5 @@
 /**
- * validateBoxCompatibility.ts — Compatibilidade módulo ? sistema europeu.
+ * validateBoxCompatibility.ts â€” Compatibilidade mÃ³dulo ? sistema europeu.
  */
 
 import type { DrawerEuropeanModel, EuropeanDrawerBoxConfig, EuropeanDrawerBoxInput } from "../types";
@@ -17,7 +17,7 @@ import { emptyValidationResult, type EuropeanDrawerValidationResult } from "./ty
 const PARALLEL_TOL_MM = 1;
 
 /**
- * Valida se a caixa aceita a configuração europeia.
+ * Valida se a caixa aceita a configuraÃ§Ã£o europeia.
  */
 export function validateBoxCompatibility(
   box: EuropeanDrawerBoxInput,
@@ -40,7 +40,7 @@ export function validateBoxCompatibility(
     result.errors.push(
       euError(
         EU_ERROR_CODES.BOX_PARALLEL,
-        `Espessura fora da tolerancia de paralelismo (±${PARALLEL_TOL_MM} mm).`,
+        `Espessura fora da tolerancia de paralelismo (Â±${PARALLEL_TOL_MM} mm).`,
         "box.espessura"
       )
     );
@@ -64,7 +64,7 @@ export function validateBoxCompatibility(
     result.errors.push(
       euError(
         EU_ERROR_CODES.BOX_DEPTH,
-        `Profundidade útil interna (${usefulDepth.toFixed(0)} mm) não admite corrediça Hettich < útil.`,
+        `Profundidade Ãºtil interna (${usefulDepth.toFixed(0)} mm) nÃ£o admite corrediÃ§a Hettich < Ãºtil.`,
         "box.dimensoes.profundidade"
       )
     );
@@ -73,7 +73,7 @@ export function validateBoxCompatibility(
     result.errors.push(
       euError(
         EU_ERROR_CODES.BOX_DEPTH,
-        `Corrediça ${config.depthMm} mm deve ser < profundidade útil ${usefulDepth.toFixed(0)} mm.`,
+        `CorrediÃ§a ${config.depthMm} mm deve ser < profundidade Ãºtil ${usefulDepth.toFixed(0)} mm.`,
         "config.depthMm"
       )
     );

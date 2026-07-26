@@ -30,7 +30,7 @@ describe("buildRemateCutlistItems", () => {
     expect(items.map((i) => i.id)).toEqual(["r1"]);
   });
 
-  it("exclui remates sem dimenses vlidas (no inventa custo)", () => {
+  it("exclui remates sem dimensÃµes vÃ¡lidas (nÃ£o inventa custo)", () => {
     const items = buildRemateCutlistItems(
       [
         baseRemate({ id: "ok", width: 800, height: 100 }),

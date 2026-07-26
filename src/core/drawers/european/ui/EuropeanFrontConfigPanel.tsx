@@ -1,6 +1,6 @@
 /**
- * ui/EuropeanFrontConfigPanel — subpainel isolado (material + dims da frente).
- * Evita rerender do painel completo quando só a frente muda.
+ * ui/EuropeanFrontConfigPanel â€” subpainel isolado (material + dims da frente).
+ * Evita rerender do painel completo quando sÃ³ a frente muda.
  */
 
 import { memo, useCallback } from "react";
@@ -62,7 +62,7 @@ function EuropeanFrontConfigPanelInner({
             value={frontMaterialId ?? boxMaterial ?? ""}
             onChange={(e) => onMaterial(e.target.value)}
           >
-            <option value="">Igual à caixa</option>
+            <option value="">Igual â€” caixa</option>
             {materialOptions.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.label}

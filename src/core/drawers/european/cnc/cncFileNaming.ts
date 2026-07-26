@@ -1,6 +1,6 @@
 /**
- * cncFileNaming.ts — Nomes de ficheiros CNC alinhados aos códigos industriais.
- * Não altera códigos — apenas deriva nomes de ficheiro.
+ * cncFileNaming.ts â€” Nomes de ficheiros CNC alinhados aos cÃ³digos industriais.
+ * NÃ£o altera cÃ³digos â€” apenas deriva nomes de ficheiro.
  */
 
 export type EuropeanCncPieceKey =
@@ -13,7 +13,7 @@ export type EuropeanCncPieceKey =
 
 export type EuropeanCncFormat = "cnc" | "xml" | "mpr" | "cix" | "bpp";
 
-/** Código industrial ? chave de peça / ficheiro. */
+/** CÃ³digo industrial ? chave de peÃ§a / ficheiro. */
 export const INDUSTRIAL_CODE_TO_CNC_PIECE_KEY: Record<string, EuropeanCncPieceKey> = {
   gav_fren: "front",
   gav_fre_int: "front_int",
@@ -23,7 +23,7 @@ export const INDUSTRIAL_CODE_TO_CNC_PIECE_KEY: Record<string, EuropeanCncPieceKe
   gav_fun: "fundo",
 };
 
-/** Nome base canónico (sem extensão) por chave. */
+/** Nome base canÃºnico (sem extensÃ£o) por chave. */
 export const CNC_FILE_BASE_NAMES: Record<EuropeanCncPieceKey, string> = {
   front: "gav_fren",
   front_int: "gav_fre_int",
@@ -55,7 +55,7 @@ export function resolveCncPieceKeyFromCodigo(codigo: string): EuropeanCncPieceKe
 }
 
 /**
- * Constrói nome de ficheiro CNC com prefixo e formato opcionais.
+ * ConstrÃ³i nome de ficheiro CNC com prefixo e formato opcionais.
  * Ex.: prefix "CX01_" + format mpr ? CX01_gav_fren.mpr
  */
 export function buildCncFileName(

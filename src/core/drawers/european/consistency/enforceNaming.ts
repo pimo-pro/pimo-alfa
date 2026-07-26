@@ -1,5 +1,5 @@
 /**
- * enforceNaming.ts — Normalização central de identidade industrial.
+ * enforceNaming.ts â€” NormalizaÃ§Ã£o central de identidade industrial.
  */
 
 import {
@@ -23,14 +23,14 @@ export type EuropeanPieceIdentityInput = {
 export type EuropeanPieceIdentity = {
   nome: string;
   codigo: string;
-  /** Sempre igual ao código industrial. */
+  /** Sempre igual ao cÃ³digo industrial. */
   label: string;
   baseCode: EuropeanIndustrialBaseCode;
 };
 
 /**
- * Garante nome/código/label canónicos.
- * Se o input vier errado de qualquer módulo ? corrige automaticamente.
+ * Garante nome/cÃ³digo/label canÃºnicos.
+ * Se o input vier errado de qualquer mÃ³dulo ? corrige automaticamente.
  */
 export function enforceNaming(piece: EuropeanPieceIdentityInput): EuropeanPieceIdentity | null {
   const drawerIndex0 = Math.max(0, Math.floor(piece.drawerIndex0 ?? 0));
@@ -44,7 +44,7 @@ export function enforceNaming(piece: EuropeanPieceIdentityInput): EuropeanPieceI
   }
   if (!base) return null;
 
-  // Se já veio código indexado canónico, preservar
+  // Se jÃ¡ veio cÃ³digo indexado canÃºnico, preservar
   let codigo = piece.codigo?.trim() ?? "";
   if (!isCanonicalEuropeanCode(codigo) || resolveBaseCode(codigo) !== base) {
     codigo = resolveIndexedCode(base, drawerIndex0, drawerCount);
@@ -63,7 +63,7 @@ export function enforceNaming(piece: EuropeanPieceIdentityInput): EuropeanPieceI
   };
 }
 
-/** Extrai índice 0-based a partir de id tipo eu-drawer-box-2 ou código gav_2_fren. */
+/** Extrai Ã­ndice 0-based a partir de id tipo eu-drawer-box-2 ou cÃ³digo gav_2_fren. */
 export function inferDrawerIndexFromCodigo(codigo: string | undefined): number | undefined {
   if (!codigo) return undefined;
   const front = /^gav_(\d+)_fren$/.exec(codigo);

@@ -14,7 +14,7 @@ const box = {
 };
 
 describe("docs/industrialMetadata", () => {
-  it("extrai modelo, runner, materiais e códigos do resultado real", () => {
+  it("extrai modelo, runner, materiais e cÃ³digos do resultado real", () => {
     vi.spyOn(flags, "isDrawerModeloAActive").mockReturnValue(false);
     const result = generateEuropeanDrawer("hettich-innotech-atira", box, {
       systemId: "hettich-innotech-atira",

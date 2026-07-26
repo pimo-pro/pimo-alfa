@@ -1,5 +1,5 @@
 /**
- * doorModels.ts — Portas industriais (catalogo documental).
+ * doorModels.ts â€” Portas industriais (catalogo documental).
  */
 
 import type { KitchenDoorModel } from "../types";

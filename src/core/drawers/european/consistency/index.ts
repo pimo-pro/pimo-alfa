@@ -1,5 +1,5 @@
 /**
- * european/consistency — Consistência industrial absoluta de nomes/códigos (Modelo B).
+ * european/consistency â€” ConsistÃªncia industrial absoluta de nomes/cÃ³digos (Modelo B).
  */
 
 export {

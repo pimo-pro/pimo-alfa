@@ -1,5 +1,5 @@
 /**
- * dxfReport.ts — Relatório da camada DXF / desenho técnico (Fase 12).
+ * dxfReport.ts â€” RelatÃ©rio da camada DXF / desenho tÃ©cnico (Fase 12).
  */
 
 export type EuropeanDxfStatus = "DXF_OK" | "DXF_WARN" | "DXF_ERROR";
@@ -43,7 +43,7 @@ export function buildDxfReport(input: {
 
 export function formatDxfReportText(report: EuropeanDxfReport): string {
   const lines = [
-    `European DXF / Technical — ${report.status}`,
+    `European DXF / Technical â€” ${report.status}`,
     `entidades: ${report.entityCount}`,
     `layers: ${report.layerCount}`,
     `vistas: ${report.viewCount}`,

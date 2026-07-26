@@ -1,5 +1,5 @@
 /**
- * overlayBuilder.ts — MC Overlay completo (Modelo B).
+ * overlayBuilder.ts â€” MC Overlay completo (Modelo B).
  */
 
 import type { EuropeanDrawerBoxInput, EuropeanDrawerResult } from "../types";
@@ -57,7 +57,7 @@ function groupByView(
 }
 
 /**
- * Constrói MC Overlay avançado — somente leitura sobre o resultado.
+ * ConstrÃ³i MC Overlay avanÃ§ado â€” somente leitura sobre o resultado.
  */
 export function buildEuropeanOverlay(
   result: EuropeanDrawerResult,
@@ -74,13 +74,13 @@ export function buildEuropeanOverlay(
     const gaps = buildOverlayGaps(result, aberturas);
 
     if (measures.internalUsefulWidthMm <= 0) {
-      warnings.push("Largura interna útil <= 0 no overlay.");
+      warnings.push("Largura interna Ãºtil <= 0 no overlay.");
     }
     if (!box) {
-      warnings.push("Box omitida — medidas de módulo/remates usam fallbacks da geometry.");
+      warnings.push("Box omitida â€” medidas de mÃ³dulo/remates usam fallbacks da geometry.");
     }
     if (!result.valid) {
-      warnings.push("Resultado industrial invalid — overlay gerado do estado disponível.");
+      warnings.push("Resultado industrial invalid â€” overlay gerado do estado disponÃ­vel.");
     }
 
     const technicalViewIds =
@@ -112,7 +112,7 @@ export function buildEuropeanOverlay(
 
     return {
       kind: "european-mc-overlay",
-      title: `MC Overlay — ${result.model.displayName}`,
+      title: `MC Overlay â€” ${result.model.displayName}`,
       measures,
       aberturas,
       remates,
@@ -138,7 +138,7 @@ export function buildEuropeanOverlay(
     const gaps = buildOverlayGaps(result, aberturas);
     return {
       kind: "european-mc-overlay",
-      title: "MC Overlay — erro",
+      title: "MC Overlay â€” erro",
       measures,
       aberturas,
       remates,

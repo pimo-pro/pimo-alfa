@@ -1,5 +1,5 @@
 /**
- * validateAssemblyRules.ts — Montagem industrial Modelo B.
+ * validateAssemblyRules.ts â€” Montagem industrial Modelo B.
  */
 
 import type {
@@ -31,7 +31,7 @@ export function validateAssemblyRules(
     result.warnings.push(
       euWarning(
         EU_WARNING_CODES.ASM_TOLERANCE,
-        `Tolerancia de montagem ${assembly.toleranceMm} mm fora do intervalo tipico 0–2 mm.`,
+        `Tolerancia de montagem ${assembly.toleranceMm} mm fora do intervalo tipico 0â€“2 mm.`,
         "assembly.toleranceMm"
       )
     );

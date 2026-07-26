@@ -1,6 +1,6 @@
 /**
- * plannerMeasurements.ts  Medidas visuais da cozinha (documental).
- * Consome overlay se existir  sem alterar overlay.
+ * plannerMeasurements.ts â€” Medidas visuais da cozinha (documental).
+ * Consome overlay se existir â€” sem alterar overlay.
  */
 
 import type { EuropeanOverlay } from "../drawers/european/overlay";

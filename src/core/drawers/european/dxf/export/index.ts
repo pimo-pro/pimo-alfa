@@ -1,6 +1,6 @@
 /**
- * european/dxf/export — API segura para browser (sem Node FS).
- * Para escrita física: importar `exportEuropeanDXFFiles` de `./dxfFileWriter`.
+ * european/dxf/export â€” API segura para browser (sem Node FS).
+ * Para escrita fÃ­sica: importar `exportEuropeanDXFFiles` de `./dxfFileWriter`.
  */
 
 export {

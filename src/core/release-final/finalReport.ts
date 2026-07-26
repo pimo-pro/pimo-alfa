@@ -1,5 +1,5 @@
 /**
- * finalReport.ts ù Relatùrio do Release Final PIMO.PRO-V5 (Fase 20).
+ * finalReport.ts ‚Äî Relat√©rio do Release Final PIMO.PRO-V5 (Fase 20).
  */
 
 import type { FinalDocumentationBundle } from "./finalDocumentation";
@@ -44,7 +44,7 @@ export function buildFinalReleaseReport(input: {
     }
   }
   if (!input.integrity.nothingMutated) {
-    errors.push("Integridade: flag nothingMutated invùlida.");
+    errors.push("Integridade: flag nothingMutated inv√°lida.");
   }
 
   let status: ReleaseFinalStatus = "RELEASE_FINAL_OK";

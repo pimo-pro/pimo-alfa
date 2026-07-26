@@ -1,6 +1,6 @@
 /**
- * autoFix.ts — Correções automáticas seguras (Modelo B).
- * Nunca altera o catálogo oficial — apenas EuropeanDrawerBoxConfig.
+ * autoFix.ts â€” CorreÃ§Ãµes automÃ¡ticas seguras (Modelo B).
+ * Nunca altera o catÃ¡logo oficial â€” apenas EuropeanDrawerBoxConfig.
  */
 
 import type {
@@ -20,7 +20,7 @@ import type { EuropeanDrawerValidationError } from "./errors";
 import { EU_ERROR_CODES } from "./errors";
 
 /**
- * Constrói lista de auto-fixes a partir dos erros detectados + geometria da caixa.
+ * ConstrÃ³i lista de auto-fixes a partir dos erros detectados + geometria da caixa.
  */
 export function buildEuropeanAutoFixes(
   box: EuropeanDrawerBoxInput,
@@ -35,7 +35,7 @@ export function buildEuropeanAutoFixes(
   if (codes.has(EU_ERROR_CODES.BOX_DEPTH) || codes.has(EU_ERROR_CODES.DIM_BOTTOM)) {
     fixes.push({
       code: "FIX_DEPTH_FIT",
-      description: "Ajustar corrediça Hettich (maior comprimento < profundidade útil interna).",
+      description: "Ajustar corrediÃ§a Hettich (maior comprimento < profundidade Ãºtil interna).",
       apply: (cfg) => {
         const useful = resolveEuropeanUsefulInternalDepthMm(box);
         const best = pickHettichRunnerForBox({ ...box, profundidadeInternaUtilMm: useful });
@@ -47,7 +47,7 @@ export function buildEuropeanAutoFixes(
   if (codes.has(EU_ERROR_CODES.BOX_HEIGHT) || codes.has(EU_ERROR_CODES.DIM_USEFUL_HEIGHT)) {
     fixes.push({
       code: "FIX_HEIGHT_OR_COUNT",
-      description: "Reduzir quantidade ou altura de catálogo para caber na altura útil.",
+      description: "Reduzir quantidade ou altura de catÃ¡logo para caber na altura Ãºtil.",
       apply: (cfg) => {
         const useful = calcUsefulCabinetHeightMm(box);
         const gap = 6;
@@ -106,7 +106,7 @@ export function buildEuropeanAutoFixes(
   if (codes.has(EU_ERROR_CODES.HOLE_BOTTOM_GAP) || codes.has(EU_ERROR_CODES.HOLE_PITCH32)) {
     fixes.push({
       code: "FIX_HOLE_PATTERN_REGEN",
-      description: "Normalizar config Hettich para regenerar padrão de furos.",
+      description: "Normalizar config Hettich para regenerar padrÃ£o de furos.",
       apply: (cfg) => {
         const useful = resolveEuropeanUsefulInternalDepthMm(box);
         const depth = pickHettichRunnerForBox({ ...box, profundidadeInternaUtilMm: useful });
@@ -118,7 +118,7 @@ export function buildEuropeanAutoFixes(
 
   fixes.push({
     code: "FIX_MIN_TOLERANCE_NORMALIZE",
-    description: "Normalizar count/depth/height aos valores Hettich válidos.",
+    description: "Normalizar count/depth/height aos valores Hettich vÃ¡lidos.",
     apply: (cfg) => {
       const useful = resolveEuropeanUsefulInternalDepthMm(box);
       let depth = pickHettichRunnerForBox({ ...box, profundidadeInternaUtilMm: useful });
@@ -149,7 +149,7 @@ export function buildEuropeanAutoFixes(
   });
 }
 
-/** Aplica todas as ações em sequência. */
+/** Aplica todas as aÃ§Ãµes em sequÃªncia. */
 export function applyEuropeanAutoFixes(
   config: EuropeanDrawerBoxConfig,
   fixes: EuropeanDrawerAutoFixAction[]

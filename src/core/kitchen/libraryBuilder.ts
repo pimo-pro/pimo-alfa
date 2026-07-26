@@ -1,5 +1,5 @@
 /**
- * libraryBuilder.ts — Construção completa da Kitchen Library industrial.
+ * libraryBuilder.ts â€” ConstruÃ§Ã£o completa da Kitchen Library industrial.
  */
 
 import { buildBaseModules } from "./modules/baseModules";
@@ -47,7 +47,7 @@ export type KitchenLibrary = {
   drawers: {
     modeloB: KitchenEuropeanDrawerSample;
   };
-  /** Referências documentais agregadas. */
+  /** ReferÃªncias documentais agregadas. */
   integrations: {
     technicalViews: boolean;
     dxf: boolean;
@@ -65,10 +65,10 @@ export type KitchenLibrary = {
 export const KITCHEN_LIBRARY_VERSION = "K.v15.0";
 
 /**
- * Constrói a biblioteca industrial completa (somente leitura sobre Modelo B).
+ * ConstrÃ³i a biblioteca industrial completa (somente leitura sobre Modelo B).
  */
 export function buildKitchenLibrary(options?: {
-  /** Se false, não invoca generateEuropeanDrawer (catalog only). Default true. */
+  /** Se false, nÃ£o invoca generateEuropeanDrawer (catalog only). Default true. */
   includeModeloBSample?: boolean;
 }): KitchenLibrary {
   const warnings: string[] = [];

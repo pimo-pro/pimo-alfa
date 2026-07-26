@@ -1,5 +1,5 @@
 /**
- * catalog.ts ù Catalogo oficial dos 4 sistemas europeus (Modelo B).
+ * catalog.ts ‚Äî Catalogo oficial dos 4 sistemas europeus (Modelo B).
  *
  * Specs industriais fornecidas para esta fase (SSOT Modelo B).
  * Nao reutiliza drawerMetalBoxCatalog do Modelo A (alturas diferentes).
@@ -37,7 +37,7 @@ function holePattern(partial: Partial<DrawerHolePattern> & Pick<DrawerHolePatter
 
 const ASSEMBLY_BASE = {
   order: [
-    "1. Fixar corrediùas Hettich nas laterais do mùdulo (sistema 32 mm)",
+    "1. Fixar corredi√ßas Hettich nas laterais do m√≥dulo (sistema 32 mm)",
     "2. Montar laterais 16 mm + costa 16 mm + fundo 10 mm",
     "3. Fixar frente interna (se dual) / frente externa (material independente)",
     "4. Regular Soft-Close / Push-Open",
@@ -53,11 +53,11 @@ export const BLUM_LEGRABOX: DrawerEuropeanModel = {
   brand: "Blum",
   displayName: "Blum Legrabox",
   heights: [
-    { code: "N", heightMm: 66, label: "N ù 66 mm" },
-    { code: "M", heightMm: 90, label: "M ù 90 mm" },
-    { code: "K", heightMm: 128, label: "K ù 128 mm" },
-    { code: "F", heightMm: 185, label: "F ù 185 mm" },
-    { code: "H", heightMm: 241, label: "H ù 241 mm" },
+    { code: "N", heightMm: 66, label: "N ‚Äî 66 mm" },
+    { code: "M", heightMm: 90, label: "M ‚Äî 90 mm" },
+    { code: "K", heightMm: 128, label: "K ‚Äî 128 mm" },
+    { code: "F", heightMm: 185, label: "F ‚Äî 185 mm" },
+    { code: "H", heightMm: 241, label: "H ‚Äî 241 mm" },
   ],
   depthsMm: depthRange(300, 600, [300]),
   depthProfile: { nominalMm: 500, minMm: 300, maxMm: 600, stepMm: 50 },
@@ -67,7 +67,7 @@ export const BLUM_LEGRABOX: DrawerEuropeanModel = {
     ...ASSEMBLY_BASE,
     warnings: [
       "Modelo B: largura externa = caixa interna ? 14 mm (folga 7+7)",
-      "Corrediùas Hettich 300ù600; corpo = corrediùa ? 10 mm",
+      "Corredi√ßas Hettich 300‚Äì600; corpo = corredi√ßa ? 10 mm",
       "Setback frontal 37 mm; bottom gap 12.5 mm; sistema 32 mm",
     ],
   },
@@ -81,11 +81,11 @@ export const BLUM_TANDEMBOX_ANTARO: DrawerEuropeanModel = {
   brand: "Blum",
   displayName: "Blum TandemBox Antaro",
   heights: [
-    { code: "D", heightMm: 68, label: "D ù 68 mm" },
-    { code: "M", heightMm: 83, label: "M ù 83 mm" },
-    { code: "K", heightMm: 115, label: "K ù 115 mm" },
-    { code: "C", heightMm: 167, label: "C ù 167 mm" },
-    { code: "F", heightMm: 199, label: "F ù 199 mm" },
+    { code: "D", heightMm: 68, label: "D ‚Äî 68 mm" },
+    { code: "M", heightMm: 83, label: "M ‚Äî 83 mm" },
+    { code: "K", heightMm: 115, label: "K ‚Äî 115 mm" },
+    { code: "C", heightMm: 167, label: "C ‚Äî 167 mm" },
+    { code: "F", heightMm: 199, label: "F ‚Äî 199 mm" },
   ],
   depthsMm: depthRange(300, 600, [300]),
   depthProfile: { nominalMm: 500, minMm: 300, maxMm: 600, stepMm: 50 },
@@ -95,7 +95,7 @@ export const BLUM_TANDEMBOX_ANTARO: DrawerEuropeanModel = {
     ...ASSEMBLY_BASE,
     warnings: [
       "Modelo B: largura externa = caixa interna ? 14 mm (folga 7+7)",
-      "Corrediùas Hettich 300ù600; corpo = corrediùa ? 10 mm",
+      "Corredi√ßas Hettich 300‚Äì600; corpo = corredi√ßa ? 10 mm",
     ],
   },
   recommendedFrontThicknessMm: 19,
@@ -121,7 +121,7 @@ export const HETTICH_INNOTECH_ATIRA: DrawerEuropeanModel = {
     ...ASSEMBLY_BASE,
     warnings: [
       "Modelo B: largura externa = caixa interna ? 14 mm (folga 7+7)",
-      "Corrediùas Hettich 300ù600; corpo = corrediùa ? 10 mm",
+      "Corredi√ßas Hettich 300‚Äì600; corpo = corredi√ßa ? 10 mm",
     ],
   },
   recommendedFrontThicknessMm: 19,
@@ -147,7 +147,7 @@ export const GRASS_NOVA_PRO_SCALA: DrawerEuropeanModel = {
     ...ASSEMBLY_BASE,
     warnings: [
       "Modelo B: largura externa = caixa interna ? 14 mm (folga 7+7)",
-      "Corrediùas Hettich 300ù600; corpo = corrediùa ? 10 mm",
+      "Corredi√ßas Hettich 300‚Äì600; corpo = corredi√ßa ? 10 mm",
     ],
   },
   recommendedFrontThicknessMm: 19,
@@ -155,7 +155,7 @@ export const GRASS_NOVA_PRO_SCALA: DrawerEuropeanModel = {
   notes: "Soft-Close e Push-Open suportados.",
 };
 
-/** Catalogo completo ù ordem estavel para UI. */
+/** Catalogo completo ‚Äî ordem estavel para UI. */
 export const EUROPEAN_DRAWER_SYSTEMS: readonly DrawerEuropeanModel[] = [
   BLUM_LEGRABOX,
   BLUM_TANDEMBOX_ANTARO,

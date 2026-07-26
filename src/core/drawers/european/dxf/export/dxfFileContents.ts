@@ -1,5 +1,5 @@
 /**
- * dxfFileContents.ts — Gera conteúdos .dxf em memória (sem FS).
+ * dxfFileContents.ts â€” Gera conteÃºdos .dxf em memÃ³ria (sem FS).
  */
 
 import type { EuropeanDrawerResult } from "../../types";
@@ -44,7 +44,7 @@ export type DxfPreparedFile = {
 };
 
 /**
- * Prepara ficheiros DXF em memória a partir de result.dxf.
+ * Prepara ficheiros DXF em memÃ³ria a partir de result.dxf.
  */
 export function prepareEuropeanDXFFiles(
   result: EuropeanDrawerResult,
@@ -60,7 +60,7 @@ export function prepareEuropeanDXFFiles(
     return {
       files: [],
       warnings,
-      errors: ["result.dxf ausente — execute generateEuropeanDrawer com Modelo B activo."],
+      errors: ["result.dxf ausente â€” execute generateEuropeanDrawer com Modelo B activo."],
       outputDir,
     };
   }
@@ -72,7 +72,7 @@ export function prepareEuropeanDXFFiles(
   );
 
   if (contours.length === 0) {
-    warnings.push("Nenhum contorno selecionado para exportação.");
+    warnings.push("Nenhum contorno selecionado para exportaÃ§Ã£o.");
   }
 
   const usedNames = new Set<string>();
@@ -80,7 +80,7 @@ export function prepareEuropeanDXFFiles(
   for (const contour of contours) {
     let fileName = buildDxfFileName(contour.pieceCode, { prefix: options?.prefix });
     if (!fileName) {
-      warnings.push(`Código sem mapeamento de ficheiro: ${contour.pieceCode}`);
+      warnings.push(`CÃ³digo sem mapeamento de ficheiro: ${contour.pieceCode}`);
       continue;
     }
     if (usedNames.has(fileName)) {
@@ -90,11 +90,11 @@ export function prepareEuropeanDXFFiles(
 
     const entities = document.entities.filter((e) => e.pieceCode === contour.pieceCode);
     if (entities.length === 0) {
-      warnings.push(`Peça ${contour.pieceCode} sem entidades DXF suficientes.`);
+      warnings.push(`PeÃ§a ${contour.pieceCode} sem entidades DXF suficientes.`);
       continue;
     }
     if (entities.length < 4) {
-      warnings.push(`Peça ${contour.pieceCode} com poucas entidades DXF (${entities.length}).`);
+      warnings.push(`PeÃ§a ${contour.pieceCode} com poucas entidades DXF (${entities.length}).`);
     }
 
     files.push({
@@ -111,7 +111,7 @@ export function prepareEuropeanDXFFiles(
   for (const expected of ["front", "lat_dir", "lat_esq", "costa", "fundo"] as const) {
     if (!options?.pieces || options.pieces.includes(expected)) {
       if (!coveredKeys.has(expected)) {
-        warnings.push(`Peça esperada não exportada: ${expected}`);
+        warnings.push(`PeÃ§a esperada nÃ£o exportada: ${expected}`);
       }
     }
   }

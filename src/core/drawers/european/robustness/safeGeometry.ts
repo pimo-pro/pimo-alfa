@@ -1,5 +1,5 @@
 /**
- * safeGeometry.ts ó Sanitiza geometria emitida (dims/origins finitos).
+ * safeGeometry.ts ‚Äî Sanitiza geometria emitida (dims/origins finitos).
  */
 
 import type { DrawerGeometry, DrawerPieceBox } from "../types";
@@ -33,7 +33,7 @@ function pieceHasCriticalNaN(piece: DrawerPieceBox): boolean {
 }
 
 /**
- * Sanitiza geometria completa. PeÁas com NaN residual apÛs clamp s„o zeradas.
+ * Sanitiza geometria completa. Pe√ßas com NaN residual ap√≥s clamp s√≥o zeradas.
  */
 export function sanitizeGeometry(geometry: DrawerGeometry): DrawerGeometry {
   const front = sanitizePiece(geometry.front, "geometry.front");
@@ -53,7 +53,7 @@ export function sanitizeGeometry(geometry: DrawerGeometry): DrawerGeometry {
     ["back", back],
   ] as const) {
     if (pieceHasCriticalNaN(p)) {
-      robustDebug("geometry", `peÁa ${name} ainda inv·lida apÛs sanitize`, p);
+      robustDebug("geometry", `pe√ßa ${name} ainda inv√°lida ap√≥s sanitize`, p);
     }
   }
 

@@ -1,5 +1,5 @@
 /**
- * safetyCutlistGate.ts — Bloqueia cutlist sem identidade/dims industriais válidas.
+ * safetyCutlistGate.ts â€” Bloqueia cutlist sem identidade/dims industriais vÃ¡lidas.
  */
 
 import type { DrawerCutlistItem } from "../types";
@@ -11,9 +11,9 @@ function isWoodLike(item: DrawerCutlistItem): boolean {
 }
 
 /**
- * Gate de cutlist: nome/código industrial, espessura, qty, dims.
+ * Gate de cutlist: nome/cÃ³digo industrial, espessura, qty, dims.
  * kind optional/hardware/metal: regras mais leves (corpo pode ter espessura 0).
- * Soft-close / push-open / corrediça não exigem código gav_*.
+ * Soft-close / push-open / corrediÃ§a nÃ£o exigem cÃ³digo gav_*.
  */
 export function runSafetyCutlistGate(cutlist: DrawerCutlistItem[]): EuropeanSafetyGateResult {
   const t0 = performance.now();

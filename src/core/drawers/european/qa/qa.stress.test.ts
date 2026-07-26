@@ -10,14 +10,14 @@ import {
 } from "./index";
 
 describe("european/qa Auto QA", () => {
-  it("gera ~200 cenários determinísticos", () => {
+  it("gera ~200 cenÃ¡rios determinÃ­sticos", () => {
     expect(ALL_SCENARIOS.length).toBe(200);
     expect(buildEuropeanQaScenarios(200).length).toBe(200);
     expect(ALL_SCENARIOS[0]!.id).toBe("EU-QA-001");
     expect(ALL_SCENARIOS[0]!.gavetas.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("bloqueia execução se Modelo A activo", async () => {
+  it("bloqueia execuÃ§Ã£o se Modelo A activo", async () => {
     vi.spyOn(flags, "isDrawerModeloAActive").mockReturnValue(true);
     const r = await runScenario(ALL_SCENARIOS[0]!);
     expect(r.skipped).toBe(true);

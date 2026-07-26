@@ -1,5 +1,5 @@
 /**
- * technicalSections.ts — Helpers estruturais reutilizáveis (dados, sem layout gráfico).
+ * technicalSections.ts â€” Helpers estruturais reutilizÃ¡veis (dados, sem layout grÃ¡fico).
  */
 
 export type DocsTextBlock = {
@@ -49,16 +49,16 @@ export function tableBlock(columns: string[], rows: string[][], title?: string):
 }
 
 export function fmtMm(n: number | undefined | null): string {
-  if (n == null || !Number.isFinite(n)) return "—";
+  if (n == null || !Number.isFinite(n)) return "â€”";
   return `${Math.round(n * 100) / 100} mm`;
 }
 
 export function fmtM2(n: number | undefined | null): string {
-  if (n == null || !Number.isFinite(n)) return "—";
-  return `${(Math.round(n * 10000) / 10000).toFixed(4)} m²`;
+  if (n == null || !Number.isFinite(n)) return "â€”";
+  return `${(Math.round(n * 10000) / 10000).toFixed(4)} mÂ²`;
 }
 
-export function safeStr(v: unknown, fallback = "—"): string {
+export function safeStr(v: unknown, fallback = "â€”"): string {
   if (v == null) return fallback;
   const s = String(v).trim();
   return s || fallback;

@@ -1,11 +1,11 @@
 /**
- * perf/memo.ts ù Memoizaùùo segura para funùùes puras do Modelo B.
+ * perf/memo.ts ‚Äî Memoiza√ß√£o segura para fun√ß√µes puras do Modelo B.
  * Cache por JSON.stringify(args); LRU; limpeza por epoch de config.
  * Nunca usar em UI/layers com side-effects.
  */
 
 export type MemoOptions = {
-  /** Capacidade mùxima de entradas (default 256). */
+  /** Capacidade m√°xima de entradas (default 256). */
   maxSize?: number;
   /** Namespace para limpeza selectiva. */
   namespace?: string;
@@ -17,7 +17,7 @@ const globalCaches = new Map<string, Map<string, CacheEntry>>();
 let configEpoch = 0;
 let touchSeq = 0;
 
-/** Incrementa epoch global (invalidaùùo quando config estrutural muda). */
+/** Incrementa epoch global (invalida√ß√£o quando config estrutural muda). */
 export function bumpEuropeanPerfConfigEpoch(): number {
   configEpoch += 1;
   clearAllEuropeanMemos();
@@ -49,7 +49,7 @@ function stableKey(args: unknown[]): string {
   try {
     return `${configEpoch}::${JSON.stringify(args)}`;
   } catch {
-    // Fallback raro (args nùo serializùveis): nùo cachear de forma partilhada
+    // Fallback raro (args n√£o serializ√°veis): n√£o cachear de forma partilhada
     return `${configEpoch}::${String(args.length)}::${Date.now()}::${Math.random()}`;
   }
 }
@@ -65,7 +65,7 @@ function evictIfNeeded(cache: Map<string, CacheEntry>, maxSize: number): void {
 }
 
 /**
- * Memoiza funùùo pura. Chave = epoch + JSON.stringify(args).
+ * Memoiza fun√ß√£o pura. Chave = epoch + JSON.stringify(args).
  */
 export function memo<TArgs extends unknown[], TResult>(
   fn: (..._args: TArgs) => TResult,
@@ -77,7 +77,7 @@ export function memo<TArgs extends unknown[], TResult>(
 
   return (...args: TArgs): TResult => {
     const key = stableKey(args as unknown[]);
-    // Se a chave contùm random (fallback), nùo usar cache
+    // Se a chave cont√©m random (fallback), n√£o usar cache
     if (key.includes("::") && key.split("::").length > 2 && /[0-9]+\.[0-9]+$/.test(key)) {
       return fn(...args);
     }

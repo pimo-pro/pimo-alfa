@@ -1,6 +1,6 @@
 /**
- * adapter/ � Converte resultado Modelo B ? DrawerLayerItem / CutListItem.
- * Permite reutilizar viewer/cutlist sem alterar o n�cleo do Modelo A.
+ * adapter/ — Converte resultado Modelo B ? DrawerLayerItem / CutListItem.
+ * Permite reutilizar viewer/cutlist sem alterar o núcleo do Modelo A.
  */
 
 import type { DrawerLayerItem } from "../../../../models/BoxLayers";
@@ -119,8 +119,8 @@ function europeanGeometryToLayerItemCore(params: {
 }
 
 /**
- * Layer memoizado. Material da frente faz parte da chave �
- * mudan�a s� de material reutiliza hit se args iguais; dims iguais + mat diferente = s� overlay leve via cache miss m�nimo.
+ * Layer memoizado. Material da frente faz parte da chave —
+ * mudança só de material reutiliza hit se args iguais; dims iguais + mat diferente = só overlay leve via cache miss mínimo.
  */
 export const europeanGeometryToLayerItem = memo(europeanGeometryToLayerItemCore, {
   namespace: "eu.adapter.layer",

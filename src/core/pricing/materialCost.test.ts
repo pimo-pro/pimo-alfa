@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { calculateMaterialCost, DEFAULT_MATERIAL_COST_CONFIG } from "./materialCost";
 
 describe("pricing/materialCost", () => {
-  it("calcula área e custo a partir da cutlist wood", () => {
+  it("calcula Ã¡rea e custo a partir da cutlist wood", () => {
     const breakdown = calculateMaterialCost(
       [
         {
@@ -29,7 +29,7 @@ describe("pricing/materialCost", () => {
         },
         {
           codigo: "runner",
-          nome: "Corrediça",
+          nome: "CorrediÃ§a",
           quantidade: 1,
           larguraMm: 1,
           alturaMm: 1,

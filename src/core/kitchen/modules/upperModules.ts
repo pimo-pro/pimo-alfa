@@ -1,5 +1,5 @@
 /**
- * upperModules.ts — Módulos superiores industriais (300–900 mm).
+ * upperModules.ts â€” MÃ³dulos superiores industriais (300â€“900 mm).
  */
 
 import type { KitchenModuleSpec } from "../types";
@@ -12,7 +12,7 @@ export function buildUpperModules(): KitchenModuleSpec[] {
   return UPPER_WIDTHS.map((w) => ({
     id: `upper-${w}`,
     kind: "upper" as const,
-    name: `Módulo superior ${w} mm`,
+    name: `MÃ³dulo superior ${w} mm`,
     widthMm: w,
     heightMm: UPPER_HEIGHT_MM,
     depthMm: UPPER_DEPTH_MM,

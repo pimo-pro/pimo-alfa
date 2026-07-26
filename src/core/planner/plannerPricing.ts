@@ -1,5 +1,5 @@
 /**
- * plannerPricing.ts — Preço em tempo real (consome IndustrialPricing, sem recalcular).
+ * plannerPricing.ts â€” PreÃ§o em tempo real (consome IndustrialPricing, sem recalcular).
  */
 
 import type { IndustrialPricing } from "../pricing";
@@ -22,8 +22,8 @@ export type PlannerPricingSummary = {
 };
 
 /**
- * Agrega preço a partir do pricing da Kitchen Library / amostra.
- * Multiplica unitários × módulos colocados — sem rebuild industrial.
+ * Agrega preÃ§o a partir do pricing da Kitchen Library / amostra.
+ * Multiplica unitÃ¡rios â€” mÃ³dulos colocados â€” sem rebuild industrial.
  */
 export function buildPlannerPricing(
   placed: PlannerPlacedModule[],

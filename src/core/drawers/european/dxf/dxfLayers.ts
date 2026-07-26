@@ -1,5 +1,5 @@
 /**
- * dxfLayers.ts — Layers industriais DXF (Modelo B).
+ * dxfLayers.ts â€” Layers industriais DXF (Modelo B).
  */
 
 export const EUROPEAN_DXF_LAYERS = [

@@ -1,6 +1,6 @@
 /**
- * validation/validateAll.ts — Um único passo de validação industrial (Modelo B).
- * Mesma ordem / merge / autoFixes que a orquestração anterior.
+ * validation/validateAll.ts â€” Um Ãºnico passo de validaÃ§Ã£o industrial (Modelo B).
+ * Mesma ordem / merge / autoFixes que a orquestraÃ§Ã£o anterior.
  */
 
 import type {
@@ -37,7 +37,7 @@ export type ValidateAllInput = {
 };
 
 /**
- * Consolida todos os validadores num único resultado.
+ * Consolida todos os validadores num Ãºnico resultado.
  */
 export function validateAll(input: ValidateAllInput): EuropeanDrawerValidationResult {
   const { box, model, config, geometry, holes, cutlist, pdf, viewer, assembly } = input;

@@ -1,6 +1,6 @@
 /**
  * Tipos base da Kitchen Library industrial (Fase 15 / PIMO.PRO-V5 Fase 10).
- * Camada documental — não altera Modelo B / industrial/** / Modelo A.
+ * Camada documental â€” nÃ£o altera Modelo B / industrial/** / Modelo A.
  */
 
 export type KitchenModuleKind = "base" | "tall" | "upper" | "corner";
@@ -19,7 +19,7 @@ export type KitchenModuleSpec = {
     defaultDrawers?: number;
     defaultDoors?: number;
   };
-  /** Integrações documentais (presença na library, sem gerar peças). */
+  /** IntegraÃ§Ãµes documentais (presenÃ§a na library, sem gerar peÃ§as). */
   integrations: {
     technicalViews: boolean;
     dxf: boolean;

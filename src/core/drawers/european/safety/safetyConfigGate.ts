@@ -1,5 +1,5 @@
 /**
- * safetyConfigGate.ts — Bloqueia configs industriais impossíveis (sem auto-correção).
+ * safetyConfigGate.ts â€” Bloqueia configs industriais impossÃ³veis (sem auto-correÃ§Ã£o).
  */
 
 import type { DrawerEuropeanModel, EuropeanDrawerBoxConfig, EuropeanDrawerBoxInput } from "../types";
@@ -21,7 +21,7 @@ function isBlankMaterial(value: string | undefined): boolean {
 }
 
 /**
- * Gate de configuração: runner, altura, frente, count, profundidade útil, materiais, flags.
+ * Gate de configuraÃ§Ã£o: runner, altura, frente, count, profundidade Ãºtil, materiais, flags.
  */
 export function runSafetyConfigGate(
   config: EuropeanDrawerBoxConfig,
@@ -138,7 +138,7 @@ export function runSafetyConfigGate(
         "config",
         "warning",
         "FLAGS_DUAL_PUSH_SOFT",
-        "Flags dualFront + pushOpen + softClose simultaneas — verificar catalogo"
+        "Flags dualFront + pushOpen + softClose simultaneas â€” verificar catalogo"
       )
     );
   }

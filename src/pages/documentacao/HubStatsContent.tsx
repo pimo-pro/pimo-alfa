@@ -1,5 +1,5 @@
 /**
- * Bloco de Estatisticas do Projeto ù topo do Hub (hibrido A+C).
+ * Bloco de Estatisticas do Projeto ‚Äî topo do Hub (hibrido A+C).
  * Visivel apenas na seccao "Documentacao atual".
  * Dados via loadHubStats (local) + contagem dinamica de projetos.
  */

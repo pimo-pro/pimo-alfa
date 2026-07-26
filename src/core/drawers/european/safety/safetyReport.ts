@@ -1,5 +1,5 @@
 /**
- * safetyReport.ts — Relatório agregado dos Industrial Safety Gates (Modelo B).
+ * safetyReport.ts â€” RelatÃ©rio agregado dos Industrial Safety Gates (Modelo B).
  */
 
 export type EuropeanSafetyGateId =
@@ -96,7 +96,7 @@ export function buildSafetyReport(gates: EuropeanSafetyGateResult[]): EuropeanSa
 
 export function formatSafetyReportText(report: EuropeanSafetyReport): string {
   const lines = [
-    `European Safety Gates — ${report.status}`,
+    `European Safety Gates â€” ${report.status}`,
     `tempo: ${report.totalDurationMs.toFixed(2)} ms`,
     `gates: ${report.gates.map((g) => `${g.gate}:${g.ok ? "OK" : "FAIL"}`).join(", ")}`,
   ];

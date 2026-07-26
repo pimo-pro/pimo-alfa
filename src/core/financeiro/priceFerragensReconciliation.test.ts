@@ -1,5 +1,5 @@
 /**
- * P3.9 F2 — reconciliação ? Peças.ferragens == Unificado.ferragens com flag on.
+ * P3.9 F2 â€” reconciliaÃ§Ã£o ? PeÃ§as.ferragens == Unificado.ferragens com flag on.
  * Usa cutlist directa no SSOT (evita gerarModeloIndustrial / rules incompletas).
  */
 
@@ -27,7 +27,7 @@ function piece(
 }
 
 describe("P3.9 F2 ferragens reconciliation (SSOT)", () => {
-  it("? eurByPieceId === totalEur (same function used by Unificado + Peças)", () => {
+  it("? eurByPieceId === totalEur (same function used by Unificado + PeÃ§as)", () => {
     const cutlist = [
       piece({ id: "a", tipo: "porta_simples" }),
       piece({ id: "b", tipo: "prateleira" }),

@@ -1,5 +1,5 @@
 /**
- * releaseReport.ts — Relatório da camada Release Notes (Fase 14).
+ * releaseReport.ts â€” RelatÃ©rio da camada Release Notes (Fase 14).
  */
 
 export type EuropeanReleaseStatus = "RELEASE_OK" | "RELEASE_WARN" | "RELEASE_ERROR";
@@ -23,7 +23,7 @@ export function buildReleaseReport(input: {
   const warnings = [...(input.warnings ?? [])];
   const errors = [...(input.errors ?? [])];
   if (!input.industrialIntegrity) {
-    warnings.push("Integridade industrial: result.valid=false no momento da geração das notes.");
+    warnings.push("Integridade industrial: result.valid=false no momento da geraÃ§Ã£o das notes.");
   }
   let status: EuropeanReleaseStatus = "RELEASE_OK";
   if (errors.length > 0) status = "RELEASE_ERROR";
@@ -40,7 +40,7 @@ export function buildReleaseReport(input: {
 
 export function formatReleaseReportText(report: EuropeanReleaseReport): string {
   const lines = [
-    `European Release Notes — ${report.status}`,
+    `European Release Notes â€” ${report.status}`,
     `secoes: ${report.sectionsGenerated}`,
     `eventos: ${report.eventsCollected}`,
     `integridade: ${report.industrialIntegrity ? "OK" : "WARN"}`,

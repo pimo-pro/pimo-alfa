@@ -1,5 +1,5 @@
 /**
- * dxfFileWriter.ts ù Escrita de ficheiros .dxf fùsicos (Node FS).
+ * dxfFileWriter.ts ‚Äî Escrita de ficheiros .dxf f√≠sicos (Node FS).
  */
 
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -22,8 +22,8 @@ function canUseNodeFs(): boolean {
 }
 
 /**
- * Exporta ficheiros .dxf fùsicos a partir de result.dxf.
- * Nùo altera o result.
+ * Exporta ficheiros .dxf f√≠sicos a partir de result.dxf.
+ * N√£o altera o result.
  */
 export function exportEuropeanDXFFiles(
   result: EuropeanDrawerResult,
@@ -54,7 +54,7 @@ export function exportEuropeanDXFFiles(
         );
       }
     } else if (write && !canUseNodeFs()) {
-      warnings.push(`Ambiente sem Node FS ù ${f.fileName} gerado sù em memùria.`);
+      warnings.push(`Ambiente sem Node FS ‚Äî ${f.fileName} gerado s√≥ em mem√≥ria.`);
     }
 
     files.push({

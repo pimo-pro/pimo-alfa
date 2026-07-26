@@ -72,7 +72,7 @@ describe("computeCustosAvancadosFinanceiras (P3.9 F3c)", () => {
     expect(r.warnings.some((w) => w.includes("enableLogistica"))).toBe(true);
   });
 
-  it("por_chapas_reais ? chapasReais = count × custo + suppress material", () => {
+  it("por_chapas_reais ? chapasReais = count â€” custo + suppress material", () => {
     const cutlist = [
       piece({ id: "a", w: 1000, h: 1000 }),
       piece({ id: "b", w: 1000, h: 1000 }),
@@ -104,7 +104,7 @@ describe("computeCustosAvancadosFinanceiras (P3.9 F3c)", () => {
     ).toThrow(/anti-double-count/);
   });
 
-  it("MO flag on ? tempo × valorHora; ? peças == total", () => {
+  it("MO flag on ? tempo â€” valorHora; ? peÃ§as == total", () => {
     const cutlist = [
       piece({ id: "a", holes: 10 }), // 2 + 1 = 3 min
       piece({ id: "b", holes: 0 }), // 2 min
@@ -117,7 +117,7 @@ describe("computeCustosAvancadosFinanceiras (P3.9 F3c)", () => {
       tarifas: {
         materialCostMode: "por_peca",
         enableMaoDeObra: true,
-        valorHoraMaquina: 60, // 1 €/min
+        valorHoraMaquina: 60, // 1 â‚¬/min
         enableLogistica: false,
       },
     });
@@ -128,7 +128,7 @@ describe("computeCustosAvancadosFinanceiras (P3.9 F3c)", () => {
     expect(sumMap(r.maoDeObraByPieceId)).toBe(r.precoMaoDeObra);
   });
 
-  it("logistica flag on ? peso × €/kg; ? peças == total", () => {
+  it("logistica flag on ? peso Ã— â‚¬/kg; ? peÃ§as == total", () => {
     const cutlist = [
       piece({ id: "a", w: 1000, h: 1000 }),
       piece({ id: "b", w: 1000, h: 1000 }),

@@ -1,6 +1,6 @@
 /**
- * european/overlay — MC Overlay Advanced (Modelo B, Fase 13).
- * Camada somente-leitura: medidas, aberturas, remates, roda-pé, gaps.
+ * european/overlay â€” MC Overlay Advanced (Modelo B, Fase 13).
+ * Camada somente-leitura: medidas, aberturas, remates, roda-pÃ©, gaps.
  */
 
 export { buildOverlayMeasures } from "./overlayMeasures";

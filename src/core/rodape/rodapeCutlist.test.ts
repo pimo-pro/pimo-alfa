@@ -25,7 +25,7 @@ describe("buildRodapeCutlistItems", () => {
     expect(items.map((i) => i.id)).toEqual(["r1"]);
   });
 
-  it("exclui rodapes sem dimensões válidas (não inventa 1×1)", () => {
+  it("exclui rodapes sem dimensÃµes vÃ¡lidas (nÃ£o inventa 1â€“1)", () => {
     const items = buildRodapeCutlistItems(
       [
         baseRodape({ id: "ok" }),

@@ -1,5 +1,5 @@
 /**
- * safePdf.ts — Filtra linhas PDF inválidas sem alterar layout.
+ * safePdf.ts â€” Filtra linhas PDF invÃ¡lidas sem alterar layout.
  */
 
 import type { DrawerPDFSection } from "../types";
@@ -45,7 +45,7 @@ export function sanitizePdfSection(section: DrawerPDFSection): DrawerPDFSection 
   });
   const pieceRows = ensureArray(section.pieceRows, "pdf.pieceRows").filter((r) => {
     const ok = isPieceRowOk(r);
-    if (!ok) robustDebug("pdf", "linha peça omitida", r);
+    if (!ok) robustDebug("pdf", "linha peÃ§a omitida", r);
     return ok;
   });
   const holeRows = ensureArray(section.holeRows, "pdf.holeRows").filter((r) => {

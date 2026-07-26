@@ -1,5 +1,5 @@
 /**
- * rodapeModels.ts — Roda-pé industrial (documental).
+ * rodapeModels.ts â€” Roda-pÃ© industrial (documental).
  */
 
 import type { KitchenRodapeModel } from "../types";

@@ -74,7 +74,7 @@ const tabBtn = (active: boolean): CSSProperties => ({
 
 export default function DrawersAdminHubPage() {
   const [modeloAActive, setModeloAActive] = useState(() => isDrawerModeloAActive());
-  /** Com Modelo B activo (default de produto), abre directamente no cat·logo europeu. */
+  /** Com Modelo B activo (default de produto), abre directamente no cat√°logo europeu. */
   const [section, setSection] = useState<HubSection>(() =>
     isDrawerModeloAActive() ? "visao" : "modelo-b"
   );
@@ -143,7 +143,7 @@ export default function DrawersAdminHubPage() {
   const ensureDocsSample = () => {
     if (docsSample) return docsSample;
     if (modeloAActive) {
-      setDocsError("Desactive o Modelo A para gerar a documentaùùo de amostra do Modelo B.");
+      setDocsError("Desactive o Modelo A para gerar a documenta√ß√£o de amostra do Modelo B.");
       return null;
     }
     setDocsError(null);
@@ -168,7 +168,7 @@ export default function DrawersAdminHubPage() {
       }
     );
     if (!result.docs) {
-      setDocsError("generateEuropeanDrawer nùo devolveu docs.");
+      setDocsError("generateEuropeanDrawer n√£o devolveu docs.");
       return null;
     }
     setDocsSample(result.docs);
@@ -511,7 +511,7 @@ export default function DrawersAdminHubPage() {
   return (
     <div style={{ ...adminPageShellStyle, maxWidth: 1200 }}>
       <AdminPageHeader
-        title="Gavetas ù Sistema Unificado"
+        title="Gavetas ‚Äî Sistema Unificado"
         subtitle="Centro Admin: Modelo A (toggle), inventario, regras e catalogo europeu Modelo B."
       />
 
@@ -596,7 +596,7 @@ export default function DrawersAdminHubPage() {
             </div>
           </Panel>
 
-          <Panel title="Inventario ù Modelo A" description="Referencia; nada e apagado ao desativar.">
+          <Panel title="Inventario ‚Äî Modelo A" description="Referencia; nada e apagado ao desativar.">
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                 <thead>
@@ -646,11 +646,11 @@ export default function DrawersAdminHubPage() {
       {section === "modelo-b" ? (
         <>
           <Panel
-            title="Sistema Europeu de Gavetas ù Modelo B"
+            title="Sistema Europeu de Gavetas ‚Äî Modelo B"
             description="Catalogo oficial implementado. Activo no projeto quando o Modelo A esta desactivado."
           >
             <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 0, lineHeight: 1.5 }}>
-              API: <code>generateEuropeanDrawer(systemId, box)</code> ù measures, geometry, drilling, cutlist, PDF e
+              API: <code>generateEuropeanDrawer(systemId, box)</code> ‚Äî measures, geometry, drilling, cutlist, PDF e
               viewer.
             </p>
             <div style={{ overflowX: "auto" }}>
@@ -672,9 +672,9 @@ export default function DrawersAdminHubPage() {
                       </td>
                       <td style={tdStyle}>{m.heights.map((h) => h.label).join(", ")}</td>
                       <td style={tdStyle}>
-                        {m.depthProfile.minMm}ù{m.depthProfile.maxMm} mm
+                        {m.depthProfile.minMm}‚Äì{m.depthProfile.maxMm} mm
                       </td>
-                      <td style={tdStyle}>2ù{m.side.clearanceMm} mm</td>
+                      <td style={tdStyle}>2√ó{m.side.clearanceMm} mm</td>
                       <td style={tdStyle}>
                         {m.holePattern.setbackFrontMm} / {m.holePattern.bottomGapMm} / {m.holePattern.systemPitchMm}
                       </td>
@@ -686,12 +686,12 @@ export default function DrawersAdminHubPage() {
           </Panel>
 
           <Panel
-            title="Documentaùùo Industrial (Modelo B)"
-            description="Camada adicional Fase 11 ù ficha tùcnica + PDF multi-pùginas (estrutura). Nùo substitui o PDF industrial existente."
+            title="Documenta√ß√£o Industrial (Modelo B)"
+            description="Camada adicional Fase 11 ‚Äî ficha t√©cnica + PDF multi-p√°ginas (estrutura). N√£o substitui o PDF industrial existente."
           >
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
               <button type="button" className="button" disabled={modeloAActive} onClick={showFicha}>
-                Ver ficha tùcnica
+                Ver ficha t√©cnica
               </button>
               <button
                 type="button"
@@ -699,12 +699,12 @@ export default function DrawersAdminHubPage() {
                 disabled={modeloAActive}
                 onClick={showMultiPdf}
               >
-                Ver PDF multi-pùginas (estrutura)
+                Ver PDF multi-p√°ginas (estrutura)
               </button>
               {docsSample?.report ? (
                 <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                  {docsSample.report.status} ù {docsSample.report.piecesDocumented} peùas ù{" "}
-                  {docsSample.report.holesDocumented} furos ù {docsSample.report.logicalPages} pùgs
+                  {docsSample.report.status} ‚Äî {docsSample.report.piecesDocumented} pe√ßas √ó{" "}
+                  {docsSample.report.holesDocumented} furos ‚Äî {docsSample.report.logicalPages} p√°gs
                 </span>
               ) : null}
             </div>
@@ -736,7 +736,7 @@ export default function DrawersAdminHubPage() {
 
           <Panel
             title="Desenho Tecnico & DXF"
-            description="Camada adicional Fase 12 ù vistas industriais + estrutura DXF em memoria. Nao altera viewer 3D nem PDF industrial."
+            description="Camada adicional Fase 12 ‚Äî vistas industriais + estrutura DXF em memoria. Nao altera viewer 3D nem PDF industrial."
           >
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
               <button type="button" className="button" disabled={modeloAActive} onClick={showTechnicalViews}>
@@ -752,8 +752,8 @@ export default function DrawersAdminHubPage() {
               </button>
               {dxfSample?.report ? (
                 <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                  {dxfSample.report.status} ù {dxfSample.report.contourCount} contornos ù{" "}
-                  {dxfSample.report.holeEntityCount} furos ù {dxfSample.report.viewCount} vistas
+                  {dxfSample.report.status} ‚Äî {dxfSample.report.contourCount} contornos √ó{" "}
+                  {dxfSample.report.holeEntityCount} furos ‚Äî {dxfSample.report.viewCount} vistas
                 </span>
               ) : null}
             </div>
@@ -812,7 +812,7 @@ export default function DrawersAdminHubPage() {
 
           <Panel
             title="Exportacao DXF fisica"
-            description="Fase 16 ù gera ficheiros .dxf reais a partir de result.dxf (em memoria). No browser faz download; em Node escreve em exports/dxf/european/."
+            description="Fase 16 ‚Äî gera ficheiros .dxf reais a partir de result.dxf (em memoria). No browser faz download; em Node escreve em exports/dxf/european/."
           >
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
               <button
@@ -821,12 +821,12 @@ export default function DrawersAdminHubPage() {
                 disabled={modeloAActive || dxfFileBusy}
                 onClick={generatePhysicalDxfFiles}
               >
-                {dxfFileBusy ? "A gerarù" : "Gerar DXF (ficheiros)"}
+                {dxfFileBusy ? "A gerar‚Ä¶" : "Gerar DXF (ficheiros)"}
               </button>
               {dxfFileReport ? (
                 <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                  {dxfFileReport.status} ù {dxfFileReport.files.length} ficheiros ù{" "}
-                  {dxfFileReport.totalBytes} bytes ù {dxfFileReport.outputDir}
+                  {dxfFileReport.status} ‚Äî {dxfFileReport.files.length} ficheiros √ó{" "}
+                  {dxfFileReport.totalBytes} bytes ‚Äî {dxfFileReport.outputDir}
                 </span>
               ) : null}
             </div>
@@ -834,7 +834,7 @@ export default function DrawersAdminHubPage() {
               <ul style={{ marginTop: 10, paddingLeft: 18, fontSize: 11, color: "var(--text-muted)", lineHeight: 1.45 }}>
                 {dxfFileReport.files.map((f) => (
                   <li key={f.fileName}>
-                    {f.fileName} ù {f.relativePath} ({f.byteLength} B, {f.pieceCode})
+                    {f.fileName} ‚Äî {f.relativePath} ({f.byteLength} B, {f.pieceCode})
                   </li>
                 ))}
               </ul>
@@ -843,7 +843,7 @@ export default function DrawersAdminHubPage() {
 
           <Panel
             title="Exportacao CNC (Modelo B)"
-            description="Fase 17 ù gera ficheiros CNC fùsicos a partir de geometry + holes + dxf. Formatos: cnc/xml/mpr/cix/bpp. No browser faz download; em Node escreve em exports/cnc/european/."
+            description="Fase 17 ‚Äî gera ficheiros CNC f√≠sicos a partir de geometry + holes + dxf. Formatos: cnc/xml/mpr/cix/bpp. No browser faz download; em Node escreve em exports/cnc/european/."
           >
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
               <label style={{ fontSize: 11, color: "var(--text-muted)" }}>
@@ -867,12 +867,12 @@ export default function DrawersAdminHubPage() {
                 disabled={modeloAActive || cncFileBusy}
                 onClick={generatePhysicalCncFiles}
               >
-                {cncFileBusy ? "A gerarù" : "Gerar ficheiros CNC"}
+                {cncFileBusy ? "A gerar‚Ä¶" : "Gerar ficheiros CNC"}
               </button>
               {cncFileReport ? (
                 <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                  {cncFileReport.status} ù {cncFileReport.files.length} ficheiros ù CUT{" "}
-                  {cncFileReport.totalCutOps} / DRILL {cncFileReport.totalDrillOps} ù{" "}
+                  {cncFileReport.status} ‚Äî {cncFileReport.files.length} ficheiros ‚Äî CUT{" "}
+                  {cncFileReport.totalCutOps} / DRILL {cncFileReport.totalDrillOps} √ó{" "}
                   {cncFileReport.outputDir}
                 </span>
               ) : null}
@@ -884,7 +884,7 @@ export default function DrawersAdminHubPage() {
               <ul style={{ marginTop: 10, paddingLeft: 18, fontSize: 11, color: "var(--text-muted)", lineHeight: 1.45 }}>
                 {cncFileReport.files.map((f) => (
                   <li key={f.fileName}>
-                    {f.fileName} ù {f.relativePath} (CUT {f.cutCount}, DRILL {f.drillCount}, {f.byteLength} B)
+                    {f.fileName} ‚Äî {f.relativePath} (CUT {f.cutCount}, DRILL {f.drillCount}, {f.byteLength} B)
                   </li>
                 ))}
               </ul>
@@ -893,7 +893,7 @@ export default function DrawersAdminHubPage() {
 
           <Panel
             title="MC Overlay Avancado"
-            description="Camada adicional Fase 13 ù medidas internas, aberturas, gaps, remates e roda-pe. Integrado com DXF e vistas tecnicas."
+            description="Camada adicional Fase 13 ‚Äî medidas internas, aberturas, gaps, remates e roda-pe. Integrado com DXF e vistas tecnicas."
           >
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
               <button type="button" className="button" disabled={modeloAActive} onClick={showOverlay}>
@@ -901,8 +901,8 @@ export default function DrawersAdminHubPage() {
               </button>
               {overlaySample?.report ? (
                 <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                  {overlaySample.report.status} ù {overlaySample.report.aberturaCount} aberturas ù{" "}
-                  {overlaySample.report.gapCount} gaps ù {overlaySample.report.remateCount} remates
+                  {overlaySample.report.status} ‚Äî {overlaySample.report.aberturaCount} aberturas √ó{" "}
+                  {overlaySample.report.gapCount} gaps ‚Äî {overlaySample.report.remateCount} remates
                 </span>
               ) : null}
             </div>
@@ -952,7 +952,7 @@ export default function DrawersAdminHubPage() {
 
           <Panel
             title="Release Notes (Modelo B)"
-            description="Camada adicional Fase 14 ù geracao automatica de notes industriais (B.v3.14). Nao altera pipeline industrial."
+            description="Camada adicional Fase 14 ‚Äî geracao automatica de notes industriais (B.v3.14). Nao altera pipeline industrial."
           >
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
               <button type="button" className="button" disabled={modeloAActive} onClick={showReleaseNotes}>
@@ -960,8 +960,8 @@ export default function DrawersAdminHubPage() {
               </button>
               {releaseSample ? (
                 <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                  {releaseSample.version} ù {releaseSample.report.status} ù{" "}
-                  {releaseSample.eventsCollected} eventos ù {releaseSample.author}
+                  {releaseSample.version} ‚Äî {releaseSample.report.status} √ó{" "}
+                  {releaseSample.eventsCollected} eventos ‚Äî {releaseSample.author}
                 </span>
               ) : null}
             </div>
@@ -990,7 +990,7 @@ export default function DrawersAdminHubPage() {
 
           <Panel
             title="Custo Industrial (Modelo B / Kitchen Library)"
-            description="Fase 18 ù motor de custo industrial (materiais, ops, CNC, montagem, mùo de obra, overhead, margem). Camada somente-leitura."
+            description="Fase 18 ‚Äî motor de custo industrial (materiais, ops, CNC, montagem, m√£o de obra, overhead, margem). Camada somente-leitura."
           >
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
               <button
@@ -1003,9 +1003,9 @@ export default function DrawersAdminHubPage() {
               </button>
               {pricingSample ? (
                 <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                  {pricingSample.report.status} ù custo {pricingSample.totals.costIndustrial}{" "}
-                  {pricingSample.currency} ù preùo {pricingSample.totals.priceFinal}{" "}
-                  {pricingSample.currency} ù margem{" "}
+                  {pricingSample.report.status} ‚Äî custo {pricingSample.totals.costIndustrial}{" "}
+                  {pricingSample.currency} ‚Äî pre√ßo {pricingSample.totals.priceFinal}{" "}
+                  {pricingSample.currency} ‚Äî margem{" "}
                   {Math.round(pricingSample.margin.marginPercent * 100)}%
                 </span>
               ) : null}
@@ -1019,27 +1019,27 @@ export default function DrawersAdminHubPage() {
                   Custo por gaveta: {pricingSample.totals.costPerDrawer} {pricingSample.currency}
                 </li>
                 <li>
-                  Custo por mùdulo: {pricingSample.totals.costPerModule} {pricingSample.currency}
+                  Custo por m√≥dulo: {pricingSample.totals.costPerModule} {pricingSample.currency}
                 </li>
                 <li>
                   Custo total: {pricingSample.totals.costIndustrial} {pricingSample.currency}
                 </li>
                 <li>
-                  Materiais {pricingSample.materials.totalWoodCost} ù Ops{" "}
-                  {pricingSample.operations.totalCost} ù CNC {pricingSample.cnc.totalCost} ù Montagem{" "}
-                  {pricingSample.assembly.totalCost} ù Labor {pricingSample.labor.totalCost} ù Overhead{" "}
+                  Materiais {pricingSample.materials.totalWoodCost} ‚Äî Ops{" "}
+                  {pricingSample.operations.totalCost} ‚Äî CNC {pricingSample.cnc.totalCost} ‚Äî Montagem{" "}
+                  {pricingSample.assembly.totalCost} ‚Äî Labor {pricingSample.labor.totalCost} ‚Äî Overhead{" "}
                   {pricingSample.overhead.totalCost}
                 </li>
                 <li>
-                  Preùo final: {pricingSample.totals.priceFinal} {pricingSample.currency} (gaveta{" "}
-                  {pricingSample.totals.pricePerDrawer} / mùdulo {pricingSample.totals.pricePerModule})
+                  Pre√ßo final: {pricingSample.totals.priceFinal} {pricingSample.currency} (gaveta{" "}
+                  {pricingSample.totals.pricePerDrawer} / m√≥dulo {pricingSample.totals.pricePerModule})
                 </li>
               </ul>
             ) : null}
           </Panel>
 
           <Panel
-            title="Auto QA ù Stress Testing (Modelo B)"
+            title="Auto QA ‚Äî Stress Testing (Modelo B)"
             description={`${ALL_SCENARIOS.length} cenarios industriais. Simulacao pura: sem CNC, sem industrial/**, sem alterar o projeto.`}
           >
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
@@ -1049,7 +1049,7 @@ export default function DrawersAdminHubPage() {
                 disabled={qaRunning || modeloAActive}
                 onClick={() => void runAutoQa()}
               >
-                {qaRunning ? "A executarù" : "Executar testes automùticos"}
+                {qaRunning ? "A executar‚Ä¶" : "Executar testes autom√°ticos"}
               </button>
               {qaResults && qaSummary ? (
                 <button
@@ -1070,7 +1070,7 @@ export default function DrawersAdminHubPage() {
             {qaProgress ? (
               <div style={{ marginTop: 10, fontSize: 12, color: "var(--text-muted)" }}>
                 Progresso: {qaProgress.index}/{qaProgress.total}
-                {qaRunning ? "ù" : " (concluùdo)"}
+                {qaRunning ? "‚Ä¶" : " (conclu√≠do)"}
               </div>
             ) : null}
 
@@ -1082,8 +1082,8 @@ export default function DrawersAdminHubPage() {
               <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 12 }}>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
                   {[
-                    { label: "Vùlidos", value: `${qaSummary.pctValid}%`, color: "#34d399" },
-                    { label: "Invùlidos", value: `${qaSummary.pctInvalid}%`, color: "#f87171" },
+                    { label: "V√°lidos", value: `${qaSummary.pctValid}%`, color: "#34d399" },
+                    { label: "Inv√°lidos", value: `${qaSummary.pctInvalid}%`, color: "#f87171" },
                     { label: "AutoFix", value: `${qaSummary.pctAutoFixed}%`, color: "#93c5fd" },
                     { label: "Ran / Skip", value: `${qaSummary.ran}/${qaSummary.skipped}`, color: "var(--text)" },
                   ].map((card) => (
@@ -1168,7 +1168,7 @@ export default function DrawersAdminHubPage() {
       {section === "kitchen" ? (
         <Panel
           title="Kitchen Library (Industrial)"
-          description="Fase 15 / PIMO.PRO-V5 Fase 10 ù biblioteca documental de mùdulos, frentes, portas, gavetas Modelo B, remates e roda-pù."
+          description="Fase 15 / PIMO.PRO-V5 Fase 10 ‚Äî biblioteca documental de m√≥dulos, frentes, portas, gavetas Modelo B, remates e roda-p√©."
         >
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
             <button type="button" className="button" disabled={modeloAActive} onClick={loadKitchenLibrary}>
@@ -1176,8 +1176,8 @@ export default function DrawersAdminHubPage() {
             </button>
             {kitchenLib ? (
               <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                {kitchenLib.version} ù {kitchenLib.report.status} ù {kitchenLib.report.moduleCount} mùdulos ù{" "}
-                {kitchenLib.report.frontCount} frentes ù {kitchenLib.report.doorCount} portas
+                {kitchenLib.version} ‚Äî {kitchenLib.report.status} ‚Äî {kitchenLib.report.moduleCount} m√≥dulos √ó{" "}
+                {kitchenLib.report.frontCount} frentes ‚Äî {kitchenLib.report.doorCount} portas
               </span>
             ) : null}
           </div>

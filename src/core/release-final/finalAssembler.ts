@@ -1,5 +1,5 @@
 /**
- * finalAssembler.ts ù Consolida artefactos PIMO.PRO-V5 sem alterar componentes.
+ * finalAssembler.ts ‚Äî Consolida artefactos PIMO.PRO-V5 sem alterar componentes.
  */
 
 import { generateEuropeanDrawer } from "../drawers/european";
@@ -31,9 +31,9 @@ export type FinalAssembledRelease = {
   library: KitchenLibrary;
   planner: PlannerState;
   plannerExport: PlannerExportPackage;
-  /** Conteùdos DXF em memùria (nùo escreve disco). */
+  /** Conte√∫dos DXF em mem√≥ria (n√£o escreve disco). */
   dxfFiles: Array<{ fileName: string; pieceCode: string }>;
-  /** Conteùdos CNC em memùria (nùo escreve disco). */
+  /** Conte√∫dos CNC em mem√≥ria (n√£o escreve disco). */
   cncFiles: Array<{ fileName: string; pieceCode: string; format: string }>;
   documentation: FinalDocumentationBundle;
   integrity: FinalIntegrityReport;
@@ -41,15 +41,15 @@ export type FinalAssembledRelease = {
 };
 
 export type AssembleFinalReleaseOptions = {
-  /** Se false, nùo gera amostra Modelo B (apenas library). Default true. */
+  /** Se false, n√£o gera amostra Modelo B (apenas library). Default true. */
   includeModeloBSample?: boolean;
-  /** Coloca mùdulos demo no planner. Default true. */
+  /** Coloca m√≥dulos demo no planner. Default true. */
   seedPlannerModules?: boolean;
 };
 
 /**
- * Consolida Modelo B + Kitchen + Planner + docs/pricing/DXF/CNC referùncias.
- * Nùo muta geometry/furos/cutlist existentes ù apenas lù e agrega.
+ * Consolida Modelo B + Kitchen + Planner + docs/pricing/DXF/CNC refer√™ncias.
+ * N√£o muta geometry/furos/cutlist existentes ‚Äî apenas l√™ e agrega.
  */
 export function assemblePimoProV5FinalRelease(
   options?: AssembleFinalReleaseOptions

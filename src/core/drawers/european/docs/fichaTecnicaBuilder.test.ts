@@ -4,7 +4,7 @@ import { generateEuropeanDrawer } from "../index";
 import { buildFichaTecnica } from "./fichaTecnicaBuilder";
 
 describe("docs/fichaTecnicaBuilder", () => {
-  it("contém secções e todas as peças wood relevantes", () => {
+  it("contÃ©m secÃ§Ãµes e todas as peÃ§as wood relevantes", () => {
     vi.spyOn(flags, "isDrawerModeloAActive").mockReturnValue(false);
     const result = generateEuropeanDrawer(
       "hettich-innotech-atira",

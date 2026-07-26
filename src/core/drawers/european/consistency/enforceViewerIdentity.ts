@@ -1,5 +1,5 @@
 /**
- * enforceViewerIdentity.ts ù Identidade industrial no viewer data.
+ * enforceViewerIdentity.ts ‚Äî Identidade industrial no viewer data.
  * Sem alterar geometria/materiais.
  */
 
@@ -15,7 +15,7 @@ export type EuropeanViewerPieceMeta = {
 
 /**
  * Anexa/normaliza identidade nos drawers do viewer.
- * Geometria intacta; holes pieceRef normalizados; id de drawer estùvel.
+ * Geometria intacta; holes pieceRef normalizados; id de drawer est√°vel.
  */
 export function enforceViewerIdentity(
   viewer: EuropeanDrawerViewerData,
@@ -32,7 +32,7 @@ export function enforceViewerIdentity(
       return {
         ...d,
         holes,
-        // id permanece eu-drawer-*; metadados de peùa vivem nos holes pieceRef canùnicos
+        // id permanece eu-drawer-*; metadados de pe√ßa vivem nos holes pieceRef can√∫nicos
       };
     }),
   };

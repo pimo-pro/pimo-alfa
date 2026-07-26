@@ -1,7 +1,7 @@
 /**
- * enforcePieceIdentity.ts — Identidade associada à geometria (pass-through estrutural).
- * A geometria não carrega nomes; este passo documenta/garante que o pipeline
- * aplica identidade nas saídas (cutlist/pdf/viewer/holes).
+ * enforcePieceIdentity.ts â€” Identidade associada â€” geometria (pass-through estrutural).
+ * A geometria nÃ£o carrega nomes; este passo documenta/garante que o pipeline
+ * aplica identidade nas saÃ­das (cutlist/pdf/viewer/holes).
  */
 
 import type { DrawerGeometry } from "../types";
@@ -17,8 +17,8 @@ export type GeometryIdentityTags = {
 };
 
 /**
- * Geometria pura não tem campos de nome — devolve a mesma referência.
- * Tags canónicas disponíveis via `geometryIdentityTags` para consumidores.
+ * Geometria pura nÃ£o tem campos de nome â€” devolve a mesma referÃªncia.
+ * Tags canÃºnicas disponÃ­veis via `geometryIdentityTags` para consumidores.
  */
 export function enforcePieceIdentity(geometry: DrawerGeometry): DrawerGeometry {
   return geometry;

@@ -1,6 +1,6 @@
 /**
- * jsonReporter.ts — Serializa resultados para qa-results.json (download / blob).
- * Não escreve no disco do projeto nem em industrial/**.
+ * jsonReporter.ts â€” Serializa resultados para qa-results.json (download / blob).
+ * NÃ£o escreve no disco do projeto nem em industrial/**.
  */
 
 import type { EuropeanQaScenarioResult, EuropeanQaSummary } from "../types";

@@ -1,5 +1,5 @@
 /**
- * stressTestRunner.ts ó Loop de stress tests Modelo B.
+ * stressTestRunner.ts ‚Äî Loop de stress tests Modelo B.
  */
 
 import { ALL_SCENARIOS } from "./scenarios";
@@ -12,9 +12,9 @@ import type {
 
 export type RunStressTestsOptions = {
   scenarios?: readonly EuropeanQaScenario[];
-  /** Callback por cen·rio (UI progresso). */
+  /** Callback por cen√°rio (UI progresso). */
   onProgress?: (_p: EuropeanQaProgress) => void;
-  /** Yield ao event loop a cada N cen·rios (default 5). */
+  /** Yield ao event loop a cada N cen√°rios (default 5). */
   yieldEvery?: number;
 };
 
@@ -26,8 +26,8 @@ function yieldToMain(): Promise<void> {
 }
 
 /**
- * Executa todos os cen·rios QA (simulaÁ„o interna).
- * N„o altera projeto, n„o chama CNC, n„o escreve industrial/**.
+ * Executa todos os cen√°rios QA (simula√ß√£o interna).
+ * N√£o altera projeto, n√£o chama CNC, n√£o escreve industrial/**.
  */
 export async function runStressTests(
   options: RunStressTestsOptions = {}

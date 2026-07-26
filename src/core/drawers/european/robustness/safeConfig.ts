@@ -1,5 +1,5 @@
 /**
- * safeConfig.ts — Normaliza config de entrada do Modelo B sem throw.
+ * safeConfig.ts â€” Normaliza config de entrada do Modelo B sem throw.
  */
 
 import { HETTICH_RUNNER_LENGTHS_MM, selectHettichRunnerDepth } from "../measures/hettichRunners";
@@ -11,8 +11,8 @@ const MIN_HEIGHT_MM = 40;
 const MAX_COUNT = 8;
 
 /**
- * Normaliza config para valores mínimos seguros.
- * Não altera regras de negócio: apenas evita entradas destruídas.
+ * Normaliza config para valores mÃ­nimos seguros.
+ * NÃ£o altera regras de negÃ³cio: apenas evita entradas destruÃ­das.
  */
 export function ensureConfigSafe(
   config: EuropeanDrawerBoxConfig,
@@ -21,10 +21,10 @@ export function ensureConfigSafe(
   const model = getEuropeanDrawerModel(config.systemId);
   let heightMm = ensureFiniteNumber(config.heightMm, "config.heightMm", model.heights[0]?.heightMm ?? 90);
   if (heightMm < MIN_HEIGHT_MM) {
-    robustDebug("config.heightMm", `abaixo do mínimo ? ${MIN_HEIGHT_MM}`, heightMm);
+    robustDebug("config.heightMm", `abaixo do mÃ­nimo ? ${MIN_HEIGHT_MM}`, heightMm);
     heightMm = MIN_HEIGHT_MM;
   }
-  // Snap à altura de catálogo mais próxima
+  // Snap â€” altura de catÃ¡logo mais prÃ³xima
   let best = model.heights[0]!;
   let bestDist = Math.abs(best.heightMm - heightMm);
   for (const h of model.heights) {
@@ -39,7 +39,7 @@ export function ensureConfigSafe(
   let count = Math.floor(ensureFiniteNumber(config.count ?? 1, "config.count", 1));
   if (count < 1) count = 1;
   if (count > MAX_COUNT) {
-    robustDebug("config.count", `acima do máximo ? ${MAX_COUNT}`, count);
+    robustDebug("config.count", `acima do mÃ¡ximo ? ${MAX_COUNT}`, count);
     count = MAX_COUNT;
   }
 
@@ -53,7 +53,7 @@ export function ensureConfigSafe(
   let depthMm = ensureFiniteNumber(config.depthMm, "config.depthMm", 450);
   if (!(HETTICH_RUNNER_LENGTHS_MM as readonly number[]).includes(depthMm) || depthMm >= useful) {
     const safe = selectHettichRunnerDepth(useful > 0 ? useful : 500);
-    robustDebug("config.depthMm", `runner inválido ? ${safe}`, { depthMm, useful });
+    robustDebug("config.depthMm", `runner invÃ¡lido ? ${safe}`, { depthMm, useful });
     depthMm = safe;
   }
 

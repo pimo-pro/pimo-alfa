@@ -1,5 +1,5 @@
 /**
- * dxfBuilder.ts — Agrega entidades DXF (contornos + furos + layers).
+ * dxfBuilder.ts â€” Agrega entidades DXF (contornos + furos + layers).
  */
 
 import type { EuropeanDrawerResult } from "../types";

@@ -1,5 +1,5 @@
 /**
- * finalVersioning.ts — Versão oficial PIMO.PRO-V5.0 (Fase 20).
+ * finalVersioning.ts â€” VersÃ³o oficial PIMO.PRO-V5.0 (Fase 20).
  */
 
 export const PIMO_PRO_V5_VERSION = "PIMO.PRO-V5.0";
@@ -11,7 +11,7 @@ export type FinalVersionManifest = {
   version: string;
   codename: string;
   releasedAt: string;
-  /** Hash lógico estável (conteúdo do manifesto, sem RNG). */
+  /** Hash lÃ³gico estÃ¡vel (conteÃºdo do manifesto, sem RNG). */
   logicalHash: string;
   components: Array<{
     id: string;
@@ -27,10 +27,10 @@ export type FinalVersionManifest = {
 
 const COMPONENT_CATALOG: FinalVersionManifest["components"] = [
   { id: "modelo-b", label: "Modelo B (gavetas europeias)", phase: "1-11", status: "OK" },
-  { id: "dxf", label: "DXF em memória + físico", phase: "12+16", status: "OK" },
-  { id: "technical", label: "Vistas técnicas", phase: 12, status: "OK" },
-  { id: "overlay", label: "MC Overlay avançado", phase: 13, status: "OK" },
-  { id: "docs", label: "Documentação industrial", phase: 11, status: "OK" },
+  { id: "dxf", label: "DXF em memÃ³ria + fÃ­sico", phase: "12+16", status: "OK" },
+  { id: "technical", label: "Vistas tÃ©cnicas", phase: 12, status: "OK" },
+  { id: "overlay", label: "MC Overlay avanÃ§ado", phase: 13, status: "OK" },
+  { id: "docs", label: "DocumentaÃ§Ã£o industrial", phase: 11, status: "OK" },
   { id: "release-notes", label: "Release Notes Modelo B", phase: 14, status: "OK" },
   { id: "kitchen-library", label: "Kitchen Library", phase: 15, status: "OK" },
   { id: "cnc", label: "CNC Post-Processor", phase: 17, status: "OK" },
@@ -39,7 +39,7 @@ const COMPONENT_CATALOG: FinalVersionManifest["components"] = [
   { id: "release-final", label: "Release Final consolidado", phase: 20, status: "OK" },
 ];
 
-/** Hash lógico determinístico (djb2-like) sobre string canónica. */
+/** Hash lÃ³gico determinÃ­stico (djb2-like) sobre string canÃºnica. */
 export function computeLogicalHash(input: string): string {
   let h = 5381;
   for (let i = 0; i < input.length; i++) {

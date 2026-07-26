@@ -1,5 +1,5 @@
 /**
- * ADMIN — Informacoes de deploy / versao publicada.
+ * ADMIN â€” Informacoes de deploy / versao publicada.
  * Rota: /admin/system/deploy-info
  */
 
@@ -80,27 +80,27 @@ export default function DeployInfoPage() {
           ) : null}
           <div style={rowStyle}>
             <span style={labelStyle}>Versao</span>
-            <span style={valueStyle}>{info?.version ?? "…"}</span>
+            <span style={valueStyle}>{info?.version ?? "â€¦"}</span>
           </div>
           <div style={rowStyle}>
             <span style={labelStyle}>Tag</span>
-            <span style={valueStyle}>{info?.tag || info?.version || "—"}</span>
+            <span style={valueStyle}>{info?.tag || info?.version || "â€”"}</span>
           </div>
           <div style={rowStyle}>
             <span style={labelStyle}>Commit</span>
-            <span style={valueStyle}>{info?.commit || "—"}</span>
+            <span style={valueStyle}>{info?.commit || "â€”"}</span>
           </div>
           <div style={rowStyle}>
             <span style={labelStyle}>updatedAt</span>
-            <span style={valueStyle}>{info?.updatedAt || "—"}</span>
+            <span style={valueStyle}>{info?.updatedAt || "â€”"}</span>
           </div>
           <div style={rowStyle}>
             <span style={labelStyle}>deployedAt</span>
-            <span style={valueStyle}>{info?.deployedAt || "—"}</span>
+            <span style={valueStyle}>{info?.deployedAt || "â€”"}</span>
           </div>
           <div style={rowStyle}>
             <span style={labelStyle}>Build stamp</span>
-            <span style={valueStyle}>{buildStamp || "—"}</span>
+            <span style={valueStyle}>{buildStamp || "â€”"}</span>
           </div>
         </Panel>
       </div>

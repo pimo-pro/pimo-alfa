@@ -1,5 +1,5 @@
 /**
- * industrialMetadata.ts — Metadata industrial somente-leitura (Modelo B).
+ * industrialMetadata.ts â€” Metadata industrial somente-leitura (Modelo B).
  */
 
 import type {
@@ -59,7 +59,7 @@ export type EuropeanIndustrialMetadata = {
     frontExternal: boolean;
     frontInternal: boolean;
   };
-  /** Consumo aproximado por gaveta (m²) — informativo, não altera cutlist oficial. */
+  /** Consumo aproximado por gaveta (mÂ²) â€” informativo, nÃ£o altera cutlist oficial. */
   materialConsumptionM2ApproxPerDrawer: number;
   materialConsumptionM2ApproxTotal: number;
   pieces: EuropeanIndustrialPieceMeta[];
@@ -111,7 +111,7 @@ export function buildEuropeanIndustrialMetadata(
   const bodyMat =
     result.cutlist.find((i) => i.tipo === "gaveta_corpo" || i.codigo?.startsWith("gav"))?.material ??
     wood.find((i) => i.codigo?.includes("lat"))?.material ??
-    "—";
+    "â€”";
   const frontMat =
     result.config.frontMaterialId ??
     wood.find((i) => (i.codigo ?? "").includes("fren") && !(i.codigo ?? "").includes("int"))?.material ??
@@ -138,7 +138,7 @@ export function buildEuropeanIndustrialMetadata(
 
   const totalArea = pieces.reduce((acc, p) => acc + p.areaM2Approx, 0);
   const codes = [
-    ...new Set(pieces.map((p) => p.codigo).filter((c) => c && c !== "—")),
+    ...new Set(pieces.map((p) => p.codigo).filter((c) => c && c !== "â€”")),
   ];
 
   const frontThickness =

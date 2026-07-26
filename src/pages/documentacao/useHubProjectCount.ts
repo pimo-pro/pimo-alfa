@@ -1,6 +1,6 @@
 /**
  * Contagem dinamica de projetos alinhada a `/PROJETOS`
- * (loadProjectCountAsync — sem rotas novas).
+ * (loadProjectCountAsync â€” sem rotas novas).
  */
 
 import { useEffect, useState } from "react";

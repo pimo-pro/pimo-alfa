@@ -1,5 +1,5 @@
 /**
- * dxfExport.ts — Exportação DXF em memória + vistas + metadata + report.
+ * dxfExport.ts â€” ExportaÃ§Ã£o DXF em memÃ³ria + vistas + metadata + report.
  */
 
 import type { EuropeanDrawerResult } from "../types";
@@ -24,7 +24,7 @@ export type EuropeanDXFExport = {
 };
 
 /**
- * Constrói export DXF completo em memória (sem ficheiro físico).
+ * ConstrÃ³i export DXF completo em memÃ³ria (sem ficheiro fÃ­sico).
  */
 export function buildEuropeanDXF(result: EuropeanDrawerResult): EuropeanDXFExport {
   const warnings: string[] = [];
@@ -42,11 +42,11 @@ export function buildEuropeanDXF(result: EuropeanDrawerResult): EuropeanDXFExpor
       ),
     ];
 
-    if (document.contourCount === 0) warnings.push("Nenhum contorno de peça gerado.");
+    if (document.contourCount === 0) warnings.push("Nenhum contorno de peÃ§a gerado.");
     if (document.holeEntityCount === 0 && result.holes.length > 0) {
       warnings.push("Furos no resultado mas 0 entidades DRILLING.");
     }
-    if (!result.valid) warnings.push("Resultado industrial invalid — DXF gerado do estado disponível.");
+    if (!result.valid) warnings.push("Resultado industrial invalid â€” DXF gerado do estado disponÃ­vel.");
 
     const report = buildDxfReport({
       entityCount: document.entities.length,
@@ -60,7 +60,7 @@ export function buildEuropeanDXF(result: EuropeanDrawerResult): EuropeanDXFExpor
 
     return {
       kind: "european-dxf-export",
-      title: `DXF — ${result.model.displayName}`,
+      title: `DXF â€” ${result.model.displayName}`,
       document,
       technical,
       metadata: {
@@ -79,7 +79,7 @@ export function buildEuropeanDXF(result: EuropeanDrawerResult): EuropeanDXFExpor
     const document = buildEuropeanDxfDocument(result);
     return {
       kind: "european-dxf-export",
-      title: `DXF — erro`,
+      title: `DXF â€” erro`,
       document,
       technical,
       metadata: {

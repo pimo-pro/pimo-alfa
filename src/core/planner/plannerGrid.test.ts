@@ -14,7 +14,7 @@ describe("planner/plannerGrid", () => {
     expect(snapToGrid(126)).toBe(150);
   });
 
-  it("constrói grelha com zonas", () => {
+  it("constrÃ³i grelha com zonas", () => {
     const grid = buildPlannerGrid({ widthMm: 3000, heightMm: 2000 });
     expect(grid.cols).toBe(60);
     expect(grid.rows).toBe(40);

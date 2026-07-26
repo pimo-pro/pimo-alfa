@@ -1,6 +1,6 @@
 /**
- * P3.9 F3c ó chapas reais / m„o de obra / logÌstica (modos exclusivos).
- * N„o altera CNC/TCN/cutlist/drill/PDFs industriais nem portes P3.6.
+ * P3.9 F3c ‚Äî chapas reais / m√£o de obra / log√≠stica (modos exclusivos).
+ * N√£o altera CNC/TCN/cutlist/drill/PDFs industriais nem portes P3.6.
  */
 
 import type { CutListItemComPreco } from "../types";
@@ -11,9 +11,9 @@ import type {
 } from "../orcamentos";
 import { pieceDrillHoleCount, pieceHasCncOperacao } from "./computeOperacoesFinanceiras";
 
-/** Minutos heurÌsticos por unidade CNC (n„o TCN real). */
+/** Minutos heur√≠sticos por unidade CNC (n√£o TCN real). */
 export const MO_MINUTOS_POR_PECA_CNC = 2;
-/** Minutos heurÌsticos por furo. */
+/** Minutos heur√≠sticos por furo. */
 export const MO_MINUTOS_POR_FURO = 0.1;
 
 export type CustosAvancadosTarifas = Pick<
@@ -28,7 +28,7 @@ export type CustosAvancadosTarifas = Pick<
 
 export type CustosAvancadosFinanceirasResult = {
   materialCostMode: OrcamentosMaterialCostMode;
-  /** true ? Unificado/PeÁas devem zerar paineis/portas/gavetas/remates. */
+  /** true ? Unificado/Pe√ßas devem zerar paineis/portas/gavetas/remates. */
   suppressPieceMaterial: boolean;
   chapasCount: number;
   precoChapasReais: number;
@@ -40,7 +40,7 @@ export type CustosAvancadosFinanceirasResult = {
   maoDeObraByPieceId: Map<string, number>;
   logisticaByPieceId: Map<string, number>;
   warnings: string[];
-  /** OrÁamentos=0 e usou SystemSettings.precos.valorHoraMaquina. */
+  /** Or√ßamentos=0 e usou SystemSettings.precos.valorHoraMaquina. */
   valorHoraMaquinaUsed: number;
   valorHoraFromSystemFallback: boolean;
 };
@@ -155,12 +155,12 @@ function rateioByWeight(
 }
 
 /**
- * Calcula chapas reais / MO / logÌstica e rateios por peÁa.
+ * Calcula chapas reais / MO / log√≠stica e rateios por pe√ßa.
  * `por_chapas_reais` ? suppressPieceMaterial (anti double-count).
  */
 export function computeCustosAvancadosFinanceiras(input: {
   cutlist: CutListItemComPreco[];
-  /** N∫ chapas reais (computeChapasReal.totalSheets). 0 se estimado. */
+  /** N¬∫ chapas reais (computeChapasReal.totalSheets). 0 se estimado. */
   chapasCount: number;
   /** true se nesting real produziu sheets. */
   chapasModeReal: boolean;
@@ -197,7 +197,7 @@ export function computeCustosAvancadosFinanceiras(input: {
     }
   }
 
-  // --- M„o de obra ---
+  // --- M√£o de obra ---
   let minutosEstimados = 0;
   let precoMaoDeObra = 0;
   let valorHoraMaquinaUsed = 0;
@@ -212,7 +212,7 @@ export function computeCustosAvancadosFinanceiras(input: {
     valorHoraFromSystemFallback = resolved.fromSystemFallback;
     if (resolved.fromSystemFallback) {
       warnings.push(
-        "valorHoraMaquina OrÁamentos=0 ? fallback SystemSettings.precos.valorHoraMaquina"
+        "valorHoraMaquina Or√ßamentos=0 ? fallback SystemSettings.precos.valorHoraMaquina"
       );
     }
     if (!(valorHoraMaquinaUsed > 0)) {
@@ -229,7 +229,7 @@ export function computeCustosAvancadosFinanceiras(input: {
       }
       minutosEstimados = round2(minutosEstimados);
       precoMaoDeObra = round2((minutosEstimados / 60) * valorHoraMaquinaUsed);
-      // Fechar ? peÁas ao total (arredondamento)
+      // Fechar ? pe√ßas ao total (arredondamento)
       reconcileMaps(
         maoDeObraByPieceId,
         precoMaoDeObra,
@@ -241,7 +241,7 @@ export function computeCustosAvancadosFinanceiras(input: {
     }
   }
 
-  // --- LogÌstica (independente de portes P3.6) ---
+  // --- Log√≠stica (independente de portes P3.6) ---
   let precoLogistica = 0;
   if (!tarifas.enableLogistica) {
     warnings.push("enableLogistica=false ? custo logistica = 0");
@@ -257,7 +257,7 @@ export function computeCustosAvancadosFinanceiras(input: {
   const logisticaByPieceId = rateioByWeight(cutlist, precoLogistica, (item) => {
     const id = String(item.id ?? "");
     if (input.pesoByPieceId?.has(id)) return input.pesoByPieceId.get(id) ?? 0;
-    return pieceAreaMm2(item); // fallback ·rea se sem peso
+    return pieceAreaMm2(item); // fallback √°rea se sem peso
   });
 
   return {
@@ -278,7 +278,7 @@ export function computeCustosAvancadosFinanceiras(input: {
   };
 }
 
-/** Assert de testes: material peÁ e chapas reais n„o coexistem. */
+/** Assert de testes: material pe√ßa e chapas reais n√£o coexistem. */
 export function assertNoMaterialDoubleCount(input: {
   pieceMaterialSum: number;
   chapasReais: number;
@@ -287,7 +287,7 @@ export function assertNoMaterialDoubleCount(input: {
   const chapas = Number(input.chapasReais) || 0;
   if (piece > 0 && chapas > 0) {
     throw new Error(
-      `anti-double-count: pieceMaterial=${piece} e chapasReais=${chapas} n„o podem coexistir`
+      `anti-double-count: pieceMaterial=${piece} e chapasReais=${chapas} n√£o podem coexistir`
     );
   }
 }

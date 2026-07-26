@@ -1,5 +1,5 @@
 /**
- * assemblyCost.ts — Custo de montagem e ferragens.
+ * assemblyCost.ts â€” Custo de montagem e ferragens.
  */
 
 export type AssemblyCostConfig = {

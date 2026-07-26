@@ -1,5 +1,5 @@
 /**
- * cncBuilder.ts — Construção de programas CNC a partir de geometry/holes/dxf.
+ * cncBuilder.ts â€” ConstruÃ§Ã£o de programas CNC a partir de geometry/holes/dxf.
  * Sem alterar geometry real.
  */
 
@@ -52,7 +52,7 @@ export type CncPreparedFile = {
 };
 
 /**
- * Constrói programas CNC por peça (estrutura em memória).
+ * ConstrÃ³i programas CNC por peÃ§a (estrutura em memÃ³ria).
  */
 export function buildEuropeanCncPrograms(
   result: EuropeanDrawerResult,
@@ -68,7 +68,7 @@ export function buildEuropeanCncPrograms(
 }
 
 /**
- * Prepara ficheiros CNC em memória (sem FS).
+ * Prepara ficheiros CNC em memÃ³ria (sem FS).
  */
 export function prepareEuropeanCNCFiles(
   result: EuropeanDrawerResult,
@@ -98,7 +98,7 @@ export function prepareEuropeanCNCFiles(
 
   const programs = buildEuropeanCncPrograms(result, { pieces: options?.pieces });
   if (programs.length === 0) {
-    warnings.push("Nenhuma peça CNC mapeada.");
+    warnings.push("Nenhuma peÃ§a CNC mapeada.");
   }
 
   const files: CncPreparedFile[] = [];
@@ -112,7 +112,7 @@ export function prepareEuropeanCNCFiles(
       format,
     });
     if (!fileName) {
-      warnings.push(`Código sem mapeamento CNC: ${prog.meta.pieceCode}`);
+      warnings.push(`CÃ³digo sem mapeamento CNC: ${prog.meta.pieceCode}`);
       continue;
     }
     if (usedNames.has(fileName)) {
@@ -124,7 +124,7 @@ export function prepareEuropeanCNCFiles(
     usedNames.add(fileName);
 
     if (prog.cuts.length === 0) {
-      warnings.push(`Peça ${prog.meta.pieceCode} sem operações CUT.`);
+      warnings.push(`PeÃ§a ${prog.meta.pieceCode} sem operaÃ§Ãµes CUT.`);
     }
 
     files.push({
@@ -152,7 +152,7 @@ export function prepareEuropeanCNCFiles(
               : "fundo";
     if (!options?.pieces || options.pieces.includes(key)) {
       if (!covered.has(expected)) {
-        warnings.push(`Peça esperada não exportada: ${expected}`);
+        warnings.push(`PeÃ§a esperada nÃ£o exportada: ${expected}`);
       }
     }
   }
@@ -160,7 +160,7 @@ export function prepareEuropeanCNCFiles(
   return { files, warnings, errors, outputDir, format, industrialIntegrityOk };
 }
 
-/** Conteúdos prontos para download/escrita. */
+/** ConteÃºdos prontos para download/escrita. */
 export function buildEuropeanCNCFileContents(
   result: EuropeanDrawerResult,
   options?: Omit<CncExportOptions, "write">

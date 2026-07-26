@@ -1,5 +1,5 @@
 /**
- * pricingBuilder.ts — Constrói IndustrialPricing a partir de result Modelo B (somente leitura).
+ * pricingBuilder.ts â€” ConstrÃ³i IndustrialPricing a partir de result Modelo B (somente leitura).
  */
 
 import type { EuropeanDrawerResult } from "../drawers/european/types";
@@ -128,8 +128,8 @@ function countCutOpsFromDxf(result: EuropeanDrawerResult): number {
 }
 
 /**
- * Constrói o relatório completo de custo industrial.
- * Não altera geometry/furos/cutlist/DXF/CNC — apenas lê.
+ * ConstrÃ³i o relatÃ©rio completo de custo industrial.
+ * NÃ£o altera geometry/furos/cutlist/DXF/CNC â€” apenas lÃª.
  */
 export function buildIndustrialPricing(
   result: EuropeanDrawerResult,
@@ -160,7 +160,7 @@ export function buildIndustrialPricing(
 
   const materials = calculateMaterialCost(result.cutlist, cfg.material);
   if (materials.pieces.length === 0) {
-    warnings.push("Cutlist sem peças wood — custo de material = 0.");
+    warnings.push("Cutlist sem peÃ§as wood â€” custo de material = 0.");
   }
 
   let cutOps = 0;
@@ -172,7 +172,7 @@ export function buildIndustrialPricing(
       drillOps += p.drills.length;
     }
   } catch {
-    warnings.push("CNC programs indisponíveis — a usar DXF/holes como fallback.");
+    warnings.push("CNC programs indisponÃ­veis â€” a usar DXF/holes como fallback.");
     cutOps = countCutOpsFromDxf(result);
     drillOps = result.holes.filter((h) => !(h.pieceRef || "").startsWith("module_")).length;
   }
@@ -250,7 +250,7 @@ export function buildIndustrialPricing(
 }
 
 /**
- * Estima pricing agregado para Kitchen Library (módulos × amostra Modelo B).
+ * Estima pricing agregado para Kitchen Library (mÃ³dulos â€” amostra Modelo B).
  */
 export function buildKitchenLibraryPricing(
   drawerPricing: IndustrialPricing,
@@ -316,7 +316,7 @@ export function buildKitchenLibraryPricing(
     report: buildPricingReport({
       warnings: [
         ...drawerPricing.report.warnings,
-        `Kitchen pricing escalado ×${n} módulos (estimativa).`,
+        `Kitchen pricing escalado â€”${n} mÃ³dulos (estimativa).`,
       ],
       errors: drawerPricing.report.errors,
       industrialIntegrityOk: drawerPricing.report.industrialIntegrityOk,

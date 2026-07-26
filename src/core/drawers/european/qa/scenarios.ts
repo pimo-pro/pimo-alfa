@@ -1,5 +1,5 @@
 /**
- * scenarios.ts — ~200 cenários industriais determinísticos (Modelo B).
+ * scenarios.ts â€” ~200 cenÃ¡rios industriais determinÃ­sticos (Modelo B).
  */
 
 import type { EuropeanDrawerSystemId } from "../types";
@@ -15,7 +15,7 @@ const FRONT_MATERIALS = ["mdf_branco", "carvalho", "cinza_antracite", "branco_br
 
 const MODEL_IDS: EuropeanDrawerSystemId[] = EUROPEAN_DRAWER_SYSTEMS.map((m) => m.id);
 
-/** Alvo aproximado de cenários. */
+/** Alvo aproximado de cenÃ¡rios. */
 const TARGET_SCENARIO_COUNT = 200;
 
 function padId(n: number): string {
@@ -35,8 +35,8 @@ function pickHeightForModel(
 }
 
 /**
- * Gera combinações estáveis (mesma ordem em todos os runs).
- * Cobre larguras × profundidades × alturas × modelos × counts × runners.
+ * Gera combinaÃ§Ãµes estÃ¡veis (mesma ordem em todos os runs).
+ * Cobre larguras â€” profundidades â€” alturas â€” modelos â€” counts â€” runners.
  */
 export function buildEuropeanQaScenarios(targetCount = TARGET_SCENARIO_COUNT): EuropeanQaScenario[] {
   const scenarios: EuropeanQaScenario[] = [];
@@ -58,7 +58,7 @@ export function buildEuropeanQaScenarios(targetCount = TARGET_SCENARIO_COUNT): E
               const drawerCount = DRAWER_COUNTS[ci]!;
               const preferedRunner = HETTICH_RUNNER_LENGTHS_MM[ri]!;
 
-              // Runner preferido deve ser tipicamente < profundidade útil
+              // Runner preferido deve ser tipicamente < profundidade Ãºtil
               if (preferedRunner >= profundidadeInternaMm) continue;
 
               const height = pickHeightForModel(modelId, n);
@@ -107,7 +107,7 @@ export function buildEuropeanQaScenarios(targetCount = TARGET_SCENARIO_COUNT): E
     }
   }
 
-  // Se a filtragem de runners deixou poucos cenários, completar com amostras forçadas
+  // Se a filtragem de runners deixou poucos cenÃ¡rios, completar com amostras forÃ§adas
   let fill = 0;
   while (scenarios.length < targetCount && fill < targetCount * 2) {
     const wi = fill % BOX_WIDTHS_INTERNAL_MM.length;

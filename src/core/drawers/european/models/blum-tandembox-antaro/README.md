@@ -1,6 +1,6 @@
 # Blum TandemBox Antaro
 
-Módulo do Sistema Europeu (Modelo B).
+MÃ³dulo do Sistema Europeu (Modelo B).
 
 - **Estado:** estrutura apenas
-- **Implementação:** aguarda specs oficiais (alturas, profundidades, furação, ferragens)
+- **ImplementaÃ§Ã£o:** aguarda specs oficiais (alturas, profundidades, furaÃ§Ã£o, ferragens)

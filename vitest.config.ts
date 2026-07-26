@@ -3,9 +3,9 @@ import react from "@vitejs/plugin-react";
 import { fileURLToPath, URL } from "node:url";
 
 /**
- * Configuração Vitest para testes industriais (Fase 7) e validações.
- * Alias `@` alinhado ao vite.config (necessário para IndustrialCenter / live store).
- * Não altera build, TCN, topDrillable nem exportações CNC.
+ * Configura�o Vitest para testes industriais (Fase 7) e valida�es.
+ * Alias `@` alinhado ao vite.config (necess�rio para IndustrialCenter / live store).
+ * N�o altera build, TCN, topDrillable nem exporta�es CNC.
  */
 export default defineConfig({
   plugins: [react()],

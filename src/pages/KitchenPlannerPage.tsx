@@ -1,6 +1,6 @@
 /**
- * KitchenPlannerPage — Modo cliente (Fase 19).
- * Configurador visual sobre a Kitchen Library. Não altera Admin.
+ * KitchenPlannerPage â€” Modo cliente (Fase 19).
+ * Configurador visual sobre a Kitchen Library. NÃ£o altera Admin.
  */
 
 import { useCallback, useMemo, useState, type CSSProperties, type DragEvent } from "react";
@@ -97,14 +97,14 @@ export default function KitchenPlannerPage() {
     <PageContainer>
       <PageHeader
         title="Kitchen Planner"
-        subtitle="Modo cliente — montar cozinha a partir da Kitchen Library industrial"
+        subtitle="Modo cliente â€” montar cozinha a partir da Kitchen Library industrial"
       />
       <div style={{ marginBottom: 12, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
         <Link to="/dashboard" style={{ fontSize: 13 }}>
           ? Dashboard
         </Link>
         <span style={{ fontSize: 12, color: "var(--text-muted, #666)" }}>
-          {state.report.status} · {state.modules.length} módulos ·{" "}
+          {state.report.status} â€” {state.modules.length} mÃ³dulos Ã—{" "}
           {state.pricing.priceFinal} {state.pricing.currency}
         </span>
         <Button type="button" onClick={() => setState(plannerAutoAlign(state))}>
@@ -116,9 +116,9 @@ export default function KitchenPlannerPage() {
       </div>
 
       <div style={shell}>
-        {/* Catálogo */}
+        {/* CatÃ¡logo */}
         <aside style={sidePanel}>
-          <strong style={{ fontSize: 13 }}>Módulos</strong>
+          <strong style={{ fontSize: 13 }}>MÃ³dulos</strong>
           <p style={{ margin: "6px 0 12px", color: "#555", fontSize: 11 }}>
             Arraste para a grelha (snap {state.grid.config.snapMm} mm)
           </p>
@@ -144,7 +144,7 @@ export default function KitchenPlannerPage() {
               >
                 <div style={{ fontWeight: 600 }}>{m.id}</div>
                 <div style={{ opacity: 0.75, fontSize: 10 }}>
-                  {m.widthMm}×{m.heightMm}×{m.depthMm} · {m.metadata.industrialCode}
+                  {m.widthMm}â€“{m.heightMm}â€“{m.depthMm} â€” {m.metadata.industrialCode}
                 </div>
               </button>
             ))}
@@ -173,7 +173,7 @@ export default function KitchenPlannerPage() {
           }}
           aria-label="Grelha da cozinha"
         >
-          {/* Zona rodapé */}
+          {/* Zona rodapÃ© */}
           <div
             style={{
               position: "absolute",
@@ -188,7 +188,7 @@ export default function KitchenPlannerPage() {
               color: "#4a3728",
             }}
           >
-            rodapé
+            rodapÃ©
           </div>
 
           {state.modules.map((m) => {
@@ -243,18 +243,18 @@ export default function KitchenPlannerPage() {
         <aside style={sidePanel}>
           <strong style={{ fontSize: 13 }}>Medidas</strong>
           <ul style={{ margin: "8px 0 14px", paddingLeft: 16 }}>
-            <li>Planta: {state.measurements.totalWidthMm} × {state.measurements.totalDepthMm} mm</li>
+            <li>Planta: {state.measurements.totalWidthMm} â€” {state.measurements.totalDepthMm} mm</li>
             <li>Ocupado: {state.measurements.occupiedWidthMm} mm</li>
             <li>Gaps: {state.measurements.gaps.length}</li>
             {state.measurements.overlayInternal ? (
               <li>
-                Overlay: {state.measurements.overlayInternal.status} · aberturas{" "}
+                Overlay: {state.measurements.overlayInternal.status} â€” aberturas{" "}
                 {state.measurements.overlayInternal.aberturaCount}
               </li>
             ) : null}
           </ul>
 
-          <strong style={{ fontSize: 13 }}>Preço</strong>
+          <strong style={{ fontSize: 13 }}>PreÃ§o</strong>
           <ul style={{ margin: "8px 0 14px", paddingLeft: 16 }}>
             <li>
               Total: {state.pricing.priceFinal} {state.pricing.currency}
@@ -263,16 +263,16 @@ export default function KitchenPlannerPage() {
               Custo industrial: {state.pricing.costIndustrial} {state.pricing.currency}
             </li>
             <li>
-              /módulo: {state.pricing.pricePerModule} · /gaveta: {state.pricing.pricePerDrawer}
+              /mÃ³dulo: {state.pricing.pricePerModule} â€” /gaveta: {state.pricing.pricePerDrawer}
             </li>
             <li>Margem: {Math.round(state.pricing.marginPercent * 100)}%</li>
           </ul>
 
           <strong style={{ fontSize: 13 }}>Vistas / DXF / CNC</strong>
           <ul style={{ margin: "8px 0 14px", paddingLeft: 16 }}>
-            <li>Vistas: {(state.library.drawers.modeloB.viewIds || []).join(", ") || "—"}</li>
-            <li>DXF library: {state.library.integrations.dxf ? "sim" : "não"}</li>
-            <li>Pricing/CNC ref.: {state.library.integrations.pricing ? "sim" : "não"}</li>
+            <li>Vistas: {(state.library.drawers.modeloB.viewIds || []).join(", ") || "â€”"}</li>
+            <li>DXF library: {state.library.integrations.dxf ? "sim" : "nÃ£o"}</li>
+            <li>Pricing/CNC ref.: {state.library.integrations.pricing ? "sim" : "nÃ£o"}</li>
           </ul>
 
           {selected ? (
@@ -281,7 +281,7 @@ export default function KitchenPlannerPage() {
               <p style={{ margin: "6px 0" }}>
                 {selected.moduleId}
                 <br />
-                {selected.industrialCode} · gavetas {selected.drawerCount}
+                {selected.industrialCode} â€” gavetas {selected.drawerCount}
               </p>
               <Button
                 type="button"
@@ -291,7 +291,7 @@ export default function KitchenPlannerPage() {
               </Button>
             </>
           ) : (
-            <p style={{ color: "#666", fontSize: 11 }}>Selecione um módulo na grelha.</p>
+            <p style={{ color: "#666", fontSize: 11 }}>Selecione um mÃ³dulo na grelha.</p>
           )}
 
           {exportText ? (

@@ -1,6 +1,6 @@
 /**
- * european/qa/types ó Contratos do Auto QA Stress Testing (Modelo B).
- * SimulaÁ„o pura: sem CNC, sem industrial/**, sem mutar projeto.
+ * european/qa/types ‚Äî Contratos do Auto QA Stress Testing (Modelo B).
+ * Simula√ß√£o pura: sem CNC, sem industrial/**, sem mutar projeto.
  */
 
 import type { EuropeanDrawerSystemId } from "../types";
@@ -12,11 +12,11 @@ export type EuropeanQaFrenteDims = {
 
 export type EuropeanQaGavetaSpec = {
   modelId: EuropeanDrawerSystemId;
-  /** CÛdigo de altura de cat·logo (N, M, KÖ); vazio se o modelo sÛ usa mm. */
+  /** C√≥digo de altura de cat√°logo (N, M, K√©); vazio se o modelo s√≥ usa mm. */
   alturaCode?: string;
   /** Altura em mm (alternativa / fallback). */
   alturaMm?: number;
-  /** CorrediÁa Hettich preferida (mm); opcional. */
+  /** Corredi√ßa Hettich preferida (mm); opcional. */
   preferedRunner?: number;
   frenteMaterialId?: string;
   frenteDims?: EuropeanQaFrenteDims;
@@ -33,7 +33,7 @@ export type EuropeanQaScenario = {
     profundidadeInternaMm: number;
   };
   gavetas: EuropeanQaGavetaSpec[];
-  /** Metadados para reporters (falhas por dimens„o/modelo). */
+  /** Metadados para reporters (falhas por dimens√≥o/modelo). */
   meta?: {
     modelId?: EuropeanDrawerSystemId;
     preferedRunner?: number;
@@ -49,7 +49,7 @@ export type EuropeanQaScenarioResult = {
   errors: string[];
   warnings: string[];
   autoFixes: Array<{ code: string; description: string }>;
-  /** true se dry-run inv·lido e run com autoFix ficou v·lido. */
+  /** true se dry-run inv√°lido e run com autoFix ficou v√°lido. */
   autoFixed: boolean;
   cutlistCount: number;
   pdfOk: boolean;

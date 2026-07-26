@@ -1,5 +1,5 @@
 /**
- * types.ts ù Tipos base do Sistema Europeu de Gavetas (Modelo B).
+ * types.ts ‚Äî Tipos base do Sistema Europeu de Gavetas (Modelo B).
  *
  * SSOT de contratos industriais para Blum / Hettich / Grass.
  * Independente do Modelo A (src/core/drawers/* excepto european/).
@@ -19,7 +19,7 @@ export type EuropeanDrawerSystemId =
   | "hettich-innotech-atira"
   | "grass-nova-pro-scala";
 
-/** Codigo comercial da altura (ex.: N, M, K, F, H / D, Cù). */
+/** Codigo comercial da altura (ex.: N, M, K, F, H / D, C√©). */
 export type EuropeanHeightCode = string;
 
 /**
@@ -27,11 +27,11 @@ export type EuropeanHeightCode = string;
  * Industrial: altura da caixa metalica / lateral do sistema, nao da frente.
  */
 export type DrawerHeightProfile = {
-  /** Codigo de catalogo (N/M/Kù). Vazio se o sistema so usa mm. */
+  /** Codigo de catalogo (N/M/K√©). Vazio se o sistema so usa mm. */
   code: EuropeanHeightCode;
   /** Altura nominal do sistema (mm). */
   heightMm: number;
-  /** Etiqueta UI (ex.: "N ù 66 mm"). */
+  /** Etiqueta UI (ex.: "N ‚Äî 66 mm"). */
   label: string;
 };
 
@@ -55,7 +55,7 @@ export type DrawerDepthProfile = {
  * Industrial: body width = internalWidth - 2 * clearanceMm.
  */
 export type DrawerSideProfile = {
-  /** Folga por lado (mm) ù half of "caixa interna - 2xN". */
+  /** Folga por lado (mm) ‚Äî half of "caixa interna - 2xN". */
   clearanceMm: number;
   /** Espessura tipica da parede metalica (mm), informativo. */
   wallThicknessMm: number;
@@ -74,7 +74,7 @@ export type DrawerHolePattern = {
   bottomGapMm: number;
   /** Offset lateral tipico do furo na face do painel (mm). */
   lateralOffsetMm: number;
-  /** Passo do sistema de furacao (mm) ù tipicamente 32. */
+  /** Passo do sistema de furacao (mm) ‚Äî tipicamente 32. */
   systemPitchMm: number;
   /** Diametro dos furos de corredica (mm). */
   runnerHoleDiameterMm: number;
@@ -101,7 +101,7 @@ export type DrawerPieceBox = {
 
 /**
  * Geometria completa de uma gaveta europeia.
- * Industrial Modelo B: frente madeira + laterais/costa/fundo madeira + corrediùa Hettich.
+ * Industrial Modelo B: frente madeira + laterais/costa/fundo madeira + corredi√ßa Hettich.
  */
 export type DrawerGeometry = {
   systemId: EuropeanDrawerSystemId;
@@ -146,7 +146,7 @@ export type DrawerAssemblyRules = {
 export type DrawerCutlistItem = {
   id: string;
   nome: string;
-  /** Cùdigo industrial (gav_fren, gav_lat_dir, ù). */
+  /** C√≥digo industrial (gav_fren, gav_lat_dir, ‚Äî). */
   codigo?: string;
   quantidade: number;
   /** Largura / altura / profundidade da peca (mm). */
@@ -239,7 +239,7 @@ export type EuropeanDrawerBoxInput = {
   espessura: number;
   gavetas?: number;
   material?: string;
-  /** Profundidade ùtil interna (mm) ù preferida para seleùùo Hettich. */
+  /** Profundidade √∫til interna (mm) ‚Äî preferida para sele√ß√£o Hettich. */
   profundidadeInternaUtilMm?: number;
   espessuraCosta?: number;
   costaAtiva?: boolean;
@@ -254,7 +254,7 @@ export type EuropeanDrawerResult = {
   valid: boolean;
   errors: string[];
   warnings: string[];
-  /** Descriùùes de auto-fix disponùveis (sem funùùes ù serializùvel). */
+  /** Descri√ß√µes de auto-fix dispon√≠veis (sem fun√ß√µes ‚Äî serializ√°vel). */
   autoFixes: Array<{ code: string; description: string }>;
   geometry: DrawerGeometry;
   holes: EuropeanDrawerHole[];
@@ -272,17 +272,17 @@ export type EuropeanDrawerResult = {
     piecesAffected: string[];
     gates: Array<{ gate: string; ok: boolean; durationMs: number }>;
   };
-  /** Documentaùùo industrial completa (Fase 11) ù camada somente-leitura. */
+  /** Documenta√ß√£o industrial completa (Fase 11) ‚Äî camada somente-leitura. */
   docs?: import("./docs").EuropeanIndustrialDocs;
-  /** Export DXF em memùria (Fase 12). */
+  /** Export DXF em mem√≥ria (Fase 12). */
   dxf?: import("./dxf").EuropeanDXFExport;
-  /** Modo de desenho tùcnico / vistas industriais (Fase 12). */
+  /** Modo de desenho t√©cnico / vistas industriais (Fase 12). */
   technical?: import("./dxf").EuropeanTechnicalDrawingMode;
   /** MC Overlay avancado (Fase 13). */
   overlay?: import("./overlay").EuropeanOverlay;
   /** Release Notes industriais automaticas (Fase 14). */
   releaseNotes?: import("./release").EuropeanReleaseNotes;
-  /** Custo industrial (Fase 18) ó camada somente-leitura. */
+  /** Custo industrial (Fase 18) ‚Äî camada somente-leitura. */
   pricing?: import("../../pricing").IndustrialPricing;
 };
 

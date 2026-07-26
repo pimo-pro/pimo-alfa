@@ -1,6 +1,6 @@
 # drilling/
 
-Furação específica dos sistemas europeus (Modelo B).
+FuraÃ§Ã£o especÃ­fica dos sistemas europeus (Modelo B).
 
-**Estado:** pasta reservada — sem implementação nesta fase.
-**Nota:** não misturar com `src/core/drawers/drilling/` (Modelo A) até haver migração explícita.
+**Estado:** pasta reservada â€” sem implementaÃ§Ã£o nesta fase.
+**Nota:** nÃ£o misturar com `src/core/drawers/drilling/` (Modelo A) atÃ© haver migraÃ§Ã£o explÃ­cita.

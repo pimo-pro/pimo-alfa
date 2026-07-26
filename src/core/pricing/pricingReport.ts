@@ -1,5 +1,5 @@
 /**
- * pricingReport.ts ó RelatÛrio do motor de custo industrial (Fase 18).
+ * pricingReport.ts ‚Äî Relat√©rio do motor de custo industrial (Fase 18).
  */
 
 export type PricingStatus = "PRICING_OK" | "PRICING_WARN" | "PRICING_ERROR";
@@ -24,10 +24,10 @@ export function buildPricingReport(input: {
   const industrialIntegrityOk = input.industrialIntegrityOk !== false;
 
   if (input.costIndustrial != null && !(input.costIndustrial >= 0)) {
-    errors.push("Custo industrial inv·lido.");
+    errors.push("Custo industrial inv√°lido.");
   }
   if (input.priceFinal != null && !(input.priceFinal >= 0)) {
-    errors.push("PreÁo final inv·lido.");
+    errors.push("Pre√ßo final inv√°lido.");
   }
 
   let status: PricingStatus = "PRICING_OK";

@@ -1,6 +1,6 @@
 /**
- * validateHolePositions.ts ó Furos do Sistema Europeu.
- * Laterais/costa da gaveta: regras Modelo A (n„o forÁar pitch 32 do mÛdulo).
+ * validateHolePositions.ts ‚Äî Furos do Sistema Europeu.
+ * Laterais/costa da gaveta: regras Modelo A (n√£o for√ßar pitch 32 do m√≥dulo).
  */
 
 import type {
@@ -69,7 +69,7 @@ function pieceBounds(
       allowEdgeDepth: true,
     };
   }
-  // Laterais do mÛdulo
+  // Laterais do m√≥dulo
   return {
     maxX: box.dimensoes.profundidade,
     maxY: box.dimensoes.altura,
@@ -79,7 +79,7 @@ function pieceBounds(
 }
 
 /**
- * Valida coordenadas, profundidades e padr„o oficial (mÛdulo 32 mm / setback).
+ * Valida coordenadas, profundidades e padr√£o oficial (m√≥dulo 32 mm / setback).
  */
 export function validateHolePositions(
   box: EuropeanDrawerBoxInput,
@@ -92,14 +92,14 @@ export function validateHolePositions(
 
   for (const hole of holes) {
     const bounds = pieceBounds(hole, geometry, box);
-    // Rasgo / groove: di‚metro 0 permitido
+    // Rasgo / groove: di√¢metro 0 permitido
     const isGroove = hole.diameter === 0 && hole.holeType === "fixacao_estrutural";
 
     if (hole.x < -EPS || hole.y < -EPS || hole.x > bounds.maxX + EPS || hole.y > bounds.maxY + EPS) {
       result.errors.push(
         euError(
           EU_ERROR_CODES.HOLE_BOUNDS,
-          `Furo fora da peÁa ${hole.pieceRef}: X=${hole.x.toFixed(1)} Y=${hole.y.toFixed(1)}.`,
+          `Furo fora da pe√ßa ${hole.pieceRef}: X=${hole.x.toFixed(1)} Y=${hole.y.toFixed(1)}.`,
           `holes.${hole.pieceRef}`
         )
       );
@@ -108,12 +108,12 @@ export function validateHolePositions(
       result.errors.push(
         euError(
           EU_ERROR_CODES.HOLE_DEPTH,
-          `Furo com profundidade/di‚metro inv·lido em ${hole.pieceRef}.`,
+          `Furo com profundidade/di√¢metro inv√°lido em ${hole.pieceRef}.`,
           `holes.${hole.pieceRef}`
         )
       );
     }
-    // Furos de face/topo Modelo A podem ter profundidade > espessura (orientaÁ„o de face)
+    // Furos de face/topo Modelo A podem ter profundidade > espessura (orienta√ß√£o de face)
     if (!bounds.allowEdgeDepth && hole.depth > bounds.maxThickness + EPS) {
       result.errors.push(
         euError(
@@ -125,7 +125,7 @@ export function validateHolePositions(
     }
   }
 
-  // Pitch 32 / setback: apenas furos de corrediÁa nas laterais do mÛdulo
+  // Pitch 32 / setback: apenas furos de corredi√ßa nas laterais do m√≥dulo
   const moduleRunnerHoles = holes.filter(
     (h) =>
       h.holeType === "corredica" &&
@@ -141,7 +141,7 @@ export function validateHolePositions(
       result.errors.push(
         euError(
           EU_ERROR_CODES.HOLE_PITCH32,
-          `Furo corrediÁa mÛdulo X=${h.x.toFixed(1)} n„o respeita setback ${pattern.setbackFrontMm} + sistema ${pattern.systemPitchMm} mm.`,
+          `Furo corredi√ßa m√≥dulo X=${h.x.toFixed(1)} n√£o respeita setback ${pattern.setbackFrontMm} + sistema ${pattern.systemPitchMm} mm.`,
           "holes.corredica"
         )
       );
@@ -156,7 +156,7 @@ export function validateHolePositions(
       result.errors.push(
         euError(
           EU_ERROR_CODES.HOLE_SETBACK,
-          `FixaÁ„o frente X=${h.x.toFixed(1)} n„o respeita setback oficial ${pattern.setbackFrontMm} mm.`,
+          `Fixa√ß√£o frente X=${h.x.toFixed(1)} n√£o respeita setback oficial ${pattern.setbackFrontMm} mm.`,
           "holes.front"
         )
       );

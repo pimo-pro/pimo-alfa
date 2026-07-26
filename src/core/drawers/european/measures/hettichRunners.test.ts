@@ -6,16 +6,16 @@ import {
 } from "./index";
 
 describe("selectHettichRunnerDepth", () => {
-  it("escolhe o maior comprimento STRICTLY menor que a profundidade útil", () => {
+  it("escolhe o maior comprimento STRICTLY menor que a profundidade Ãºtil", () => {
     expect(selectHettichRunnerDepth(500)).toBe(450);
     expect(selectHettichRunnerDepth(380)).toBe(350);
     expect(selectHettichRunnerDepth(301)).toBe(300);
     expect(selectHettichRunnerDepth(600)).toBe(550);
   });
 
-  it("não devolve comprimento igual à profundidade útil", () => {
+  it("nÃ£o devolve comprimento igual â€” profundidade Ãºtil", () => {
     expect(selectHettichRunnerDepth(450)).toBe(400);
-    expect(selectHettichRunnerDepth(300)).toBe(300); // fallback mínimo se nada < 300
+    expect(selectHettichRunnerDepth(300)).toBe(300); // fallback mÃ­nimo se nada < 300
   });
 });
 
@@ -30,7 +30,7 @@ describe("medidas industriais Modelo B", () => {
     expect(calcDrawerExternalWidthMm(box)).toBe(486);
   });
 
-  it("corpo sem frente = corrediça ? 10", () => {
+  it("corpo sem frente = corrediÃ§a ? 10", () => {
     expect(calcBodyDepthWithoutFrontMm(450)).toBe(440);
   });
 });

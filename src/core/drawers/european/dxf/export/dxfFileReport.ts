@@ -1,5 +1,5 @@
 /**
- * dxfFileReport.ts — Relatório de exportação DXF física (Fase 16).
+ * dxfFileReport.ts â€” RelatÃ©rio de exportaÃ§Ã£o DXF fÃ­sica (Fase 16).
  */
 
 export type DxfFileExportStatus = "DXF_FILE_OK" | "DXF_FILE_WARN" | "DXF_FILE_ERROR";

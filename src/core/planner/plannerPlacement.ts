@@ -1,5 +1,5 @@
 /**
- * plannerPlacement.ts — Regras de posicionamento (somente leitura sobre Kitchen Library).
+ * plannerPlacement.ts â€” Regras de posicionamento (somente leitura sobre Kitchen Library).
  */
 
 import type { KitchenModuleKind, KitchenRodapeModel, KitchenRemateModel } from "../kitchen/types";
@@ -36,18 +36,18 @@ export function buildPlacementRules(input?: {
   };
 }
 
-/** Origem Y sugerida no alçado (elevação) por tipo de módulo. */
+/** Origem Y sugerida no alÃ§ado (elevaÃ§Ã£o) por tipo de mÃ³dulo. */
 export function suggestedElevationYMm(
   kind: KitchenModuleKind,
   rules: PlannerPlacementRules = DEFAULT_PLACEMENT_RULES
 ): number {
   if (kind === "upper") return rules.upperBottomHeightMm;
   if (kind === "tall") return rules.baseFloorOffsetMm;
-  // base + corner: assentam sobre rodapé (visual)
+  // base + corner: assentam sobre rodapÃ© (visual)
   return rules.baseFloorOffsetMm + rules.rodapeHeightMm;
 }
 
-/** Alinhamento de frentes/portas — folga documental. */
+/** Alinhamento de frentes/portas â€” folga documental. */
 export function frontAlignmentOffsetMm(
   rules: PlannerPlacementRules = DEFAULT_PLACEMENT_RULES
 ): number {

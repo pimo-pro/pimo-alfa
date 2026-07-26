@@ -1,5 +1,5 @@
 /**
- * Regress„o de desempenho: resultados industriais est·veis apÛs memo/validateAll.
+ * Regress√≥o de desempenho: resultados industriais est√°veis ap√≥s memo/validateAll.
  */
 
 import { describe, expect, it, vi } from "vitest";
@@ -40,7 +40,7 @@ function industrialFingerprint(result: ReturnType<typeof generateEuropeanDrawer>
   });
 }
 
-describe("european/perf ó regress„o transparente", () => {
+describe("european/perf ‚Äî regress√≥o transparente", () => {
   it("memo devolve o mesmo valor para os mesmos args", () => {
     clearAllEuropeanMemos();
     let calls = 0;
@@ -55,7 +55,7 @@ describe("european/perf ó regress„o transparente", () => {
     expect(calls).toBe(2);
   });
 
-  it("generateEuropeanDrawer È est·vel entre duas chamadas (cache hit)", () => {
+  it("generateEuropeanDrawer ‚Äî est√°vel entre duas chamadas (cache hit)", () => {
     vi.spyOn(flags, "isDrawerModeloAActive").mockReturnValue(false);
     clearAllEuropeanMemos();
     const box = {
@@ -90,7 +90,7 @@ describe("european/perf ó regress„o transparente", () => {
     vi.restoreAllMocks();
   });
 
-  it("mudanÁa sÛ de material da frente n„o altera geometria/furos/corpo cutlist", () => {
+  it("mudan√ßa s√≥ de material da frente n√£o altera geometria/furos/corpo cutlist", () => {
     vi.spyOn(flags, "isDrawerModeloAActive").mockReturnValue(false);
     clearAllEuropeanMemos();
     const box = {
@@ -136,7 +136,7 @@ describe("european/perf ó regress„o transparente", () => {
     vi.restoreAllMocks();
   });
 
-  it("Auto QA amostra (40) sem crashes apÛs otimizaÁ„o", async () => {
+  it("Auto QA amostra (40) sem crashes ap√≥s otimiza√ß√£o", async () => {
     vi.spyOn(flags, "isDrawerModeloAActive").mockReturnValue(false);
     clearAllEuropeanMemos();
     const sample = ALL_SCENARIOS.slice(0, 40);

@@ -1,6 +1,6 @@
 /**
- * plannerGrid.ts — Grelha de cozinha (snap industrial 50 mm).
- * Não altera medidas dos módulos da Kitchen Library.
+ * plannerGrid.ts â€” Grelha de cozinha (snap industrial 50 mm).
+ * NÃ£o altera medidas dos mÃ³dulos da Kitchen Library.
  */
 
 export const PLANNER_SNAP_MM = 50;
@@ -10,7 +10,7 @@ export type PlannerWallZone = "north" | "south" | "east" | "west";
 export type PlannerGridConfig = {
   widthMm: number;
   heightMm: number;
-  /** Profundidade lógica da planta (mm). */
+  /** Profundidade lÃ³gica da planta (mm). */
   depthMm: number;
   snapMm: number;
 };
@@ -60,7 +60,7 @@ export function clampToGrid(
 }
 
 /**
- * Constrói grelha com zonas de parede, canto e rodapé (documental).
+ * ConstrÃ³i grelha com zonas de parede, canto e rodapÃ© (documental).
  */
 export function buildPlannerGrid(
   config: Partial<PlannerGridConfig> = {},

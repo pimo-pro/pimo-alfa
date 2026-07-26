@@ -1,5 +1,5 @@
 /**
- * docsReport.ts — Relatório da camada de documentação industrial (Fase 11).
+ * docsReport.ts â€” RelatÃ©rio da camada de documentaÃ§Ã£o industrial (Fase 11).
  */
 
 export type EuropeanDocsStatus = "DOCS_OK" | "DOCS_WARN" | "DOCS_ERROR";
@@ -40,8 +40,8 @@ export function buildDocsReport(input: {
 
 export function formatDocsReportText(report: EuropeanDocsReport): string {
   const lines = [
-    `European Industrial Docs — ${report.status}`,
-    `secoes: ${report.sectionsGenerated.join(", ") || "—"}`,
+    `European Industrial Docs â€” ${report.status}`,
+    `secoes: ${report.sectionsGenerated.join(", ") || "â€”"}`,
     `pecas: ${report.piecesDocumented}`,
     `furos: ${report.holesDocumented}`,
     `paginas: ${report.logicalPages}`,

@@ -1,5 +1,5 @@
 /**
- * naming/ — Nomes e códigos industriais do Modelo B.
+ * naming/ â€” Nomes e cÃ³digos industriais do Modelo B.
  * Independente dos tokens do Modelo A (gav_frent / gav_cost).
  */
 
@@ -19,9 +19,9 @@ export type EuropeanIndustrialName = {
 
 /**
  * Corpo da gaveta:
- * 1ª ? gaveta / gav
- * 2ª ? gaveta 1 / gav_1
- * 3ª ? gaveta 2 / gav_2
+ * 1â€” ? gaveta / gav
+ * 2â€” ? gaveta 1 / gav_1
+ * 3â€” ? gaveta 2 / gav_2
  */
 export function europeanBodyIndustrialName(drawerIndex0: number): EuropeanIndustrialName {
   if (drawerIndex0 <= 0) return { nome: "gaveta", codigo: "gav" };
@@ -31,7 +31,7 @@ export function europeanBodyIndustrialName(drawerIndex0: number): EuropeanIndust
 /**
  * Frente externa:
  * 1 gaveta ? gaveta frente / gav_fren
- * N gavetas ? gaveta frente / gav_1_fren, gav_2_fren, …
+ * N gavetas ? gaveta frente / gav_1_fren, gav_2_fren, â€”
  */
 export function europeanFrontIndustrialName(
   drawerIndex0: number,

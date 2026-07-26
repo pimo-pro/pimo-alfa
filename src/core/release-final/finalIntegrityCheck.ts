@@ -1,5 +1,5 @@
 /**
- * finalIntegrityCheck.ts — Verificação industrial (somente leitura).
+ * finalIntegrityCheck.ts â€” VerificaÃ§Ã£o industrial (somente leitura).
  */
 
 import type { EuropeanDrawerResult } from "../drawers/european/types";
@@ -40,7 +40,7 @@ function item(
 }
 
 /**
- * Valida presença/integridade dos artefactos sem alterar o result.
+ * Valida presenÃ§a/integridade dos artefactos sem alterar o result.
  */
 export function runFinalIntegrityCheck(input: {
   result?: EuropeanDrawerResult | null;
