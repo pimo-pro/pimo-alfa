@@ -1,5 +1,5 @@
 /**
- * types.ts ó Tipos base do Sistema Europeu de Gavetas (Modelo B).
+ * types.ts ù Tipos base do Sistema Europeu de Gavetas (Modelo B).
  *
  * SSOT de contratos industriais para Blum / Hettich / Grass.
  * Independente do Modelo A (src/core/drawers/* excepto european/).
@@ -19,7 +19,7 @@ export type EuropeanDrawerSystemId =
   | "hettich-innotech-atira"
   | "grass-nova-pro-scala";
 
-/** Codigo comercial da altura (ex.: N, M, K, F, H / D, CÖ). */
+/** Codigo comercial da altura (ex.: N, M, K, F, H / D, Cù). */
 export type EuropeanHeightCode = string;
 
 /**
@@ -27,11 +27,11 @@ export type EuropeanHeightCode = string;
  * Industrial: altura da caixa metalica / lateral do sistema, nao da frente.
  */
 export type DrawerHeightProfile = {
-  /** Codigo de catalogo (N/M/KÖ). Vazio se o sistema so usa mm. */
+  /** Codigo de catalogo (N/M/Kù). Vazio se o sistema so usa mm. */
   code: EuropeanHeightCode;
   /** Altura nominal do sistema (mm). */
   heightMm: number;
-  /** Etiqueta UI (ex.: "N ó 66 mm"). */
+  /** Etiqueta UI (ex.: "N ù 66 mm"). */
   label: string;
 };
 
@@ -55,7 +55,7 @@ export type DrawerDepthProfile = {
  * Industrial: body width = internalWidth - 2 * clearanceMm.
  */
 export type DrawerSideProfile = {
-  /** Folga por lado (mm) ó half of "caixa interna - 2xN". */
+  /** Folga por lado (mm) ù half of "caixa interna - 2xN". */
   clearanceMm: number;
   /** Espessura tipica da parede metalica (mm), informativo. */
   wallThicknessMm: number;
@@ -74,7 +74,7 @@ export type DrawerHolePattern = {
   bottomGapMm: number;
   /** Offset lateral tipico do furo na face do painel (mm). */
   lateralOffsetMm: number;
-  /** Passo do sistema de furacao (mm) ó tipicamente 32. */
+  /** Passo do sistema de furacao (mm) ù tipicamente 32. */
   systemPitchMm: number;
   /** Diametro dos furos de corredica (mm). */
   runnerHoleDiameterMm: number;
@@ -107,7 +107,7 @@ export type DrawerGeometry = {
   systemId: EuropeanDrawerSystemId;
   front: DrawerPieceBox;
   bottom: DrawerPieceBox;
-  /** Laterais madeira ó tipicamente ausentes em caixa metalica (width=0). */
+  /** Laterais madeira ù tipicamente ausentes em caixa metalica (width=0). */
   leftSide: DrawerPieceBox;
   rightSide: DrawerPieceBox;
   back: DrawerPieceBox;
@@ -234,6 +234,8 @@ export type EuropeanDrawerResult = {
   valid: boolean;
   errors: string[];
   warnings: string[];
+  /** DescriÁıes de auto-fix disponÌveis (sem funÁıes ó serializ·vel). */
+  autoFixes: Array<{ code: string; description: string }>;
   geometry: DrawerGeometry;
   holes: EuropeanDrawerHole[];
   cutlist: DrawerCutlistItem[];

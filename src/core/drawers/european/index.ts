@@ -1,5 +1,5 @@
 /**
- * Sistema Europeu de Gavetas ó Modelo B
+ * Sistema Europeu de Gavetas ù Modelo B
  *
  * API principal: generateEuropeanDrawer(model|systemId, box)
  *
@@ -79,8 +79,18 @@ export {
   collectModuleLateralDrillHoles,
 } from "./adapter";
 
+export {
+  runEuropeanDrawerValidation,
+  applyEuropeanAutoFixes,
+  buildEuropeanAutoFixes,
+  validationMessages,
+  type EuropeanDrawerValidationResult,
+  type EuropeanDrawerAutoFixAction,
+} from "./validation";
+
 import type {
   DrawerEuropeanModel,
+  DrawerPDFSection,
   EuropeanDrawerBoxConfig,
   EuropeanDrawerBoxInput,
   EuropeanDrawerResult,
@@ -93,11 +103,15 @@ import {
 } from "./catalog";
 import { buildEuropeanDrawerGeometry } from "./geometry";
 import { generateEuropeanDrawerHoles } from "./drilling";
-import { validateEuropeanDrawerBox, getAssemblyRules } from "./assembly";
+import { getAssemblyRules } from "./assembly";
 import { buildEuropeanCutlistItems } from "./cutlist";
 import { buildEuropeanDrawerPdfSection } from "./pdf";
 import { buildEuropeanViewerData } from "./viewer";
 import { isDrawerModeloAActive } from "../drawerSystemFlags";
+import {
+  applyEuropeanAutoFixes,
+  runEuropeanDrawerValidation,
+} from "./validation";
 
 function resolveModel(
   modelOrId: DrawerEuropeanModel | EuropeanDrawerSystemId
@@ -125,64 +139,23 @@ export function defaultEuropeanDrawerConfig(
   };
 }
 
-/**
- * Gera gaveta(s) europeias completas para um modulo.
- *
- * 1. Validar caixa
- * 2. Calcular medidas / geometria
- * 3. Gerar furos
- * 4. Gerar cutlist + PDF + viewer
- */
-export function generateEuropeanDrawer(
-  modelOrId: DrawerEuropeanModel | EuropeanDrawerSystemId,
+function emptyPdf(model: DrawerEuropeanModel, config: EuropeanDrawerBoxConfig, geometry: EuropeanDrawerResult["geometry"], boxName?: string): DrawerPDFSection {
+  return buildEuropeanDrawerPdfSection({
+    model,
+    config,
+    geometry,
+    cutlist: [],
+    holes: [],
+    boxName,
+  });
+}
+
+function buildPipeline(
   box: EuropeanDrawerBoxInput,
-  configOverride?: Partial<EuropeanDrawerBoxConfig>
-): EuropeanDrawerResult {
-  const model = resolveModel(modelOrId);
-  const base = box.europeanDrawerConfig ?? defaultEuropeanDrawerConfig(box, model.id);
-  const config: EuropeanDrawerBoxConfig = {
-    ...base,
-    ...configOverride,
-    systemId: model.id,
-  };
-
-  // Normalizar altura/profundidade ao catalogo
-  const heightProfile = findHeightProfile(model, config.heightMm);
-  config.heightMm = heightProfile.heightMm;
-  config.heightCode = heightProfile.code || config.heightCode;
-  config.depthMm = findNearestDepthMm(model, config.depthMm);
-
+  model: DrawerEuropeanModel,
+  config: EuropeanDrawerBoxConfig
+) {
   const count = Math.max(1, Math.floor(config.count ?? box.gavetas ?? 1));
-  config.count = count;
-
-  const validation = validateEuropeanDrawerBox(box, model, config);
-
-  // Se Modelo A ainda activo, devolver estrutura vazia valida=false (B so com A off).
-  if (isDrawerModeloAActive()) {
-    const emptyGeo = buildEuropeanDrawerGeometry(box, model, config, 0, 1);
-    return {
-      systemId: model.id,
-      model,
-      config,
-      valid: false,
-      errors: ["Modelo A ainda activo ó desactivar em Admin ? Produtos ? Gavetas para usar o Modelo B."],
-      warnings: validation.warnings,
-      geometry: emptyGeo,
-      holes: [],
-      cutlist: [],
-      pdf: buildEuropeanDrawerPdfSection({
-        model,
-        config,
-        geometry: emptyGeo,
-        cutlist: [],
-        holes: [],
-        boxName: box.nome,
-      }),
-      viewer: { drawers: [] },
-      assembly: getAssemblyRules(model),
-    };
-  }
-
   const drawersGeo = [];
   const allHoles = [];
   const allCutlist = [];
@@ -215,38 +188,164 @@ export function generateEuropeanDrawer(
     allCutlist.push(...cutlist);
   }
 
-  const primaryGeometry = drawersGeo[0]?.geometry ?? buildEuropeanDrawerGeometry(box, model, config, 0, count);
+  const primaryGeometry =
+    drawersGeo[0]?.geometry ?? buildEuropeanDrawerGeometry(box, model, config, 0, count);
+  const assembly = getAssemblyRules(model);
+  const pdf = buildEuropeanDrawerPdfSection({
+    model,
+    config,
+    geometry: primaryGeometry,
+    cutlist: allCutlist,
+    holes: allHoles,
+    boxName: box.nome,
+  });
+  const viewer = buildEuropeanViewerData({ drawers: drawersGeo });
+
+  return { primaryGeometry, allHoles, allCutlist, pdf, viewer, assembly, drawersGeo };
+}
+
+export type GenerateEuropeanDrawerOptions = {
+  /** Aplicar auto-fixes seguros 1x e regenerar (default true). */
+  applyAutoFixes?: boolean;
+};
+
+/**
+ * Gera gaveta(s) europeias completas para um modulo.
+ *
+ * Pipeline: geometria ? furos ? cutlist/PDF/viewer ? validacao industrial ? auto-fix ? gate saidas.
+ */
+export function generateEuropeanDrawer(
+  modelOrId: DrawerEuropeanModel | EuropeanDrawerSystemId,
+  box: EuropeanDrawerBoxInput,
+  configOverride?: Partial<EuropeanDrawerBoxConfig>,
+  options?: GenerateEuropeanDrawerOptions
+): EuropeanDrawerResult {
+  const applyFixes = options?.applyAutoFixes !== false;
+  const model = resolveModel(modelOrId);
+  const base = box.europeanDrawerConfig ?? defaultEuropeanDrawerConfig(box, model.id);
+  let config: EuropeanDrawerBoxConfig = {
+    ...base,
+    ...configOverride,
+    systemId: model.id,
+  };
+
+  const heightProfile = findHeightProfile(model, config.heightMm);
+  config.heightMm = heightProfile.heightMm;
+  config.heightCode = heightProfile.code || config.heightCode;
+  config.depthMm = findNearestDepthMm(model, config.depthMm);
+  config.count = Math.max(1, Math.floor(config.count ?? box.gavetas ?? 1));
+
+  if (isDrawerModeloAActive()) {
+    const emptyGeo = buildEuropeanDrawerGeometry(box, model, config, 0, 1);
+    return {
+      systemId: model.id,
+      model,
+      config,
+      valid: false,
+      errors: ["Modelo A ainda activo ù desactivar em Admin ? Produtos ? Gavetas para usar o Modelo B."],
+      warnings: [],
+      autoFixes: [],
+      geometry: emptyGeo,
+      holes: [],
+      cutlist: [],
+      pdf: emptyPdf(model, config, emptyGeo, box.nome),
+      viewer: { drawers: [] },
+      assembly: getAssemblyRules(model),
+    };
+  }
+
+  let built = buildPipeline(box, model, config);
+  let validation = runEuropeanDrawerValidation({
+    box,
+    model,
+    config,
+    geometry: built.primaryGeometry,
+    holes: built.allHoles,
+    cutlist: built.allCutlist,
+    pdf: built.pdf,
+    viewer: built.viewer,
+    assembly: built.assembly,
+  });
+
+  // Auto-fix seguro (1 passagem) ù nunca altera catalogo
+  if (applyFixes && validation.errors.length > 0 && validation.autoFixes.length > 0) {
+    config = applyEuropeanAutoFixes(config, validation.autoFixes);
+    config.depthMm = findNearestDepthMm(model, config.depthMm);
+    const hp = findHeightProfile(model, config.heightMm);
+    config.heightMm = hp.heightMm;
+    config.heightCode = hp.code || config.heightCode;
+    built = buildPipeline(box, model, config);
+    validation = runEuropeanDrawerValidation({
+      box,
+      model,
+      config,
+      geometry: built.primaryGeometry,
+      holes: built.allHoles,
+      cutlist: built.allCutlist,
+      pdf: built.pdf,
+      viewer: built.viewer,
+      assembly: built.assembly,
+    });
+  }
+
+  const autoFixMeta = validation.autoFixes.map((f) => ({
+    code: f.code,
+    description: f.description,
+  }));
+
+  // Gaveta invalida: nao emitir cutlist / PDF util / viewer
+  if (!validation.valid) {
+    return {
+      systemId: model.id,
+      model,
+      config,
+      valid: false,
+      errors: validation.errors.map((e) => e.message),
+      warnings: validation.warnings.map((w) => w.message),
+      autoFixes: autoFixMeta,
+      geometry: built.primaryGeometry,
+      holes: [],
+      cutlist: [],
+      pdf: emptyPdf(model, config, built.primaryGeometry, box.nome),
+      viewer: { drawers: [] },
+      assembly: built.assembly,
+    };
+  }
 
   return {
     systemId: model.id,
     model,
     config,
-    valid: validation.valid,
-    errors: validation.errors,
-    warnings: validation.warnings,
-    geometry: primaryGeometry,
-    holes: allHoles,
-    cutlist: allCutlist,
-    pdf: buildEuropeanDrawerPdfSection({
-      model,
-      config,
-      geometry: primaryGeometry,
-      cutlist: allCutlist,
-      holes: allHoles,
-      boxName: box.nome,
-    }),
-    viewer: buildEuropeanViewerData({ drawers: drawersGeo }),
-    assembly: getAssemblyRules(model),
+    valid: true,
+    errors: [],
+    warnings: validation.warnings.map((w) => w.message),
+    autoFixes: autoFixMeta,
+    geometry: built.primaryGeometry,
+    holes: built.allHoles,
+    cutlist: built.allCutlist,
+    pdf: built.pdf,
+    viewer: built.viewer,
+    assembly: built.assembly,
   };
+}
+
+/**
+ * Calcula config corrigida (para botao UI "Aplicar correcoes automaticas").
+ */
+export function suggestEuropeanAutoFixedConfig(
+  box: EuropeanDrawerBoxInput,
+  config: EuropeanDrawerBoxConfig
+): EuropeanDrawerBoxConfig {
+  const model = getEuropeanDrawerModel(config.systemId);
+  const dry = generateEuropeanDrawer(model, box, config, { applyAutoFixes: false });
+  if (dry.valid) return { ...config };
+  const fixed = generateEuropeanDrawer(model, box, config, { applyAutoFixes: true });
+  return { ...fixed.config };
 }
 
 /**
  * Gera N gavetas europeias e devolve layer items (para boxLayersService).
  */
 export function generateEuropeanDrawersForBox(box: EuropeanDrawerBoxInput) {
-  const result = generateEuropeanDrawer(
-    box.europeanDrawerConfig?.systemId ?? "blum-legrabox",
-    box
-  );
-  return result;
+  return generateEuropeanDrawer(box.europeanDrawerConfig?.systemId ?? "blum-legrabox", box);
 }
