@@ -1,11 +1,7 @@
 /**
  * Blum Legrabox — Modelo B
- * STUB: pasta + export placeholder. Sem regras/furos/medidas.
+ * Re-exporta o perfil oficial do catalogo europeu.
  */
 
+export { BLUM_LEGRABOX as model, BLUM_LEGRABOX } from "../../catalog";
 export const BLUM_LEGRABOX_SYSTEM_ID = "blum-legrabox" as const;
-
-/** Placeholder para implementação futura. */
-export function getBlumLegraboxStub(): { id: typeof BLUM_LEGRABOX_SYSTEM_ID; ready: false } {
-  return { id: BLUM_LEGRABOX_SYSTEM_ID, ready: false };
-}

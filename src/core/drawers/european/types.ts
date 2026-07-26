@@ -1,15 +1,17 @@
 /**
- * types.ts — Tipos base do Sistema Europeu (Modelo B).
+ * types.ts — Tipos base do Sistema Europeu de Gavetas (Modelo B).
  *
- * STUB: sem lógica. Preencher na fase de implementação das specs.
+ * SSOT de contratos industriais para Blum / Hettich / Grass.
+ * Independente do Modelo A (src/core/drawers/* excepto european/).
+ * Nao importa nem altera src/industrial/**.
  */
 
-/** Marcas europeias alvo desta fase. */
+/** Marcas europeias suportadas nesta fase. */
 export type EuropeanDrawerBrand = "Blum" | "Hettich" | "Grass";
 
 /**
- * Identificadores canónicos dos 4 sistemas.
- * Nomes alinhados com as pastas em ./models/
+ * Identificadores canonico dos 4 sistemas oficiais.
+ * Alinhados com pastas em ./models/
  */
 export type EuropeanDrawerSystemId =
   | "blum-legrabox"
@@ -17,14 +19,238 @@ export type EuropeanDrawerSystemId =
   | "hettich-innotech-atira"
   | "grass-nova-pro-scala";
 
+/** Codigo comercial da altura (ex.: N, M, K, F, H / D, C…). */
+export type EuropeanHeightCode = string;
+
 /**
- * Perfil futuro de um sistema europeu (alturas, profundidades, furação…).
- * Campos intencionalmente mínimos nesta fase.
+ * Perfil de altura de sistema (ex.: Legrabox N = 66 mm).
+ * Industrial: altura da caixa metalica / lateral do sistema, nao da frente.
  */
-export type EuropeanDrawerSystemProfile = {
+export type DrawerHeightProfile = {
+  /** Codigo de catalogo (N/M/K…). Vazio se o sistema so usa mm. */
+  code: EuropeanHeightCode;
+  /** Altura nominal do sistema (mm). */
+  heightMm: number;
+  /** Etiqueta UI (ex.: "N — 66 mm"). */
+  label: string;
+};
+
+/**
+ * Perfil de profundidade de corredica / caixa.
+ * Industrial: profundidade nominal do runner (mm).
+ */
+export type DrawerDepthProfile = {
+  /** Profundidade nominal (mm). */
+  nominalMm: number;
+  /** Minimo aceite pelo sistema (mm). */
+  minMm: number;
+  /** Maximo aceite pelo sistema (mm). */
+  maxMm: number;
+  /** Passo tipico de catalogo (mm). */
+  stepMm: number;
+};
+
+/**
+ * Perfil lateral: folga para corredica / parede do sistema.
+ * Industrial: body width = internalWidth - 2 * clearanceMm.
+ */
+export type DrawerSideProfile = {
+  /** Folga por lado (mm) — half of "caixa interna - 2xN". */
+  clearanceMm: number;
+  /** Espessura tipica da parede metalica (mm), informativo. */
+  wallThicknessMm: number;
+  /** Tipo de runner associado. */
+  runnerFamily: string;
+};
+
+/**
+ * Padrao de furacao do sistema (laterais do modulo + frente).
+ * Industrial: sistema 32 mm + setback frontal tipico 37 mm.
+ */
+export type DrawerHolePattern = {
+  /** Distancia do furo frontal a face frontal do painel (mm). */
+  setbackFrontMm: number;
+  /** Distancia do eixo da corredica ao fundo / base (mm). */
+  bottomGapMm: number;
+  /** Offset lateral tipico do furo na face do painel (mm). */
+  lateralOffsetMm: number;
+  /** Passo do sistema de furacao (mm) — tipicamente 32. */
+  systemPitchMm: number;
+  /** Diametro dos furos de corredica (mm). */
+  runnerHoleDiameterMm: number;
+  /** Profundidade tipica do furo de corredica (mm). */
+  runnerHoleDepthMm: number;
+  /** Diametro dos furos de fixacao da frente (mm). */
+  frontFixDiameterMm: number;
+  /** Profundidade dos furos de fixacao da frente (mm). */
+  frontFixDepthMm: number;
+};
+
+/**
+ * Caixa geometrica de uma peca (mm), origem no sistema local da gaveta.
+ */
+export type DrawerPieceBox = {
+  widthMm: number;
+  heightMm: number;
+  depthMm: number;
+  thicknessMm: number;
+  originXMm: number;
+  originYMm: number;
+  originZMm: number;
+};
+
+/**
+ * Geometria completa de uma gaveta europeia.
+ * Industrial: frente madeira + corpo metalico + fundo (e traseira se aplicavel).
+ */
+export type DrawerGeometry = {
+  systemId: EuropeanDrawerSystemId;
+  front: DrawerPieceBox;
+  bottom: DrawerPieceBox;
+  /** Laterais madeira — tipicamente ausentes em caixa metalica (width=0). */
+  leftSide: DrawerPieceBox;
+  rightSide: DrawerPieceBox;
+  back: DrawerPieceBox;
+  /** Largura util interna do corpo (mm). */
+  internalWidthMm: number;
+  /** Altura util do sistema (mm). */
+  usefulHeightMm: number;
+  /** Profundidade nominal do runner (mm). */
+  runnerDepthMm: number;
+};
+
+/**
+ * Regras de montagem industrial.
+ */
+export type DrawerAssemblyRules = {
+  /** Ordem recomendada de montagem. */
+  order: string[];
+  /** Tolerancia geral de montagem (mm). */
+  toleranceMm: number;
+  /** Folga frontal tipica frente ? modulo (mm por lado). */
+  frontGapMm: number;
+  /** Avisos industriais estaticos do sistema. */
+  warnings: string[];
+  softCloseSupported: boolean;
+  pushOpenSupported: boolean;
+};
+
+/**
+ * Linha de cutlist do Modelo B (antes do adapter para CutListItem).
+ */
+export type DrawerCutlistItem = {
+  id: string;
+  nome: string;
+  quantidade: number;
+  /** Largura / altura / profundidade da peca (mm). */
+  larguraMm: number;
+  alturaMm: number;
+  profundidadeMm: number;
+  espessuraMm: number;
+  material: string;
+  /** madeira | metal | fixacao | opcional */
+  kind: "wood" | "metal" | "hardware" | "optional";
+  tipo: string;
+  observacoesIndustriais?: string;
+};
+
+/**
+ * Secao PDF dedicada ao Modelo B (nao altera pdfUnified do Modelo A directamente).
+ */
+export type DrawerPDFSection = {
+  title: string;
+  measureRows: Array<{ label: string; value: string }>;
+  pieceRows: Array<{ nome: string; qty: string; dims: string; material: string }>;
+  holeRows: Array<{ peca: string; x: string; y: string; d: string; depth: string; tipo: string }>;
+  notes: string[];
+  /** Descricao textual da vista explodida (coordenadas). */
+  explodedViewNotes: string[];
+};
+
+/**
+ * Furo gerado pelo Modelo B (coordenadas em mm no painel de referencia).
+ */
+export type EuropeanDrawerHole = {
+  x: number;
+  y: number;
+  z: number;
+  diameter: number;
+  depth: number;
+  /** corredica | fixacao_metalica | fundo | estrutural */
+  holeType: "corredica" | "fixacao_metalica" | "fixacao_estrutural" | "fundo";
+  face: "A" | "B";
+  /** Referencia da peca: module_lat_esq | module_lat_dir | front | bottom */
+  pieceRef: string;
+};
+
+/**
+ * Modelo europeu completo (entrada do catalogo).
+ */
+export type DrawerEuropeanModel = {
   id: EuropeanDrawerSystemId;
   brand: EuropeanDrawerBrand;
   displayName: string;
-  /** Placeholder — tabelas oficiais na próxima fase. */
+  heights: DrawerHeightProfile[];
+  depthsMm: number[];
+  depthProfile: DrawerDepthProfile;
+  side: DrawerSideProfile;
+  holePattern: DrawerHolePattern;
+  assembly: DrawerAssemblyRules;
+  /** Espessura recomendada da frente (mm). */
+  recommendedFrontThicknessMm: number;
+  /** Espessura tipica do fundo (mm). */
+  recommendedBottomThicknessMm: number;
   notes?: string;
+};
+
+/** Configuracao por caixa (persistida no WorkspaceBox). */
+export type EuropeanDrawerBoxConfig = {
+  systemId: EuropeanDrawerSystemId;
+  heightMm: number;
+  heightCode?: string;
+  depthMm: number;
+  softClose: boolean;
+  pushOpen: boolean;
+  /** Quantidade de gavetas (empilhadas). Se omitido, usa box.gavetas. */
+  count?: number;
+};
+
+/** Caixa de entrada para geracao (subset do WorkspaceBox). */
+export type EuropeanDrawerBoxInput = {
+  id: string;
+  nome?: string;
+  dimensoes: { largura: number; altura: number; profundidade: number };
+  espessura: number;
+  gavetas?: number;
+  material?: string;
+  europeanDrawerConfig?: EuropeanDrawerBoxConfig;
+};
+
+/** Resultado completo de generateEuropeanDrawer. */
+export type EuropeanDrawerResult = {
+  systemId: EuropeanDrawerSystemId;
+  model: DrawerEuropeanModel;
+  config: EuropeanDrawerBoxConfig;
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+  geometry: DrawerGeometry;
+  holes: EuropeanDrawerHole[];
+  cutlist: DrawerCutlistItem[];
+  pdf: DrawerPDFSection;
+  /** Dados para o viewer (meshes / animacao). */
+  viewer: EuropeanDrawerViewerData;
+  assembly: DrawerAssemblyRules;
+};
+
+/** Dados de renderizacao do viewer Modelo B. */
+export type EuropeanDrawerViewerData = {
+  drawers: Array<{
+    id: string;
+    index: number;
+    geometry: DrawerGeometry;
+    holes: EuropeanDrawerHole[];
+    openProgress: number;
+    maxPullMm: number;
+  }>;
 };
