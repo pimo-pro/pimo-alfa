@@ -288,18 +288,21 @@ export function regenerateLayersForBox(
         material: box.material,
         europeanDrawerConfig: euConfig,
       });
-      drawersLayer.push(...europeanResultToLayerItems(result, box.id));
-      // Preserva isOpen / materiais se existir layer anterior com mesmo índice
-      for (let i = 0; i < drawersLayer.length; i++) {
-        const existing = (box.drawersLayer ?? []).find((d) => d.metadata?.modeloB && d.id === drawersLayer[i]!.id)
-          ?? (box.drawersLayer ?? [])[i];
-        if (existing) {
-          drawersLayer[i] = {
-            ...drawersLayer[i]!,
-            isOpen: existing.isOpen ?? false,
-            materialId: existing.materialId ?? drawersLayer[i]!.materialId,
-            material: existing.material ?? drawersLayer[i]!.material,
-          };
+      // Validacao industrial: nao renderizar layers se gaveta invalida
+      if (result.valid) {
+        drawersLayer.push(...europeanResultToLayerItems(result, box.id));
+        for (let i = 0; i < drawersLayer.length; i++) {
+          const existing =
+            (box.drawersLayer ?? []).find((d) => d.metadata?.modeloB && d.id === drawersLayer[i]!.id) ??
+            (box.drawersLayer ?? [])[i];
+          if (existing) {
+            drawersLayer[i] = {
+              ...drawersLayer[i]!,
+              isOpen: existing.isOpen ?? false,
+              materialId: existing.materialId ?? drawersLayer[i]!.materialId,
+              material: existing.material ?? drawersLayer[i]!.material,
+            };
+          }
         }
       }
     }

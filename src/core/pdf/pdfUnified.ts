@@ -110,6 +110,8 @@ function addEuropeanGavetasSection(doc: jsPDF, project: ProjectForPdfWithExtract
       material: box.material,
       europeanDrawerConfig: box.europeanDrawerConfig,
     });
+    // Validacao industrial: PDF so com gaveta valida
+    if (!result.valid) continue;
     appendEuropeanDrawerPdfSection(doc, result.pdf, MARGIN);
   }
 }
