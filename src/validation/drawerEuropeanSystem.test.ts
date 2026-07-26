@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { buildDrawerSpecs } from "../3d/objects/DrawerFactory";
 import { calculateDrawerSpecs, generateDrawerGroup, drawerGroupToLayerItems } from "../core/drawers";
+import * as drawerFlags from "../core/drawers/drawerSystemFlags";
 import { defaultRulesConfig } from "../core/rules/rulesConfig";
 import { settingsDefaults } from "../core/settings/settingsSchema";
 import { buildPanelDrillingResult } from "../modules/drilling/drillingAdapter";
@@ -8,6 +9,15 @@ import { extractDrawerCutlistFromLayerItems } from "../services/drawerCutlistAda
 
 describe("Sistema europeu de gavetas", () => {
   const drawerSettings = settingsDefaults.gavetas;
+
+  beforeEach(() => {
+    // Estes testes exercitam o pipeline Modelo A (generateDrawerGroup) — forçar activo.
+    vi.spyOn(drawerFlags, "isDrawerModeloAActive").mockReturnValue(true);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
   it("calcula dimensoes europeias a partir de settings.gavetas", () => {
     const specs = calculateDrawerSpecs(

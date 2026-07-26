@@ -439,7 +439,58 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
         );
       },
       addDrawerLayerItem: () => {
-        if (!isDrawerModeloAActive()) return;
+        // Modelo B: incrementa contagem europeia e regenera via generateEuropeanDrawer.
+        if (!isDrawerModeloAActive()) {
+          updateProject(
+            (prev) => {
+              const selected = getSelectedOrFirstWorkspaceBox(prev);
+              if (!selected) return prev;
+              const nextCount = Math.max(1, Math.floor((selected.gavetas || 0) + 1));
+              const workspaceBoxes = prev.workspaceBoxes.map((box) => {
+                if (box.id !== selected.id) return box;
+                const updatedBox = {
+                  ...box,
+                  gavetas: nextCount,
+                  portaTipo: "sem_porta" as const,
+                  prateleiras: 0,
+                  doorsLayer: [],
+                  europeanDrawerConfig: {
+                    ...(box.europeanDrawerConfig ?? {
+                      systemId: "hettich-innotech-atira" as const,
+                      heightMm: 144,
+                      depthMm: 450,
+                      softClose: true,
+                      pushOpen: false,
+                    }),
+                    count: nextCount,
+                  },
+                  drawerConfigError: undefined,
+                  panelIds: ensureBoxPanelIds(box.panelIds, panelIdOptionsFromBox(box, {
+                    portaTipo: "sem_porta" as const,
+                    prateleiras: 0,
+                    gavetas: nextCount,
+                  })),
+                };
+                const layers = regenerateLayersForBox(updatedBox);
+                return { ...updatedBox, ...layers };
+              });
+              return recomputeState(
+                prev,
+                {
+                  workspaceBoxes,
+                  changelog: appendChangelog(prev.changelog, {
+                    timestamp: new Date(),
+                    type: "box",
+                    message: "Gaveta europeia (Modelo B) adicionada",
+                  }),
+                },
+                true
+              );
+            },
+            true
+          );
+          return;
+        }
 
         updateProject(
           (prev) => {

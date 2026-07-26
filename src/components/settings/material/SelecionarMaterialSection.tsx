@@ -7,7 +7,6 @@ import WoodGrainRotationToggle from "./WoodGrainRotationToggle";
 import WoodGrainLockToggle from "./WoodGrainLockToggle";
 import { resolveDoorLabel } from "../../../core/doors/doorLabels";
 import { isCornerDireitaInferiorModel } from "../../../core/cornerCabinet";
-import { useDrawerModeloAActive } from "../../../hooks/useDrawerModeloAActive";
 import { boxHasActiveDrawers } from "../../../core/drawers/drawerModeloAGate";
 
 type SelecionarMaterialSectionProps = {
@@ -29,7 +28,6 @@ export default function SelecionarMaterialSection({
   onFixedFrontMaterialChange,
 }: SelecionarMaterialSectionProps) {
   const { project, actions } = useProject();
-  const modeloAActive = useDrawerModeloAActive();
   const box = project.workspaceBoxes.find((item) => item.id === boxId);
   const woodMaterials = useMemo(
     () => listOfficialMaterials().filter((material) => material.industrial && material.visual),
@@ -41,7 +39,7 @@ export default function SelecionarMaterialSection({
   const fallbackMaterialId = box.material || project.materialId || project.material.tipo;
   const currentMaterialId = fallbackMaterialId;
   const hasDoor = box.portaTipo !== "sem_porta" && (box.doorsLayer?.length ?? 0) > 0;
-  const hasDrawers = modeloAActive && boxHasActiveDrawers(box);
+  const hasDrawers = boxHasActiveDrawers(box);
   const hasSeparadores = (box.separadores?.length ?? 0) > 0;
   const hasFixedFront = isCornerDireitaInferiorModel(box.baseCabinetId);
   const separadorMaterialId =

@@ -73,8 +73,11 @@ const tabBtn = (active: boolean): CSSProperties => ({
 });
 
 export default function DrawersAdminHubPage() {
-  const [section, setSection] = useState<HubSection>("visao");
   const [modeloAActive, setModeloAActive] = useState(() => isDrawerModeloAActive());
+  /** Com Modelo B activo (default de produto), abre directamente no cat·logo europeu. */
+  const [section, setSection] = useState<HubSection>(() =>
+    isDrawerModeloAActive() ? "visao" : "modelo-b"
+  );
   const stats = useMemo(() => countDrawerReferenceStats(), []);
   const europeanModels = useMemo(() => listEuropeanDrawerModels(), []);
 
@@ -987,7 +990,7 @@ export default function DrawersAdminHubPage() {
 
           <Panel
             title="Custo Industrial (Modelo B / Kitchen Library)"
-            description="Fase 18 ó motor de custo industrial (materiais, ops, CNC, montagem, m„o de obra, overhead, margem). Camada somente-leitura."
+            description="Fase 18 ù motor de custo industrial (materiais, ops, CNC, montagem, mùo de obra, overhead, margem). Camada somente-leitura."
           >
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
               <button
@@ -1000,9 +1003,9 @@ export default function DrawersAdminHubPage() {
               </button>
               {pricingSample ? (
                 <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                  {pricingSample.report.status} ó custo {pricingSample.totals.costIndustrial}{" "}
-                  {pricingSample.currency} ó preÁo {pricingSample.totals.priceFinal}{" "}
-                  {pricingSample.currency} ó margem{" "}
+                  {pricingSample.report.status} ù custo {pricingSample.totals.costIndustrial}{" "}
+                  {pricingSample.currency} ù preùo {pricingSample.totals.priceFinal}{" "}
+                  {pricingSample.currency} ù margem{" "}
                   {Math.round(pricingSample.margin.marginPercent * 100)}%
                 </span>
               ) : null}
@@ -1016,27 +1019,27 @@ export default function DrawersAdminHubPage() {
                   Custo por gaveta: {pricingSample.totals.costPerDrawer} {pricingSample.currency}
                 </li>
                 <li>
-                  Custo por mÛdulo: {pricingSample.totals.costPerModule} {pricingSample.currency}
+                  Custo por mùdulo: {pricingSample.totals.costPerModule} {pricingSample.currency}
                 </li>
                 <li>
                   Custo total: {pricingSample.totals.costIndustrial} {pricingSample.currency}
                 </li>
                 <li>
-                  Materiais {pricingSample.materials.totalWoodCost} ∑ Ops{" "}
-                  {pricingSample.operations.totalCost} ∑ CNC {pricingSample.cnc.totalCost} ∑ Montagem{" "}
-                  {pricingSample.assembly.totalCost} ∑ Labor {pricingSample.labor.totalCost} ∑ Overhead{" "}
+                  Materiais {pricingSample.materials.totalWoodCost} ù Ops{" "}
+                  {pricingSample.operations.totalCost} ù CNC {pricingSample.cnc.totalCost} ù Montagem{" "}
+                  {pricingSample.assembly.totalCost} ù Labor {pricingSample.labor.totalCost} ù Overhead{" "}
                   {pricingSample.overhead.totalCost}
                 </li>
                 <li>
-                  PreÁo final: {pricingSample.totals.priceFinal} {pricingSample.currency} (gaveta{" "}
-                  {pricingSample.totals.pricePerDrawer} / mÛdulo {pricingSample.totals.pricePerModule})
+                  Preùo final: {pricingSample.totals.priceFinal} {pricingSample.currency} (gaveta{" "}
+                  {pricingSample.totals.pricePerDrawer} / mùdulo {pricingSample.totals.pricePerModule})
                 </li>
               </ul>
             ) : null}
           </Panel>
 
           <Panel
-            title="Auto QA ó Stress Testing (Modelo B)"
+            title="Auto QA ù Stress Testing (Modelo B)"
             description={`${ALL_SCENARIOS.length} cenarios industriais. Simulacao pura: sem CNC, sem industrial/**, sem alterar o projeto.`}
           >
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>

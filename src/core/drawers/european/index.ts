@@ -742,3 +742,18 @@ export function suggestEuropeanAutoFixedConfig(
 export function generateEuropeanDrawersForBox(box: EuropeanDrawerBoxInput) {
   return generateEuropeanDrawer(box.europeanDrawerConfig?.systemId ?? "hettich-innotech-atira", box);
 }
+
+/* -------------------------------------------------------------------------- */
+/* Binding de produto (UI / factories / Admin) — aliases Modelo B             */
+/* -------------------------------------------------------------------------- */
+export {
+  drawerEuropeanDXF,
+  drawerEuropeanCNC,
+  drawerEuropeanOverlay,
+} from "./binding";
+
+/** Alias: configuração default do sistema europeu. */
+export const drawerEuropeanConfig = defaultEuropeanDrawerConfig;
+
+/** Alias: geração do sistema europeu (substitui chamadas ao pipeline antigo na UI). */
+export const drawerEuropeanGenerate = generateEuropeanDrawer;

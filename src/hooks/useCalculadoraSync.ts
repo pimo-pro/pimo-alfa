@@ -321,7 +321,7 @@ export const useCalculadoraSync = (
             portaTipo: wsBox.portaTipo,
             doorsLayer: wsBox.doorsLayer,
             drawersLayer: resolveActiveDrawersLayer(wsBox),
-            gavetas: isDrawerModeloAActive() ? wsBox.gavetas : 0,
+            gavetas: wsBox.gavetas,
             costaAtiva: resolveCostaAtivaForBox(wsBox),
           },
           espessuraCostaMm
