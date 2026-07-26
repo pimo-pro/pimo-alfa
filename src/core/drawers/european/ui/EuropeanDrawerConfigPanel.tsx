@@ -1,9 +1,10 @@
 /**
  * ui/EuropeanDrawerConfigPanel — UI do Modelo B.
  * Visível apenas quando o Modelo A está desactivado.
+ * Otimizado: useMemo/useCallback + painel da frente isolado.
  */
 
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import {
   EUROPEAN_SIDE_CLEARANCE_EACH_MM,
   HETTICH_RUNNER_LENGTHS_MM,
@@ -15,6 +16,7 @@ import {
   type EuropeanDrawerSystemId,
 } from "../index";
 import type { WorkspaceBox } from "../../../types";
+import { EuropeanFrontConfigPanel } from "./EuropeanFrontConfigPanel";
 
 export type EuropeanDrawerConfigPanelProps = {
   box: WorkspaceBox;
@@ -28,7 +30,7 @@ export function EuropeanDrawerConfigPanel({
   onChange,
   materialOptions = [],
 }: EuropeanDrawerConfigPanelProps) {
-  const models = listEuropeanDrawerModels();
+  const models = useMemo(() => listEuropeanDrawerModels(), []);
 
   const config: EuropeanDrawerBoxConfig = useMemo(
     () =>
@@ -46,6 +48,48 @@ export function EuropeanDrawerConfigPanel({
 
   const model = models.find((m) => m.id === config.systemId) ?? models[0]!;
 
+  // Fingerprint dimensional separado do material da frente (preview estrutural)
+  const dimFingerprint = useMemo(
+    () =>
+      JSON.stringify({
+        id: box.id,
+        nome: box.nome,
+        L: box.dimensoes.largura,
+        A: box.dimensoes.altura,
+        P: box.dimensoes.profundidade,
+        esp: box.espessura,
+        gav: config.count ?? box.gavetas,
+        bodyMat: box.material,
+        systemId: model.id,
+        heightMm: config.heightMm,
+        depthMm: config.depthMm,
+        softClose: config.softClose,
+        pushOpen: config.pushOpen,
+        dualFront: config.dualFront,
+        frontW: config.frontWidthMm,
+        frontH: config.frontHeightMm,
+      }),
+    [
+      box.id,
+      box.nome,
+      box.dimensoes.largura,
+      box.dimensoes.altura,
+      box.dimensoes.profundidade,
+      box.espessura,
+      box.material,
+      box.gavetas,
+      model.id,
+      config.count,
+      config.heightMm,
+      config.depthMm,
+      config.softClose,
+      config.pushOpen,
+      config.dualFront,
+      config.frontWidthMm,
+      config.frontHeightMm,
+    ]
+  );
+
   const preview = useMemo(
     () =>
       generateEuropeanDrawer(
@@ -57,50 +101,43 @@ export function EuropeanDrawerConfigPanel({
           espessura: box.espessura,
           gavetas: config.count ?? box.gavetas,
           material: box.material,
-          europeanDrawerConfig: config,
+          europeanDrawerConfig: { ...config, frontMaterialId: config.frontMaterialId },
         },
         undefined,
         { applyAutoFixes: false }
       ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- dims/espessura suficientes
-    [
-      box.id,
-      box.nome,
-      box.dimensoes.largura,
-      box.dimensoes.altura,
-      box.dimensoes.profundidade,
-      box.espessura,
-      box.material,
-      box.gavetas,
-      model.id,
-      config,
-    ]
+    // dimFingerprint cobre dims; material frente só afecta cutlist labels no preview
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [dimFingerprint, config.frontMaterialId]
   );
 
-  const patch = (partial: Partial<EuropeanDrawerBoxConfig>) => {
-    const next: EuropeanDrawerBoxConfig = {
-      ...config,
-      ...partial,
-      systemId: partial.systemId ?? config.systemId,
-    };
-    if (partial.systemId) {
-      const m = models.find((x) => x.id === partial.systemId)!;
-      const h = m.heights.find((x) => x.heightMm === next.heightMm) ?? m.heights[0]!;
-      next.heightMm = h.heightMm;
-      next.heightCode = h.code || undefined;
-      if (!(HETTICH_RUNNER_LENGTHS_MM as readonly number[]).includes(next.depthMm)) {
-        next.depthMm = 450;
+  const patch = useCallback(
+    (partial: Partial<EuropeanDrawerBoxConfig>) => {
+      const next: EuropeanDrawerBoxConfig = {
+        ...config,
+        ...partial,
+        systemId: partial.systemId ?? config.systemId,
+      };
+      if (partial.systemId) {
+        const m = models.find((x) => x.id === partial.systemId)!;
+        const h = m.heights.find((x) => x.heightMm === next.heightMm) ?? m.heights[0]!;
+        next.heightMm = h.heightMm;
+        next.heightCode = h.code || undefined;
+        if (!(HETTICH_RUNNER_LENGTHS_MM as readonly number[]).includes(next.depthMm)) {
+          next.depthMm = 450;
+        }
       }
-    }
-    if (partial.heightMm != null) {
-      const targetModel = models.find((x) => x.id === next.systemId) ?? model;
-      const h = findHeightProfile(targetModel, partial.heightMm);
-      next.heightCode = h.code || undefined;
-    }
-    onChange(next, Math.max(1, Math.floor(next.count ?? 1)));
-  };
+      if (partial.heightMm != null) {
+        const targetModel = models.find((x) => x.id === next.systemId) ?? model;
+        const h = findHeightProfile(targetModel, partial.heightMm);
+        next.heightCode = h.code || undefined;
+      }
+      onChange(next, Math.max(1, Math.floor(next.count ?? 1)));
+    },
+    [config, model, models, onChange]
+  );
 
-  const applyAutoFixes = () => {
+  const applyAutoFixes = useCallback(() => {
     const fixed = suggestEuropeanAutoFixedConfig(
       {
         id: box.id,
@@ -114,7 +151,7 @@ export function EuropeanDrawerConfigPanel({
       config
     );
     onChange(fixed, Math.max(1, Math.floor(fixed.count ?? 1)));
-  };
+  }, [box, config, onChange]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -167,9 +204,7 @@ export function EuropeanDrawerConfigPanel({
       </label>
 
       <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-        <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-          Corrediça Hettich (mm)
-        </span>
+        <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Corrediça Hettich (mm)</span>
         <select
           className="select select-xs"
           value={config.depthMm}
@@ -195,73 +230,17 @@ export function EuropeanDrawerConfigPanel({
         />
       </label>
 
-      <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-        <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-          Material da frente (independente)
-        </span>
-        {materialOptions.length > 0 ? (
-          <select
-            className="select select-xs"
-            value={config.frontMaterialId ?? box.material ?? ""}
-            onChange={(e) => patch({ frontMaterialId: e.target.value || undefined })}
-          >
-            <option value="">Igual à caixa</option>
-            {materialOptions.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.label}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <input
-            className="input input-xs"
-            type="text"
-            placeholder={box.material ?? "material id"}
-            value={config.frontMaterialId ?? ""}
-            onChange={(e) => patch({ frontMaterialId: e.target.value || undefined })}
-          />
-        )}
-      </label>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-        <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Largura frente (mm)</span>
-          <input
-            className="input input-xs"
-            type="number"
-            min={50}
-            placeholder={String(Math.round(preview.geometry.front.widthMm))}
-            value={config.frontWidthMm ?? ""}
-            onChange={(e) => {
-              const v = e.target.value;
-              patch({ frontWidthMm: v === "" ? undefined : Math.max(1, Number(v) || 0) });
-            }}
-          />
-        </label>
-        <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Altura frente (mm)</span>
-          <input
-            className="input input-xs"
-            type="number"
-            min={50}
-            placeholder={String(Math.round(preview.geometry.front.heightMm))}
-            value={config.frontHeightMm ?? ""}
-            onChange={(e) => {
-              const v = e.target.value;
-              patch({ frontHeightMm: v === "" ? undefined : Math.max(1, Number(v) || 0) });
-            }}
-          />
-        </label>
-      </div>
-
-      <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
-        <input
-          type="checkbox"
-          checked={config.dualFront === true}
-          onChange={(e) => patch({ dualFront: e.target.checked })}
-        />
-        Frente interna (gav_fre_int)
-      </label>
+      <EuropeanFrontConfigPanel
+        frontMaterialId={config.frontMaterialId}
+        frontWidthMm={config.frontWidthMm}
+        frontHeightMm={config.frontHeightMm}
+        dualFront={config.dualFront}
+        boxMaterial={box.material}
+        materialOptions={materialOptions}
+        previewFrontWidthMm={preview.geometry.front.widthMm}
+        previewFrontHeightMm={preview.geometry.front.heightMm}
+        onPatch={patch}
+      />
 
       <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
         <input
