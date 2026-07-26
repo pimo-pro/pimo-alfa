@@ -1,6 +1,6 @@
-/**
- * cutlist/ ù Cutlist do Sistema Europeu (Modelo B).
- * Nomes/cùdigos industriais + materiais/espessuras oficiais.
+Ôªø/**
+ * cutlist/ ¬ù Cutlist do Sistema Europeu (Modelo B).
+ * Nomes/c¬ùdigos industriais + materiais/espessuras oficiais.
  */
 
 import type {
@@ -20,6 +20,7 @@ import {
   resolveEuropeanPieceNaming,
 } from "../naming";
 import { memo } from "../perf/memo";
+import { sanitizeCutlist } from "../robustness/safeCutlist";
 
 function buildEuropeanCutlistItemsCore(params: {
   boxId: string;
@@ -78,7 +79,7 @@ function buildEuropeanCutlistItemsCore(params: {
     });
   };
 
-  // Corpo (linha de grupo / referùncia)
+  // Corpo (linha de grupo / refer¬ùncia)
   const body = resolveEuropeanPieceNaming("body", drawerIndex, count);
   items.push({
     id: `${boxId}-eu-${body.codigo}-body-${n}`,
@@ -93,7 +94,7 @@ function buildEuropeanCutlistItemsCore(params: {
     kind: "optional",
     tipo: "gaveta_corpo",
     industrialLabel: formatEuropeanIndustrialLabel(boxName, body.codigo, n),
-    observacoesIndustriais: `Corpo sem frente; corrediùa ${geometry.runnerDepthMm} mm; folga lateral 7+7`,
+    observacoesIndustriais: `Corpo sem frente; corredi¬ùa ${geometry.runnerDepthMm} mm; folga lateral 7+7`,
   });
 
   pushWood(
@@ -134,7 +135,7 @@ function buildEuropeanCutlistItemsCore(params: {
       espessuraMm: EUROPEAN_SIDE_THICKNESS_MM,
     },
     bodyMat,
-    "16 mm; folga 7 mm ù parede da caixa; drill via pipeline Modelo A"
+    "16 mm; folga 7 mm ¬ù parede da caixa; drill via pipeline Modelo A"
   );
 
   pushWood(
@@ -147,7 +148,7 @@ function buildEuropeanCutlistItemsCore(params: {
       espessuraMm: EUROPEAN_SIDE_THICKNESS_MM,
     },
     bodyMat,
-    "16 mm; folga 7 mm ù parede da caixa; drill via pipeline Modelo A"
+    "16 mm; folga 7 mm ¬ù parede da caixa; drill via pipeline Modelo A"
   );
 
   pushWood(
@@ -178,7 +179,7 @@ function buildEuropeanCutlistItemsCore(params: {
 
   items.push({
     id: `${boxId}-eu-slides-${n}`,
-    nome: `Par corrediùas Hettich ${geometry.runnerDepthMm} mm`,
+    nome: `Par corredi¬ùas Hettich ${geometry.runnerDepthMm} mm`,
     codigo: "corredica_hettich",
     quantidade: 1,
     larguraMm: geometry.runnerDepthMm,
@@ -223,10 +224,10 @@ function buildEuropeanCutlistItemsCore(params: {
     });
   }
 
-  return items;
+  return sanitizeCutlist(items);
 }
 
-/** Cutlist memoizado ó transparente; material da frente faz parte da chave. */
+/** Cutlist memoizado ¬ù transparente; material da frente faz parte da chave. */
 export const buildEuropeanCutlistItems = memo(buildEuropeanCutlistItemsCore, {
   namespace: "eu.cutlist",
   maxSize: 256,

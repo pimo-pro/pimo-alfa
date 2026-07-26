@@ -12,6 +12,7 @@ import type {
 } from "../types";
 import { EUROPEAN_SIDE_CLEARANCE_EACH_MM } from "../measures";
 import { memo } from "../perf/memo";
+import { sanitizePdfSection } from "../robustness/safePdf";
 
 function buildEuropeanDrawerPdfSectionCore(params: {
   model: DrawerEuropeanModel;
@@ -23,7 +24,7 @@ function buildEuropeanDrawerPdfSectionCore(params: {
 }): DrawerPDFSection {
   const { model, config, geometry, cutlist, holes, boxName } = params;
 
-  return {
+  return sanitizePdfSection({
     title: `Gavetas Europeias  ${model.displayName}${boxName ? ` (${boxName})` : ""}`,
     measureRows: [
       { label: "Sistema", value: model.displayName },
@@ -80,7 +81,7 @@ function buildEuropeanDrawerPdfSectionCore(params: {
       "5. Fundo (gav_fun) 10 mm",
       "6. Corredias Hettich nas laterais do mdulo",
     ],
-  };
+  });
 }
 
 /** PDF section memoizado (tabelas/medidas/furos). */

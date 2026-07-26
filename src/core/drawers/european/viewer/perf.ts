@@ -5,6 +5,7 @@
 
 import type { DrawerGeometry, EuropeanDrawerHole, EuropeanDrawerViewerData } from "../types";
 import { memo } from "../perf/memo";
+import { sanitizeViewerData } from "../robustness/safeViewer";
 
 export type EuropeanViewerDimKey = {
   boxId: string;
@@ -51,7 +52,7 @@ function buildViewerDataCore(params: {
     holes: EuropeanDrawerHole[];
   }>;
 }): EuropeanDrawerViewerData {
-  return {
+  return sanitizeViewerData({
     drawers: params.drawers.map((d) => ({
       id: d.id,
       index: d.index,
@@ -60,7 +61,7 @@ function buildViewerDataCore(params: {
       openProgress: 0,
       maxPullMm: Math.max(100, d.geometry.runnerDepthMm - 40),
     })),
-  };
+  });
 }
 
 const buildEuropeanViewerDataMemo = memo(buildViewerDataCore, {

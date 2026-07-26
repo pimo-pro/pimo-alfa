@@ -22,6 +22,7 @@ import type {
 import { buildEuropeanDrawerGeometry } from "../geometry";
 import { EUROPEAN_BACK_THICKNESS_MM, EUROPEAN_SIDE_THICKNESS_MM } from "../measures";
 import { memo } from "../perf/memo";
+import { sanitizeHoles } from "../robustness/safeDrilling";
 
 export type EuropeanDrillingInput = {
   model: DrawerEuropeanModel;
@@ -219,16 +220,16 @@ function generateEuropeanDrawerHolesCore(input: EuropeanDrillingInput): European
     input.stackIndex,
     input.stackCount
   );
-  return [
+  return sanitizeHoles([
     ...generateModuleLateralHoles(input),
     ...generateDrawerSideHolesFromModeloA(geo, input.config.softClose),
     ...generateDrawerBackHolesFromModeloA(geo),
     ...generateFrontFixationHoles(input),
     ...generateBottomHoles(input),
-  ];
+  ]);
 }
 
-/** Furos memoizados (c·lculos puros ó sem ficheiros industriais). */
+/** Furos memoizados (cùlculos puros ù sem ficheiros industriais). */
 export const generateEuropeanDrawerHoles = memo(generateEuropeanDrawerHolesCore, {
   namespace: "eu.drilling",
   maxSize: 256,

@@ -1,10 +1,11 @@
-/**
- * measures/ ó C·lculos de peÁas e folgas do Sistema Europeu (Modelo B).
- * Regras industriais: folga lateral 7 mm, corpo = corrediÁa ? 10, Hettich.
+Ôªø/**
+ * measures/ ¬ù C¬ùlculos de pe¬ùas e folgas do Sistema Europeu (Modelo B).
+ * Regras industriais: folga lateral 7 mm, corpo = corredi¬ùa ? 10, Hettich.
  */
 
 import type { DrawerEuropeanModel, EuropeanDrawerBoxInput } from "../types";
 import { selectHettichRunnerDepth, HETTICH_RUNNER_LENGTHS_MM } from "./hettichRunners";
+import { ensureNonNegative } from "../robustness/safeNumbers";
 
 export {
   selectHettichRunnerDepth,
@@ -13,11 +14,11 @@ export {
   type HettichRunnerLengthMm,
 } from "./hettichRunners";
 
-/** Folga lateral por lado face ‡s paredes internas da caixa (mm). */
+/** Folga lateral por lado face ¬ùs paredes internas da caixa (mm). */
 export const EUROPEAN_SIDE_CLEARANCE_EACH_MM = 7;
 /** Folga total (esquerda + direita). */
 export const EUROPEAN_SIDE_CLEARANCE_TOTAL_MM = EUROPEAN_SIDE_CLEARANCE_EACH_MM * 2;
-/** Profundidade do corpo sem frente = corrediÁa ? 10 mm. */
+/** Profundidade do corpo sem frente = corredi¬ùa ? 10 mm. */
 export const EUROPEAN_BODY_DEPTH_SLIDE_CLEARANCE_MM = 10;
 /** Espessura das laterais / costa (mm). */
 export const EUROPEAN_SIDE_THICKNESS_MM = 16;
@@ -26,7 +27,7 @@ export const EUROPEAN_BACK_THICKNESS_MM = 16;
 export const EUROPEAN_BOTTOM_THICKNESS_MM = 10;
 /** Encaixe do fundo nas laterais (mm por lado). */
 export const EUROPEAN_BOTTOM_SIDE_INSET_MM = 10;
-/** Encaixe do fundo ‡ frente quando n„o h· frente interna (mm). */
+/** Encaixe do fundo ¬ù frente quando n¬ùo h¬ù frente interna (mm). */
 export const EUROPEAN_BOTTOM_FRONT_INSET_MM = 10;
 /** Frente interna: espessura e folga lateral (mm). */
 export const EUROPEAN_FRONT_INT_THICKNESS_MM = 16;
@@ -34,9 +35,9 @@ export const EUROPEAN_FRONT_INT_SIDE_GAP_EACH_MM = 2;
 /** Folga da frente externa por lado (mm). */
 const FRONT_GAP_PER_SIDE_MM = 1;
 
-/** Largura interna da caixa (mÛdulo) apÛs laterais de madeira. */
+/** Largura interna da caixa (m¬ùdulo) ap¬ùs laterais de madeira. */
 export function calcBoxInternalWidthMm(box: EuropeanDrawerBoxInput): number {
-  return Math.max(0, box.dimensoes.largura - 2 * box.espessura);
+  return ensureNonNegative(box.dimensoes.largura - 2 * box.espessura, "measures.boxInternalWidth");
 }
 
 /**
@@ -44,12 +45,12 @@ export function calcBoxInternalWidthMm(box: EuropeanDrawerBoxInput): number {
  * larguraCaixaInterna ? 14 mm (7 mm + 7 mm).
  */
 export function calcDrawerExternalWidthMm(box: EuropeanDrawerBoxInput): number {
-  return Math.max(0, calcBoxInternalWidthMm(box) - EUROPEAN_SIDE_CLEARANCE_TOTAL_MM);
+  return ensureNonNegative(calcBoxInternalWidthMm(box) - EUROPEAN_SIDE_CLEARANCE_TOTAL_MM, "measures.drawerExternalWidth");
 }
 
 /**
  * Largura interna do corpo (entre faces internas das laterais 16 mm).
- * MantÈm assinatura com model por compatibilidade; a folga industrial È fixa (7 mm).
+ * Mant¬ùm assinatura com model por compatibilidade; a folga industrial ¬ù fixa (7 mm).
  */
 export function calcDrawerInternalWidthMm(
   box: EuropeanDrawerBoxInput,
@@ -57,17 +58,17 @@ export function calcDrawerInternalWidthMm(
 ): number {
   void _model;
   const external = calcDrawerExternalWidthMm(box);
-  return Math.max(0, external - 2 * EUROPEAN_SIDE_THICKNESS_MM);
+  return ensureNonNegative(external - 2 * EUROPEAN_SIDE_THICKNESS_MM, "measures.drawerInternalWidth");
 }
 
-/** Frente externa: cobre a abertura com folga 1 mm por lado (ajust·vel na UI). */
+/** Frente externa: cobre a abertura com folga 1 mm por lado (ajust¬ùvel na UI). */
 export function calcFrontWidthMm(box: EuropeanDrawerBoxInput): number {
   const opening = calcBoxInternalWidthMm(box);
-  return Math.max(0, opening - 2 * FRONT_GAP_PER_SIDE_MM);
+  return ensureNonNegative(opening - 2 * FRONT_GAP_PER_SIDE_MM, "measures.frontWidth");
 }
 
 export function calcFrontHeightMm(systemHeightMm: number, frontGapMm = FRONT_GAP_PER_SIDE_MM): number {
-  return Math.max(0, systemHeightMm - 2 * frontGapMm);
+  return ensureNonNegative(systemHeightMm - 2 * frontGapMm, "measures.frontHeight");
 }
 
 /** Frente interna: larguraCaixaInterna ? 4 mm (2 mm por lado). */
@@ -78,14 +79,14 @@ export function calcFrontIntWidthMm(box: EuropeanDrawerBoxInput): number {
   );
 }
 
-/** Profundidade do corpo sem frente = comprimento da corrediÁa ? 10 mm. */
+/** Profundidade do corpo sem frente = comprimento da corredi¬ùa ? 10 mm. */
 export function calcBodyDepthWithoutFrontMm(runnerDepthMm: number): number {
-  return Math.max(0, runnerDepthMm - EUROPEAN_BODY_DEPTH_SLIDE_CLEARANCE_MM);
+  return ensureNonNegative(runnerDepthMm - EUROPEAN_BODY_DEPTH_SLIDE_CLEARANCE_MM, "measures.bodyDepth");
 }
 
 /**
  * Fundo: entra 10 mm em cada lateral.
- * largura = externa ? 2◊16 + 2◊10 = externa ? 12
+ * largura = externa ? 2¬ù16 + 2¬ù10 = externa ? 12
  */
 export function calcBottomWidthMm(externalWidthMm: number): number {
   return Math.max(
@@ -136,8 +137,8 @@ export function calcIndustrialClearances(_model?: DrawerEuropeanModel) {
 }
 
 /**
- * Profundidade ˙til interna para seleÁ„o da corrediÁa.
- * PreferÍncia: valor explÌcito; sen„o P externa ? costa ? margem frontal tÌpica.
+ * Profundidade ¬ùtil interna para sele¬ù¬ùo da corredi¬ùa.
+ * Prefer¬ùncia: valor expl¬ùcito; sen¬ùo P externa ? costa ? margem frontal t¬ùpica.
  */
 export function resolveEuropeanUsefulInternalDepthMm(box: EuropeanDrawerBoxInput): number {
   if (
@@ -158,8 +159,8 @@ export function resolveEuropeanUsefulInternalDepthMm(box: EuropeanDrawerBoxInput
 }
 
 /**
- * Seleciona corrediÁa Hettich (strictly &lt; profundidade ˙til interna).
- * MantÈm assinatura legada; ignora depths do cat·logo de marca.
+ * Seleciona corredi¬ùa Hettich (strictly &lt; profundidade ¬ùtil interna).
+ * Mant¬ùm assinatura legada; ignora depths do cat¬ùlogo de marca.
  */
 export function pickRunnerDepthMm(
   _model: DrawerEuropeanModel,
@@ -173,7 +174,7 @@ export function pickRunnerDepthMm(
   return selectHettichRunnerDepth(useful);
 }
 
-/** SeleÁ„o canÛnica Modelo B a partir da caixa. */
+/** Sele¬ù¬ùo can¬ùnica Modelo B a partir da caixa. */
 export function pickHettichRunnerForBox(box: EuropeanDrawerBoxInput): number {
   return selectHettichRunnerDepth(resolveEuropeanUsefulInternalDepthMm(box));
 }

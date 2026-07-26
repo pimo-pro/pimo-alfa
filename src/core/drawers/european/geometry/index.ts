@@ -30,6 +30,7 @@ import {
   selectHettichRunnerDepth,
 } from "../measures";
 import { memo } from "../perf/memo";
+import { sanitizeGeometry } from "../robustness/safeGeometry";
 
 /**
  * Calcula geometria completa de uma gaveta europeia no sistema local do modulo.
@@ -161,7 +162,7 @@ function buildEuropeanDrawerGeometryCore(
   void stackCount;
   void gapMm;
 
-  return {
+  return sanitizeGeometry({
     systemId: model.id,
     front,
     frontInt,
@@ -174,10 +175,10 @@ function buildEuropeanDrawerGeometryCore(
     usefulHeightMm,
     runnerDepthMm: runner,
     bodyDepthMm,
-  };
+  });
 }
 
-/** Geometria memoizada (funÁ„o pura ó transparente). */
+/** Geometria memoizada (funùùo pura ù transparente). */
 export const buildEuropeanDrawerGeometry = memo(buildEuropeanDrawerGeometryCore, {
   namespace: "eu.geometry",
   maxSize: 256,

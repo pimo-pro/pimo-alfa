@@ -116,6 +116,20 @@ export {
 export { getCachedEuropeanViewerData, buildViewerDimKey } from "./viewer/perf";
 
 export {
+  ensureConfigSafe,
+  ensureFiniteNumber,
+  ensureNonNegative,
+  ensureDimensionPositive,
+  sanitizeGeometry,
+  sanitizeCutlist,
+  sanitizeHoles,
+  sanitizePdfSection,
+  sanitizeViewerData,
+  getRobustDebugLog,
+  clearRobustDebugLog,
+} from "./robustness";
+
+export {
   ALL_SCENARIOS,
   buildEuropeanQaScenarios,
   runScenario,
@@ -156,6 +170,7 @@ import {
   validateBoxCompatibility,
 } from "./validation";
 import { bumpEuropeanPerfConfigEpoch } from "./perf/memo";
+import { ensureConfigSafe } from "./robustness/safeConfig";
 import {
   HETTICH_RUNNER_LENGTHS_MM,
   isHettichRunnerLengthMm,
@@ -310,6 +325,7 @@ export function generateEuropeanDrawer(
   const useful = resolveEuropeanUsefulInternalDepthMm(box);
   config.depthMm = snapHettichDepth(config.depthMm, useful);
   config.count = Math.max(1, Math.floor(config.count ?? box.gavetas ?? 1));
+  config = ensureConfigSafe(config, box);
 
   const boxWithUseful: EuropeanDrawerBoxInput = {
     ...box,
