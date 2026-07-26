@@ -13,7 +13,7 @@ function validateFerragens(value: unknown): value is Ferragem[] {
       typeof (item as Ferragem).nome === "string" &&
       ((item as Ferragem).precoUnitario === undefined ||
         typeof (item as Ferragem).precoUnitario === "number") &&
-      ["parafuso", "cavilha", "dobradica", "corredica", "suporte", "prego", "acessorio"].includes(
+      ["parafuso", "cavilha", "dobradica", "corredica", "suporte", "prego", "acessorio", "puxa"].includes(
         (item as Ferragem).categoria
       )
   );

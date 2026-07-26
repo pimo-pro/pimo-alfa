@@ -45,6 +45,10 @@ const sectionTitleStyle: React.CSSProperties = {
 
 const aplicacaoFerragens: Record<string, string> = {
   pe_plastico: "Pés",
+  parafuso_3x30: "Pés",
+  parafuso_4x35: "Uniões / Altura / Remates",
+  parafuso_5x50: "Caixas superiores",
+  puxa_8mm: "Caixas superiores",
   dobradicas: "Portas",
   corredicas: "Gavetas",
   suportes_prateleira: "Prateleiras",
@@ -247,7 +251,19 @@ export default function CutlistPanel() {
                 {allFerragens.map((ferragem) => (
                   <tr key={ferragem.key}>
                     <td style={bodyCellStyle}>{ferragem.boxNome}</td>
-                    <td style={bodyCellStyle}>{ferragem.tipo}</td>
+                    <td style={bodyCellStyle}>
+                      {ferragem.tipo === "pe_plastico"
+                        ? "Pé"
+                        : ferragem.tipo === "parafuso_3x30"
+                          ? "Parafuso 3×30"
+                          : ferragem.tipo === "parafuso_4x35"
+                            ? "Parafuso 4×35"
+                            : ferragem.tipo === "parafuso_5x50"
+                              ? "Parafuso 5×50"
+                              : ferragem.tipo === "puxa_8mm"
+                                ? "puxa 8mm"
+                                : ferragem.tipo}
+                    </td>
                     <td style={{ ...bodyCellStyle, textAlign: "center" }}>{ferragem.quantidade}</td>
                     <td style={bodyCellStyle}>{aplicacaoFerragens[ferragem.tipo] ?? "Geral"}</td>
                     <td style={costCellStyle}>{formatCurrency(ferragem.custo)}</td>

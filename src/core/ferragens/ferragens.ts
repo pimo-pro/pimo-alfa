@@ -7,8 +7,8 @@ import type { Acessorio } from "../types";
 
 export interface Ferragem {
   id: string;
+  categoria: "parafuso" | "cavilha" | "dobradica" | "corredica" | "suporte" | "prego" | "acessorio" | "puxa";
   nome: string;
-  categoria: "parafuso" | "cavilha" | "dobradica" | "corredica" | "suporte" | "prego" | "acessorio";
   medidas?: string;
   descricao?: string;
   precoUnitario?: number;
@@ -22,6 +22,40 @@ export const FERRAGENS_DEFAULT: Ferragem[] = [
     medidas: "4mm × 50mm",
     descricao: "Parafuso para fixação estrutural",
     precoUnitario: 0.15,
+  },
+  {
+    id: "parafuso_3x30",
+    nome: "Parafuso 3\u00d730",
+    categoria: "parafuso",
+    medidas: "3mm \u00d7 30mm",
+    descricao:
+      "Parafuso para fixa\u00e7\u00e3o de p\u00e9s de pl\u00e1stico ajust\u00e1veis (4 por p\u00e9) \u2014 freeagem (sem furos/CNC)",
+    precoUnitario: 0.1,
+  },
+  {
+    id: "parafuso_4x35",
+    nome: "Parafuso 4\u00d735",
+    categoria: "parafuso",
+    medidas: "4mm \u00d7 35mm",
+    descricao:
+      "Freeagem: uni\u00e3o de caixas, alturas e remates (sem furos/CNC)",
+    precoUnitario: 0.14,
+  },
+  {
+    id: "parafuso_5x50",
+    nome: "Parafuso 5\u00d750",
+    categoria: "parafuso",
+    medidas: "5mm \u00d7 50mm",
+    descricao: "Freeagem: fixa\u00e7\u00e3o de caixas superiores (sem furos/CNC)",
+    precoUnitario: 0.24,
+  },
+  {
+    id: "puxa_8mm",
+    nome: "puxa 8mm",
+    categoria: "puxa",
+    medidas: "8mm \u00d7 30mm",
+    descricao: "Freeagem: 1 por cada Parafuso 5\u00d750 (sem furos/CNC)",
+    precoUnitario: 0.7,
   },
   {
     id: "cavilha_8mm",

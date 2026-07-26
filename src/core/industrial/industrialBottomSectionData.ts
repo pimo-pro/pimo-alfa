@@ -20,9 +20,19 @@ import type { IndustrialPieceEditsStore } from "./industrialPieceEditsTypes";
 import { isIndustrialPieceEdited, computeIndustrialPieceMetrics } from "./IndustrialPieceEditsService";
 import {
   listPesPlasticoPorCaixa,
+  listParafuso3x30PorCaixa,
   loadPesPlasticoConfig,
+  PARAFUSO_3X30_NOME,
   PE_PLASTICO_NOME,
 } from "../ferragens/pesPlasticoConfig";
+import {
+  listParafuso4x35PorCaixa,
+  listParafuso5x50PorCaixa,
+  listPuxa8mmPorCaixa,
+  PARAFUSO_4X35_NOME,
+  PARAFUSO_5X50_NOME,
+  PUXA_8MM_NOME,
+} from "../ferragens/freeagemParafusos";
 import {
   aggregateCalcoRowsForPdf,
   CALCO_MATERIAL,
@@ -124,6 +134,7 @@ type IndustrialBottomProjectSlice = Pick<
   | "ferragemOrla"
   | "financeiroOverrides"
   | "financeiroAdminSettings"
+  | "workspaceBoxes"
 > & {
   industrialPieceEdits?: IndustrialPieceEditsStore;
 };
@@ -189,6 +200,7 @@ type FerragensTotaisProjectSlice = Pick<
   | "rodapes"
   | "extractedPartsByBoxId"
   | "pieceObservacoes"
+  | "workspaceBoxes"
 >;
 
 /**
@@ -443,6 +455,57 @@ export function buildFerragensTotaisPdfData(
       `${peTotalQty} un · ${formatCurrency(peTotalPreco)}`,
     ]);
   }
+
+  // Parafuso 3×30 freeagem: pés × 4 — só apresentação/custo (sem furos/CNC/industrial).
+  const parafPorCaixa = listParafuso3x30PorCaixa(boxes, project.rules, peCfg);
+  let parafTotalQty = 0;
+  let parafTotalPreco = 0;
+  for (const p of parafPorCaixa) {
+    parafTotalQty += p.quantidade;
+    parafTotalPreco += p.precoTotal;
+    detalhe.push([
+      p.caixa,
+      PARAFUSO_3X30_NOME,
+      String(p.quantidade),
+      p.medida,
+      formatCurrency(p.precoTotal),
+    ]);
+  }
+  if (parafTotalQty > 0) {
+    porTipo.push([
+      PARAFUSO_3X30_NOME,
+      `${parafTotalQty} un · ${formatCurrency(parafTotalPreco)}`,
+    ]);
+  }
+
+  const pushFreeagemOnline = (
+    rows: Array<{ caixa: string; quantidade: number; medida: string; precoTotal: number }>,
+    nome: string
+  ) => {
+    let totalQty = 0;
+    let totalPreco = 0;
+    for (const p of rows) {
+      totalQty += p.quantidade;
+      totalPreco += p.precoTotal;
+      detalhe.push([
+        p.caixa,
+        nome,
+        String(p.quantidade),
+        p.medida,
+        formatCurrency(p.precoTotal),
+      ]);
+    }
+    if (totalQty > 0) {
+      porTipo.push([nome, `${totalQty} un · ${formatCurrency(totalPreco)}`]);
+    }
+  };
+
+  pushFreeagemOnline(
+    listParafuso4x35PorCaixa(boxes, project.remates, project.workspaceBoxes),
+    PARAFUSO_4X35_NOME
+  );
+  pushFreeagemOnline(listParafuso5x50PorCaixa(boxes), PARAFUSO_5X50_NOME);
+  pushFreeagemOnline(listPuxa8mmPorCaixa(boxes), PUXA_8MM_NOME);
 
   return { detalhe, porTipo };
 }

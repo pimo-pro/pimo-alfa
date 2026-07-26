@@ -90,7 +90,10 @@ describe("pdfFerragensTotaisNormalize", () => {
     expect(byName["Cavilha 10mm"]?.quantidade).toBe(40);
     expect(byName[DOBRADICA]).toBeUndefined();
     expect(byName["Suporte de Prateleira"]?.quantidade).toBe(12);
-    expect(byName["Parafuso 3x30"]?.quantidade).toBe(16);
+    expect(byName["Parafuso 3\u00d730"]?.quantidade).toBe(16);
+    expect(byName["Parafuso 3\u00d730"]?.ref).toBe("parafuso_3x30");
+    expect(byName["Parafuso 3\u00d730"]?.preco).toBe(0.1);
+    expect(byName["Parafuso 3\u00d730"]?.medida).toBe("3\u00d730mm");
     expect(byName["Parafuso para Puxador"]).toBeUndefined();
 
     const corredicas = rows.filter((r) => r.material === CORREDICA);
@@ -238,6 +241,13 @@ describe("pdfFerragensTotaisNormalize", () => {
     expect(pe?.medida).toBe("100mm");
     expect(pe?.quantidade).toBe(4);
     expect(pe?.preco).toBe(0.3);
+    const paraf = rows.find((r) => r.material === "Parafuso 3\u00d730");
+    expect(paraf).toMatchObject({
+      ref: "parafuso_3x30",
+      medida: "3\u00d730mm",
+      quantidade: 16, // 4 pés × 4
+      preco: 0.1,
+    });
     expect(rows.find((r) => r.material === DOBRADICA)).toBeUndefined();
   });
 

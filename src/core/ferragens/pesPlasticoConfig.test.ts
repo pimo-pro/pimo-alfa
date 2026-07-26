@@ -1,9 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
   aggregatePesPlasticoFromBoxes,
+  aggregateParafuso3x30FromBoxes,
   quantidadePesParaCaixa,
+  quantidadeParafusos3x30ParaCaixa,
   PES_PLASTICO_CONFIG_DEFAULT,
   PE_PLASTICO_NOME,
+  PARAFUSO_3X30_ID,
+  PARAFUSO_3X30_NOME,
+  PARAFUSO_3X30_PRECO,
   type PesPlasticoConfig,
 } from "./pesPlasticoConfig";
 import type { BoxModule } from "../types";
@@ -44,7 +49,14 @@ describe("pesPlasticoConfig", () => {
     ).toBe(0);
   });
 
-  it("aggregate: 2 caixas x 4 = 8 a 2.80 EUR / 100mm", () => {
+  it("quantidadeParafusos3x30ParaCaixa = pés × 4", () => {
+    expect(quantidadeParafusos3x30ParaCaixa(box({}), defaultRulesConfig)).toBe(16);
+    expect(
+      quantidadeParafusos3x30ParaCaixa(box({ cabinetType: "upper" }), defaultRulesConfig)
+    ).toBe(0);
+  });
+
+  it("aggregate: 2 caixas x 4 = 8 a preco config / 100mm", () => {
     const rows = aggregatePesPlasticoFromBoxes(
       [
         box({ id: "a", feetHeight: 100 }),
@@ -59,9 +71,26 @@ describe("pesPlasticoConfig", () => {
       ref: PE_REF,
       medida: "100mm",
       quantidade: 8,
-      precoUnitario: 2.8,
+      precoUnitario: cfg.precoUnitario,
     });
-    expect(rows[0]!.quantidade * rows[0]!.precoUnitario).toBeCloseTo(22.4);
+    expect(rows[0]!.quantidade * rows[0]!.precoUnitario).toBeCloseTo(8 * cfg.precoUnitario);
+  });
+
+  it("aggregate parafuso 3x30: 2 caixas x 4 pés x 4 = 32", () => {
+    const rows = aggregateParafuso3x30FromBoxes(
+      [box({ id: "a" }), box({ id: "b" })],
+      defaultRulesConfig,
+      cfg
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      material: PARAFUSO_3X30_NOME,
+      ref: PARAFUSO_3X30_ID,
+      medida: "3\u00d730mm",
+      quantidade: 32,
+      precoUnitario: PARAFUSO_3X30_PRECO,
+    });
+    expect(rows[0]!.quantidade * rows[0]!.precoUnitario).toBeCloseTo(3.2);
   });
 
   it("aggregate: desativado = vazio", () => {
@@ -71,5 +100,8 @@ describe("pesPlasticoConfig", () => {
       { ...cfg, ativo: false }
     );
     expect(rows).toHaveLength(0);
+    expect(
+      aggregateParafuso3x30FromBoxes([box({})], defaultRulesConfig, { ...cfg, ativo: false })
+    ).toHaveLength(0);
   });
 });

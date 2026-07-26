@@ -4,17 +4,31 @@
  * Literais PT usam escapes Unicode para evitar corrupcao de encoding no disco.
  */
 
-import type { BoxModule, CutListItem, CutListItemComPreco, PanelDrillHole } from "../types";
+import type { BoxModule, CutListItem, CutListItemComPreco, PanelDrillHole, WorkspaceBox } from "../types";
 import type { FerragensTotaisArmazemRow } from "../industrial/industrialBottomSectionData";
 import { getNumDobradicas, type RulesConfig } from "../rules/rulesConfig";
 import { isIndustrialDoorPanelTipo } from "../doors/industrialDoorPanels";
 import { resolveActiveDrawersLayer, resolveActiveGavetasCount } from "../drawers/drawerModeloAGate";
 import {
   aggregatePesPlasticoFromBoxes,
+  aggregateParafuso3x30FromBoxes,
   loadPesPlasticoConfig,
+  PARAFUSO_3X30_ID,
+  PARAFUSO_3X30_MEDIDA,
+  PARAFUSO_3X30_NOME,
+  PARAFUSO_3X30_PRECO,
   PE_PLASTICO_ID,
   PE_PLASTICO_NOME,
 } from "../ferragens/pesPlasticoConfig";
+import {
+  aggregateParafuso4x35FromProject,
+  aggregateParafuso5x50FromBoxes,
+  aggregatePuxa8mmFromBoxes,
+  PARAFUSO_4X35_ID,
+  PARAFUSO_5X50_ID,
+  PUXA_8MM_ID,
+} from "../ferragens/freeagemParafusos";
+import type { RematePiece } from "../remate/rematePieceTypes";
 import {
   aggregateCalcoRowsForPdf,
   CALCO_MATERIAL,
@@ -33,7 +47,6 @@ export const CORREDICA_LENGTHS_MM = [300, 350, 400, 450, 500, 550] as const;
 export const PARAFUSO_COSTA_SPACING_MM = 180;
 
 const EM_DASH = "\u2014";
-const MULTIPLY = "\u00d7";
 const CORREDICA_LABEL = "Corredi\u00e7a";
 const DOBRADICA_LABEL = "Dobradi\u00e7a";
 /** Ref industrial oficial da dobradiça principal (PDF / totais). */
@@ -93,6 +106,10 @@ type Bucket =
   | "calco"
   | "suporte"
   | "parafuso_puxador"
+  | "parafuso_3x30"
+  | "parafuso_4x35"
+  | "parafuso_5x50"
+  | "puxa_8mm"
   | "prego_costa"
   | "pe"
   | "other";
@@ -102,6 +119,20 @@ function classifyFerragem(nome: string, ref: string): Bucket {
   const r = normalizeKey(ref);
   if (n.includes("parafuso") && n.includes("puxador")) return "parafuso_puxador";
   if (r === "parafuso_puxador") return "parafuso_puxador";
+  if (r === PARAFUSO_4X35_ID || (n.includes("parafuso") && n.includes("4") && n.includes("35"))) {
+    return "parafuso_4x35";
+  }
+  if (r === PARAFUSO_5X50_ID || (n.includes("parafuso") && n.includes("5") && n.includes("50"))) {
+    return "parafuso_5x50";
+  }
+  if (r === PUXA_8MM_ID || n.includes("puxa")) return "puxa_8mm";
+  if (
+    r === PARAFUSO_3X30_ID ||
+    r === "parafuso_3x30" ||
+    (n.includes("parafuso") && n.includes("3") && n.includes("30") && !n.includes("puxador"))
+  ) {
+    return "parafuso_3x30";
+  }
   if (n.includes("prego") && n.includes("costa")) return "prego_costa";
   if (r === "prego_costa") return "prego_costa";
   if (n.includes("cavilha") || r.startsWith("cavilha")) return "cavilha";
@@ -204,6 +235,8 @@ export type NormalizeFerragensTotaisInput = {
   ferragemOrla?: ProjectFerragemOrla | null;
   orlaPresets?: OrlaPreset[];
   projectMaterialId?: string;
+  remates?: RematePiece[];
+  workspaceBoxes?: WorkspaceBox[];
 };
 
 function isPlaceholderDash(value: string): boolean {
@@ -354,6 +387,14 @@ export function normalizeFerragensTotaisForPdf(
       case "pe":
         // Pes: recalculados a partir das caixas (fonte oficial).
         break;
+      case "parafuso_3x30":
+        // Freeagem: recalculado (pés × 4 + costa); ignorar industrial.
+        break;
+      case "parafuso_4x35":
+      case "parafuso_5x50":
+      case "puxa_8mm":
+        // Freeagem: recalculado a nível de projeto; ignorar industrial.
+        break;
       case "dobradica":
         // Ignorar industrial (gerarFerragens + ComponentTypes). Fonte = canecos reais.
         break;
@@ -428,13 +469,18 @@ export function normalizeFerragensTotaisForPdf(
     });
   }
 
+  const peCfg = loadPesPlasticoConfig();
+  const peParafRows = aggregateParafuso3x30FromBoxes(input.boxes ?? [], input.rules, peCfg);
+  const peParafQty = peParafRows.reduce((s, r) => s + r.quantidade, 0);
   const parafusosCosta = countParafusosCosta3x30(input.cutlistItems ?? []);
-  if (parafusosCosta > 0) {
+  const parafuso3x30Qty = peParafQty + parafusosCosta;
+  if (parafuso3x30Qty > 0) {
     result.push({
-      material: "Parafuso 3x30",
-      ref: "",
-      medida: `3${MULTIPLY}30mm`,
-      quantidade: parafusosCosta,
+      material: PARAFUSO_3X30_NOME,
+      ref: PARAFUSO_3X30_ID,
+      medida: PARAFUSO_3X30_MEDIDA,
+      quantidade: parafuso3x30Qty,
+      preco: PARAFUSO_3X30_PRECO,
     });
   }
 
@@ -447,7 +493,6 @@ export function normalizeFerragensTotaisForPdf(
     });
   }
 
-  const peCfg = loadPesPlasticoConfig();
   for (const pe of aggregatePesPlasticoFromBoxes(input.boxes ?? [], input.rules, peCfg)) {
     result.push({
       material: pe.material,
@@ -455,6 +500,38 @@ export function normalizeFerragensTotaisForPdf(
       medida: pe.medida,
       quantidade: pe.quantidade,
       preco: pe.precoUnitario,
+    });
+  }
+
+  for (const row of aggregateParafuso4x35FromProject(
+    input.boxes ?? [],
+    input.remates,
+    input.workspaceBoxes
+  )) {
+    result.push({
+      material: row.material,
+      ref: row.ref,
+      medida: row.medida,
+      quantidade: row.quantidade,
+      preco: row.precoUnitario,
+    });
+  }
+  for (const row of aggregateParafuso5x50FromBoxes(input.boxes ?? [])) {
+    result.push({
+      material: row.material,
+      ref: row.ref,
+      medida: row.medida,
+      quantidade: row.quantidade,
+      preco: row.precoUnitario,
+    });
+  }
+  for (const row of aggregatePuxa8mmFromBoxes(input.boxes ?? [])) {
+    result.push({
+      material: row.material,
+      ref: row.ref,
+      medida: row.medida,
+      quantidade: row.quantidade,
+      preco: row.precoUnitario,
     });
   }
 

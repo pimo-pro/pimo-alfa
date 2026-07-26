@@ -22,6 +22,12 @@ import {
   isDrawerPieceTipo,
 } from "../services/drawerCutlistAdapter";
 import { resolveRematePieceNomeForRemate } from "../core/remate/labels";
+import {
+  quantidadeParafuso4x35JuntasPorCaixa,
+  PARAFUSO_4X35_ID,
+  PARAFUSO_4X35_PRECO,
+  quantidadeParafuso4x35PorRemate,
+} from "../core/ferragens/freeagemParafusos";
 
 export type PainelRow = {
   key: string;
@@ -167,6 +173,10 @@ export function useCutlistData() {
       suportes_prateleira: ["suporte_prateleira"],
       pe_plastico: ["pe_plastico"],
       pe_regulavel: ["pe_plastico"],
+      parafuso_3x30: ["parafuso_3x30"],
+      parafuso_4x35: ["parafuso_4x35"],
+      parafuso_5x50: ["parafuso_5x50"],
+      puxa_8mm: ["puxa_8mm"],
     };
     const categoryAliases: Record<string, Ferragem["categoria"]> = {
       dobradicas: "dobradica",
@@ -281,6 +291,42 @@ export function useCutlistData() {
       });
     });
 
+    // Freeagem project-level: juntas + remates (4×35) — não duplicar altura (já em gerarFerragens).
+    const juntasPorCaixa = quantidadeParafuso4x35JuntasPorCaixa(boxes, project.workspaceBoxes);
+    for (const [boxId, qty] of juntasPorCaixa) {
+      if (qty <= 0) continue;
+      const box = boxes.find((b) => b.id === boxId);
+      const boxNome = box?.nome || boxId;
+      const custo = PARAFUSO_4X35_PRECO * qty;
+      totalFerragensQty += qty;
+      custoTotalFerragens += custo;
+      allFerragens.push({
+        key: `${boxId}-junta-${PARAFUSO_4X35_ID}`,
+        boxNome,
+        tipo: PARAFUSO_4X35_ID,
+        quantidade: qty,
+        precoUnitario: PARAFUSO_4X35_PRECO,
+        custo,
+      });
+    }
+    for (const remate of project.remates ?? []) {
+      const qty = quantidadeParafuso4x35PorRemate(remate);
+      if (qty <= 0) continue;
+      const box = boxes.find((b) => b.id === remate.parentBoxId);
+      const boxNome = box?.nome ?? remate.parentBoxId ?? "Remates";
+      const custo = PARAFUSO_4X35_PRECO * qty;
+      totalFerragensQty += qty;
+      custoTotalFerragens += custo;
+      allFerragens.push({
+        key: `${remate.id}-${PARAFUSO_4X35_ID}`,
+        boxNome,
+        tipo: PARAFUSO_4X35_ID,
+        quantidade: qty,
+        precoUnitario: PARAFUSO_4X35_PRECO,
+        custo,
+      });
+    }
+
     (project.ferragemOrla?.linhas ?? []).forEach((linha) => {
       allOrlaFerragens.push({
         key: linha.id,
@@ -347,7 +393,7 @@ export function useCutlistData() {
       custoTotalRemates,
       custoTotal,
     };
-  }, [boxes, project.rules, project.materialId, project.ferragemOrla, project.remates, project.cutListComPreco, ferragensIndustriaisDetalhado, ferragensPorComponente, resolveFerragemPrecoUnitario]);
+  }, [boxes, project.rules, project.materialId, project.ferragemOrla, project.remates, project.workspaceBoxes, project.cutListComPreco, ferragensIndustriaisDetalhado, ferragensPorComponente, resolveFerragemPrecoUnitario]);
 
   return aggregated;
 }

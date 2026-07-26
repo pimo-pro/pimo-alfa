@@ -13,6 +13,13 @@ export const PE_PLASTICO_ID = "pe_plastico";
 export const PE_PLASTICO_NOME = "P\u00e9";
 export const PE_PLASTICO_STORAGE_KEY = "pimo_pes_plastico";
 
+/** Freeagem vinculada aos pés — só BOM/custo/PDF; sem furos, CNC, Viewer nem industrial. */
+export const PARAFUSO_3X30_ID = "parafuso_3x30";
+export const PARAFUSO_3X30_NOME = "Parafuso 3\u00d730";
+export const PARAFUSO_3X30_MEDIDA = "3\u00d730mm";
+export const PARAFUSO_3X30_PRECO = 0.1;
+export const PARAFUSOS_POR_PE = 4;
+
 export type PesPlasticoConfig = {
   ativo: boolean;
   precoUnitario: number;
@@ -138,6 +145,74 @@ export function listPesPlasticoPorCaixa(
       medida: `${h}mm`,
       precoUnitario: config.precoUnitario,
       precoTotal: config.precoUnitario * qty,
+    });
+  }
+  return rows;
+}
+
+/** Quantidade de Parafuso 3×30 por caixa = pés × 4 (freeagem). */
+export function quantidadeParafusos3x30ParaCaixa(
+  box: Pick<BoxModule, "dimensoes" | "cabinetType" | "feetEnabled">,
+  rules?: RulesConfig
+): number {
+  return quantidadePesParaCaixa(box, rules) * PARAFUSOS_POR_PE;
+}
+
+export type Parafuso3x30AggregateRow = {
+  material: string;
+  ref: string;
+  medida: string;
+  quantidade: number;
+  precoUnitario: number;
+};
+
+/** Agrega Parafuso 3×30 do projeto (pés × 4) — PDF / totais. */
+export function aggregateParafuso3x30FromBoxes(
+  boxes: BoxModule[],
+  rules?: RulesConfig,
+  config: PesPlasticoConfig = loadPesPlasticoConfig()
+): Parafuso3x30AggregateRow[] {
+  if (!config.ativo) return [];
+  let quantidade = 0;
+  for (const box of boxes ?? []) {
+    quantidade += quantidadeParafusos3x30ParaCaixa(box, rules);
+  }
+  if (quantidade <= 0) return [];
+  return [
+    {
+      material: PARAFUSO_3X30_NOME,
+      ref: PARAFUSO_3X30_ID,
+      medida: PARAFUSO_3X30_MEDIDA,
+      quantidade,
+      precoUnitario: PARAFUSO_3X30_PRECO,
+    },
+  ];
+}
+
+export type Parafuso3x30PorCaixaRow = {
+  caixa: string;
+  quantidade: number;
+  medida: string;
+  precoUnitario: number;
+  precoTotal: number;
+};
+
+export function listParafuso3x30PorCaixa(
+  boxes: BoxModule[],
+  rules?: RulesConfig,
+  config: PesPlasticoConfig = loadPesPlasticoConfig()
+): Parafuso3x30PorCaixaRow[] {
+  if (!config.ativo) return [];
+  const rows: Parafuso3x30PorCaixaRow[] = [];
+  for (const box of boxes ?? []) {
+    const qty = quantidadeParafusos3x30ParaCaixa(box, rules);
+    if (qty <= 0) continue;
+    rows.push({
+      caixa: box.nome?.trim() || box.id,
+      quantidade: qty,
+      medida: PARAFUSO_3X30_MEDIDA,
+      precoUnitario: PARAFUSO_3X30_PRECO,
+      precoTotal: PARAFUSO_3X30_PRECO * qty,
     });
   }
   return rows;

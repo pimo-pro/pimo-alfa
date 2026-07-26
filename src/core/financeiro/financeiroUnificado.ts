@@ -14,6 +14,7 @@ import {
 } from "../manufacturing/materials";
 import { buildCutlistItemsForIndustrialExport } from "../fabrication/buildCutlistItemsForIndustrialExport";
 import { ferragensFromBoxes } from "../manufacturing/cutlistFromBoxes";
+import { freeagem4x35JuntasRematesCusto } from "../ferragens/freeagemParafusos";
 import { computeChapasReal } from "../industrial/computeChapasReal";
 import { getSettings } from "../settings/settingsService";
 import { isDrawerPieceTipo } from "../../services/drawerCutlistAdapter";
@@ -298,6 +299,13 @@ export function computeFinanceiroUnificado(
     const ferragens = ferragensFromBoxes(boxes, project.rules);
     ferragensTotais = ferragens.reduce((s, a) => s + (a.quantidade ?? 0), 0);
     ferragensEur = ferragens.reduce((s, a) => s + (Number(a.precoTotal) || 0), 0);
+    const extra4x35 = freeagem4x35JuntasRematesCusto(
+      boxes,
+      project.remates,
+      project.workspaceBoxes
+    );
+    ferragensTotais += extra4x35.qty;
+    ferragensEur += extra4x35.custo;
   }
 
   const pecasTotais = cutlist.reduce((s, i) => s + (i.quantidade ?? 0), 0);

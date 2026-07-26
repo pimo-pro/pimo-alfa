@@ -14,7 +14,21 @@ import { getCentralPricingCached } from "../pricing/centralPricingConfig";
 import {
   loadPesPlasticoConfig,
   quantidadePesParaCaixa,
+  PARAFUSO_3X30_ID,
+  PARAFUSO_3X30_PRECO,
+  PARAFUSOS_POR_PE,
 } from "../ferragens/pesPlasticoConfig";
+import {
+  PARAFUSO_4X35_ID,
+  PARAFUSO_4X35_PRECO,
+  PARAFUSO_5X50_ID,
+  PARAFUSO_5X50_PRECO,
+  PUXA_8MM_ID,
+  PUXA_8MM_PRECO,
+  quantidadeParafuso4x35AlturaParaCaixa,
+  quantidadeParafuso5x50ParaCaixa,
+  quantidadePuxa8mmParaCaixa,
+} from "../ferragens/freeagemParafusos";
 import {
   CALCO_00_ID,
   CALCO_03_ID,
@@ -545,20 +559,52 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
 }
 
 export function gerarFerragens(box: BoxModule, rules: RulesConfig): FerragemIndustrial[] {
+  const appendFreeagemPorCaixa = (list: FerragemIndustrial[]): FerragemIndustrial[] => {
+    const out = [...list];
+    const push = (tipo: string, quantidade: number, unit: number) => {
+      if (quantidade <= 0) return;
+      out.push({
+        id: buildId(tipo, out.length),
+        tipo,
+        quantidade,
+        custo: unit * quantidade,
+      });
+    };
+    // Freeagem por caixa (altura 4×35; 5×50 + puxa). Juntas/remates = project-level.
+    push(PARAFUSO_4X35_ID, quantidadeParafuso4x35AlturaParaCaixa(box), PARAFUSO_4X35_PRECO);
+    const qty5 = quantidadeParafuso5x50ParaCaixa(box);
+    push(PARAFUSO_5X50_ID, qty5, PARAFUSO_5X50_PRECO);
+    push(PUXA_8MM_ID, quantidadePuxa8mmParaCaixa(box), PUXA_8MM_PRECO);
+    return out;
+  };
+
   if (isPiBaseCabinetId(box.baseCabinetId)) {
     const peCfg = loadPesPlasticoConfig();
     const peQty = quantidadePesParaCaixa(box, rules);
-    const base = gerarFerragensPi(box, rules);
-    if (!peCfg.ativo || peQty <= 0) return base;
-    return [
-      ...base,
-      {
-        id: buildId("pe_plastico", base.length),
-        tipo: "pe_plastico",
-        quantidade: peQty,
-        custo: peCfg.precoUnitario * peQty,
-      },
-    ];
+    let base = gerarFerragensPi(box, rules);
+    if (peCfg.ativo && peQty > 0) {
+      base = [
+        ...base,
+        {
+          id: buildId("pe_plastico", base.length),
+          tipo: "pe_plastico",
+          quantidade: peQty,
+          custo: peCfg.precoUnitario * peQty,
+        },
+      ];
+      // Freeagem: Parafuso 3×30 = pés × 4 — só custo/BOM, sem furos/CNC.
+      const parafQty = peQty * PARAFUSOS_POR_PE;
+      base = [
+        ...base,
+        {
+          id: buildId(PARAFUSO_3X30_ID, base.length),
+          tipo: PARAFUSO_3X30_ID,
+          quantidade: parafQty,
+          custo: PARAFUSO_3X30_PRECO * parafQty,
+        },
+      ];
+    }
+    return appendFreeagemPorCaixa(base);
   }
 
   const ferragens: FerragemIndustrial[] = [];
@@ -586,9 +632,12 @@ export function gerarFerragens(box: BoxModule, rules: RulesConfig): FerragemIndu
       addFerragem(CALCO_03_ID, countPortasFrenteFixa(box));
     }
     if (peCfg.ativo) {
-      addFerragem("pe_plastico", quantidadePesParaCaixa(box, rules));
+      const peQty = quantidadePesParaCaixa(box, rules);
+      addFerragem("pe_plastico", peQty);
+      // Freeagem: Parafuso 3×30 = pés × 4 — só custo/BOM, sem furos/CNC.
+      addFerragem(PARAFUSO_3X30_ID, peQty * PARAFUSOS_POR_PE);
     }
-    return ferragens;
+    return appendFreeagemPorCaixa(ferragens);
   }
 
   if (box.portaTipo !== "sem_porta") {
@@ -626,10 +675,13 @@ export function gerarFerragens(box: BoxModule, rules: RulesConfig): FerragemIndu
   }
 
   if (peCfg.ativo) {
-    addFerragem("pe_plastico", quantidadePesParaCaixa(box, rules));
+    const peQty = quantidadePesParaCaixa(box, rules);
+    addFerragem("pe_plastico", peQty);
+    // Freeagem: Parafuso 3×30 = pés × 4 — só custo/BOM, sem furos/CNC.
+    addFerragem(PARAFUSO_3X30_ID, peQty * PARAFUSOS_POR_PE);
   }
 
-  return ferragens;
+  return appendFreeagemPorCaixa(ferragens);
 }
 
 /**
@@ -674,6 +726,10 @@ function ferragensUnitPriceTable(
     cavilha_10mm: 0.12,
     parafuso_4x50: typeof f.parafuso === "number" ? f.parafuso : 0.15,
     pe_plastico: peUnit,
+    [PARAFUSO_3X30_ID]: PARAFUSO_3X30_PRECO,
+    [PARAFUSO_4X35_ID]: PARAFUSO_4X35_PRECO,
+    [PARAFUSO_5X50_ID]: PARAFUSO_5X50_PRECO,
+    [PUXA_8MM_ID]: PUXA_8MM_PRECO,
     [CALCO_00_ID]: calcoCfg.refs["00"].precoUnitario,
     [CALCO_03_ID]: calcoCfg.refs["03"].precoUnitario,
   };

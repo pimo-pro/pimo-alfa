@@ -42,6 +42,10 @@ const FALLBACK_PRECO_A_STATIC: Record<string, number> = {
   corredica_dir: 9.5,
   suporte_prateleira: 0.9,
   parafuso_4x50: 0.15,
+  parafuso_3x30: 0.1,
+  parafuso_4x35: 0.14,
+  parafuso_5x50: 0.24,
+  puxa_8mm: 0.7,
   cavilha_10mm: 0.12,
   cavilha_8mm: 0.12,
   prego_costa: 0.02,
@@ -133,6 +137,9 @@ export function resolveFallbackPrecoA(ferragemId: string): number | null {
   }
   if (ferragemId === "pe_plastico") {
     return loadPesPlasticoConfig().precoUnitario;
+  }
+  if (ferragemId === "parafuso_3x30") {
+    return 0.1;
   }
   if (ferragemId === CALCO_00_ID) {
     return loadCalcoConfig().refs["00"].precoUnitario;

@@ -27,6 +27,7 @@ export default function FerragensTotaisPanel({ embedded }: { embedded?: boolean 
           rodapes: project.rodapes,
           extractedPartsByBoxId: project.extractedPartsByBoxId,
           pieceObservacoes: project.pieceObservacoes,
+          workspaceBoxes: project.workspaceBoxes,
         },
         componentTypes,
         ferragens
@@ -57,8 +58,16 @@ export default function FerragensTotaisPanel({ embedded }: { embedded?: boolean 
       <h4 style={{ fontSize: 12, margin: "0 0 6px", color: "var(--text-main)" }}>Detalhe por caixa</h4>
       <div style={{ maxHeight: 280, overflow: "auto", fontSize: 11 }}>
         {detalhe.map((row, idx) => {
-          const isPe = row[1] === "Pé";
-          const line = isPe
+          const freeagemFmt =
+            row[1] === "Pé" ||
+            row[1] === "Parafuso 3×30" ||
+            row[1] === "Parafuso 3\u00d730" ||
+            row[1] === "Parafuso 4×35" ||
+            row[1] === "Parafuso 4\u00d735" ||
+            row[1] === "Parafuso 5×50" ||
+            row[1] === "Parafuso 5\u00d750" ||
+            row[1] === "puxa 8mm";
+          const line = freeagemFmt
             ? `${row[0]} — ${row[1]} — ${row[2]} unidades — ${row[3]} — total ${row[4]}`
             : `${row[0]} — ${row[1]} ×${row[2]}`;
           return (

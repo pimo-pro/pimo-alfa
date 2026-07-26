@@ -34,6 +34,7 @@ type FerragensTotaisProject = Pick<
   | "rodapes"
   | "extractedPartsByBoxId"
   | "pieceObservacoes"
+  | "workspaceBoxes"
 > &
   Partial<Pick<ProjectState, "ferragemOrla" | "orlaPresets">>;
 
@@ -140,6 +141,8 @@ export function buildFerragensTotaisPdf(
     ferragemOrla: project.ferragemOrla,
     orlaPresets: project.orlaPresets,
     projectMaterialId: project.materialId,
+    remates: project.remates ?? [],
+    workspaceBoxes: project.workspaceBoxes,
   });
 
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
