@@ -1,5 +1,5 @@
 /**
- * geometry/ ó Geometria pura do Sistema Europeu (Modelo B).
+ * geometry/ ù Geometria pura do Sistema Europeu (Modelo B).
  * Corpo em madeira: laterais/costa/fundo + frente externa (sobreposta).
  */
 
@@ -29,12 +29,13 @@ import {
   resolveEuropeanUsefulInternalDepthMm,
   selectHettichRunnerDepth,
 } from "../measures";
+import { memo } from "../perf/memo";
 
 /**
  * Calcula geometria completa de uma gaveta europeia no sistema local do modulo.
  * Origem: centro do modulo (X), base da gaveta (Y), face frontal externa (Z+).
  */
-export function buildEuropeanDrawerGeometry(
+function buildEuropeanDrawerGeometryCore(
   box: EuropeanDrawerBoxInput,
   model: DrawerEuropeanModel,
   config: EuropeanDrawerBoxConfig,
@@ -81,7 +82,7 @@ export function buildEuropeanDrawerGeometry(
   const yCenter = startY + usefulHeightMm / 2 + stackIndex * (usefulHeightMm + gapMm);
 
   const boxHalfD = box.dimensoes.profundidade / 2;
-  // Frente fora da caixa (sobreposta ‡ estrutura frontal)
+  // Frente fora da caixa (sobreposta ù estrutura frontal)
   const front: DrawerPieceBox = {
     widthMm: frontW,
     heightMm: frontH,
@@ -175,6 +176,12 @@ export function buildEuropeanDrawerGeometry(
     bodyDepthMm,
   };
 }
+
+/** Geometria memoizada (funÁ„o pura ó transparente). */
+export const buildEuropeanDrawerGeometry = memo(buildEuropeanDrawerGeometryCore, {
+  namespace: "eu.geometry",
+  maxSize: 256,
+});
 
 /** Altura util disponivel no modulo para empilhar gavetas. */
 export function calcUsefulCabinetHeightMm(box: EuropeanDrawerBoxInput): number {

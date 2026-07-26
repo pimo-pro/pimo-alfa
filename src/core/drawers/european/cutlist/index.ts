@@ -1,6 +1,6 @@
 /**
- * cutlist/ ó Cutlist do Sistema Europeu (Modelo B).
- * Nomes/cÛdigos industriais + materiais/espessuras oficiais.
+ * cutlist/ ù Cutlist do Sistema Europeu (Modelo B).
+ * Nomes/cùdigos industriais + materiais/espessuras oficiais.
  */
 
 import type {
@@ -19,8 +19,9 @@ import {
   formatEuropeanIndustrialLabel,
   resolveEuropeanPieceNaming,
 } from "../naming";
+import { memo } from "../perf/memo";
 
-export function buildEuropeanCutlistItems(params: {
+function buildEuropeanCutlistItemsCore(params: {
   boxId: string;
   boxName?: string;
   model: DrawerEuropeanModel;
@@ -77,7 +78,7 @@ export function buildEuropeanCutlistItems(params: {
     });
   };
 
-  // Corpo (linha de grupo / referÍncia)
+  // Corpo (linha de grupo / referùncia)
   const body = resolveEuropeanPieceNaming("body", drawerIndex, count);
   items.push({
     id: `${boxId}-eu-${body.codigo}-body-${n}`,
@@ -92,7 +93,7 @@ export function buildEuropeanCutlistItems(params: {
     kind: "optional",
     tipo: "gaveta_corpo",
     industrialLabel: formatEuropeanIndustrialLabel(boxName, body.codigo, n),
-    observacoesIndustriais: `Corpo sem frente; corrediÁa ${geometry.runnerDepthMm} mm; folga lateral 7+7`,
+    observacoesIndustriais: `Corpo sem frente; corrediùa ${geometry.runnerDepthMm} mm; folga lateral 7+7`,
   });
 
   pushWood(
@@ -133,7 +134,7 @@ export function buildEuropeanCutlistItems(params: {
       espessuraMm: EUROPEAN_SIDE_THICKNESS_MM,
     },
     bodyMat,
-    "16 mm; folga 7 mm ‡ parede da caixa; drill via pipeline Modelo A"
+    "16 mm; folga 7 mm ù parede da caixa; drill via pipeline Modelo A"
   );
 
   pushWood(
@@ -146,7 +147,7 @@ export function buildEuropeanCutlistItems(params: {
       espessuraMm: EUROPEAN_SIDE_THICKNESS_MM,
     },
     bodyMat,
-    "16 mm; folga 7 mm ‡ parede da caixa; drill via pipeline Modelo A"
+    "16 mm; folga 7 mm ù parede da caixa; drill via pipeline Modelo A"
   );
 
   pushWood(
@@ -177,7 +178,7 @@ export function buildEuropeanCutlistItems(params: {
 
   items.push({
     id: `${boxId}-eu-slides-${n}`,
-    nome: `Par corrediÁas Hettich ${geometry.runnerDepthMm} mm`,
+    nome: `Par corrediùas Hettich ${geometry.runnerDepthMm} mm`,
     codigo: "corredica_hettich",
     quantidade: 1,
     larguraMm: geometry.runnerDepthMm,
@@ -224,3 +225,9 @@ export function buildEuropeanCutlistItems(params: {
 
   return items;
 }
+
+/** Cutlist memoizado ó transparente; material da frente faz parte da chave. */
+export const buildEuropeanCutlistItems = memo(buildEuropeanCutlistItemsCore, {
+  namespace: "eu.cutlist",
+  maxSize: 256,
+});

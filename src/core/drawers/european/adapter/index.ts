@@ -1,6 +1,6 @@
 /**
- * adapter/ ó Converte resultado Modelo B ? DrawerLayerItem / CutListItem.
- * Permite reutilizar viewer/cutlist sem alterar o n˙cleo do Modelo A.
+ * adapter/ ù Converte resultado Modelo B ? DrawerLayerItem / CutListItem.
+ * Permite reutilizar viewer/cutlist sem alterar o nùcleo do Modelo A.
  */
 
 import type { DrawerLayerItem } from "../../../../models/BoxLayers";
@@ -14,6 +14,7 @@ import type {
 } from "../types";
 import { europeanHolesToPanelDrillHoles } from "../drilling";
 import { EUROPEAN_SIDE_THICKNESS_MM } from "../measures";
+import { memo } from "../perf/memo";
 
 const SYSTEM_TO_METAL_LABEL: Record<EuropeanDrawerSystemId, string> = {
   "blum-legrabox": "Blum Legrabox",
@@ -22,7 +23,7 @@ const SYSTEM_TO_METAL_LABEL: Record<EuropeanDrawerSystemId, string> = {
   "grass-nova-pro-scala": "Grass Nova Pro",
 };
 
-export function europeanGeometryToLayerItem(params: {
+function europeanGeometryToLayerItemCore(params: {
   id: string;
   parentBoxId: string;
   geometry: DrawerGeometry;
@@ -53,7 +54,7 @@ export function europeanGeometryToLayerItem(params: {
     type: "pro",
     drawerType: "pro",
     sideMaterial: "wood",
-    slideType: "GenÈrica",
+    slideType: "Genùrica",
     metalBoxType: SYSTEM_TO_METAL_LABEL[systemId] as DrawerLayerItem["metalBoxType"],
     softClose,
     width: g.front.widthMm,
@@ -116,6 +117,15 @@ export function europeanGeometryToLayerItem(params: {
     } as DrawerLayerItem["metadata"],
   };
 }
+
+/**
+ * Layer memoizado. Material da frente faz parte da chave ó
+ * mudanÁa sÛ de material reutiliza hit se args iguais; dims iguais + mat diferente = sÛ overlay leve via cache miss mÌnimo.
+ */
+export const europeanGeometryToLayerItem = memo(europeanGeometryToLayerItemCore, {
+  namespace: "eu.adapter.layer",
+  maxSize: 256,
+});
 
 export function europeanCutlistToCutListItems(
   items: DrawerCutlistItem[],

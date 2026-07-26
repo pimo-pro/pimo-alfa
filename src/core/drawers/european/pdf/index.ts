@@ -1,5 +1,5 @@
-/**
- * pdf/ — Secção PDF do Sistema Europeu (Modelo B).
+ï»¿/**
+ * pdf/ Â SecÂÂo PDF do Sistema Europeu (Modelo B).
  */
 
 import type {
@@ -11,8 +11,9 @@ import type {
   EuropeanDrawerBoxConfig,
 } from "../types";
 import { EUROPEAN_SIDE_CLEARANCE_EACH_MM } from "../measures";
+import { memo } from "../perf/memo";
 
-export function buildEuropeanDrawerPdfSection(params: {
+function buildEuropeanDrawerPdfSectionCore(params: {
   model: DrawerEuropeanModel;
   config: EuropeanDrawerBoxConfig;
   geometry: DrawerGeometry;
@@ -23,14 +24,14 @@ export function buildEuropeanDrawerPdfSection(params: {
   const { model, config, geometry, cutlist, holes, boxName } = params;
 
   return {
-    title: `Gavetas Europeias — ${model.displayName}${boxName ? ` (${boxName})` : ""}`,
+    title: `Gavetas Europeias Â ${model.displayName}${boxName ? ` (${boxName})` : ""}`,
     measureRows: [
       { label: "Sistema", value: model.displayName },
       {
         label: "Altura sistema",
         value: `${config.heightMm} mm${config.heightCode ? ` (${config.heightCode})` : ""}`,
       },
-      { label: "Corrediça Hettich", value: `${geometry.runnerDepthMm} mm` },
+      { label: "CorrediÂa Hettich", value: `${geometry.runnerDepthMm} mm` },
       { label: "Profundidade corpo (sem frente)", value: `${geometry.bodyDepthMm} mm` },
       { label: "Largura externa gaveta", value: `${geometry.externalWidthMm.toFixed(1)} mm` },
       { label: "Largura interna corpo", value: `${geometry.internalWidthMm.toFixed(1)} mm` },
@@ -40,20 +41,20 @@ export function buildEuropeanDrawerPdfSection(params: {
       },
       {
         label: "Frente",
-        value: `${geometry.front.widthMm.toFixed(1)} × ${geometry.front.heightMm.toFixed(1)} × ${geometry.front.thicknessMm} mm`,
+        value: `${geometry.front.widthMm.toFixed(1)} Â ${geometry.front.heightMm.toFixed(1)} Â ${geometry.front.thicknessMm} mm`,
       },
       {
         label: "Fundo",
-        value: `${geometry.bottom.widthMm.toFixed(1)} × ${geometry.bottom.depthMm.toFixed(1)} × ${geometry.bottom.thicknessMm} mm`,
+        value: `${geometry.bottom.widthMm.toFixed(1)} Â ${geometry.bottom.depthMm.toFixed(1)} Â ${geometry.bottom.thicknessMm} mm`,
       },
-      { label: "Soft-Close", value: config.softClose ? "Sim" : "Não" },
-      { label: "Push-Open", value: config.pushOpen ? "Sim" : "Não" },
-      { label: "Frente dupla", value: config.dualFront ? "Sim (gav_fre_int)" : "Não" },
+      { label: "Soft-Close", value: config.softClose ? "Sim" : "NÂo" },
+      { label: "Push-Open", value: config.pushOpen ? "Sim" : "NÂo" },
+      { label: "Frente dupla", value: config.dualFront ? "Sim (gav_fre_int)" : "NÂo" },
     ],
     pieceRows: cutlist.map((p) => ({
       nome: p.codigo ? `${p.nome} [${p.codigo}]` : p.nome,
       qty: String(p.quantidade),
-      dims: `${p.larguraMm.toFixed(0)} × ${p.alturaMm.toFixed(0)} × ${p.espessuraMm.toFixed(0)}`,
+      dims: `${p.larguraMm.toFixed(0)} Â ${p.alturaMm.toFixed(0)} Â ${p.espessuraMm.toFixed(0)}`,
       material: p.material,
     })),
     holeRows: holes.map((h) => ({
@@ -65,25 +66,31 @@ export function buildEuropeanDrawerPdfSection(params: {
       tipo: h.holeType,
     })),
     notes: [
-      "Corrediças Hettich: 300–600 mm (passo 50); sempre < profundidade útil interna.",
-      "Largura externa = interna caixa ? 14 mm; corpo = corrediça ? 10 mm.",
+      "CorrediÂas Hettich: 300Â600 mm (passo 50); sempre < profundidade Âtil interna.",
+      "Largura externa = interna caixa ? 14 mm; corpo = corrediÂa ? 10 mm.",
       "Drill laterais/costa: pipeline Modelo A (DrawerDrillingRules).",
       ...model.assembly.warnings,
       ...model.assembly.order,
     ],
     explodedViewNotes: [
-      "1. Frente externa (gav_fren) — material independente, fora da caixa",
+      "1. Frente externa (gav_fren) Â material independente, fora da caixa",
       "2. Frente int opcional (gav_fre_int)",
       "3. Laterais (gav_lat_esq / gav_lat_dir) 16 mm",
       "4. Costa (gav_costa) 16 mm",
       "5. Fundo (gav_fun) 10 mm",
-      "6. Corrediças Hettich nas laterais do módulo",
+      "6. CorrediÂas Hettich nas laterais do mÂdulo",
     ],
   };
 }
 
+/** PDF section memoizado (tabelas/medidas/furos). */
+export const buildEuropeanDrawerPdfSection = memo(buildEuropeanDrawerPdfSectionCore, {
+  namespace: "eu.pdf",
+  maxSize: 128,
+});
+
 /**
- * Desenha a secção no jsPDF (API mínima).
+ * Desenha a secÂÂo no jsPDF (API mÂnima).
  */
 export function appendEuropeanDrawerPdfSection(
   doc: {
@@ -119,11 +126,11 @@ export function appendEuropeanDrawerPdfSection(
 
   y += 4;
   doc.setFont("helvetica", "bold");
-  doc.text("Peças", margin, y);
+  doc.text("PeÂas", margin, y);
   y += 6;
   doc.setFont("helvetica", "normal");
   for (const row of section.pieceRows) {
-    doc.text(`${row.qty}x ${row.nome} — ${row.dims} — ${row.material}`, margin, y);
+    doc.text(`${row.qty}x ${row.nome} Â ${row.dims} Â ${row.material}`, margin, y);
     y += 5;
     if (y > 280) {
       doc.addPage("a4", "portrait");

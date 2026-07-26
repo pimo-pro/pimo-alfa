@@ -1,5 +1,5 @@
 /**
- * viewer/ — Dados de renderizacao do Sistema Europeu (Modelo B).
+ * viewer/ — Dados de renderização do Sistema Europeu (Modelo B).
  */
 
 import type {
@@ -7,6 +7,9 @@ import type {
   EuropeanDrawerHole,
   EuropeanDrawerViewerData,
 } from "../types";
+import { getCachedEuropeanViewerData } from "./perf";
+
+export { buildViewerDimKey, getCachedEuropeanViewerData, type EuropeanViewerDimKey } from "./perf";
 
 export function buildEuropeanViewerData(params: {
   drawers: Array<{
@@ -16,22 +19,12 @@ export function buildEuropeanViewerData(params: {
     holes: EuropeanDrawerHole[];
   }>;
 }): EuropeanDrawerViewerData {
-  return {
-    drawers: params.drawers.map((d) => ({
-      id: d.id,
-      index: d.index,
-      geometry: d.geometry,
-      holes: d.holes,
-      openProgress: 0,
-      maxPullMm: Math.max(100, d.geometry.runnerDepthMm - 40),
-    })),
-  };
+  return getCachedEuropeanViewerData(params.drawers);
 }
 
 /** Interpola abertura (0..1) ? offset Z de pull (mm). */
 export function calcEuropeanDrawerPullOffsetMm(progress: number, maxPullMm: number): number {
   const p = Math.max(0, Math.min(1, progress));
-  // Ease-out suave (similar a curvas europeias).
   const eased = 1 - Math.pow(1 - p, 2);
   return eased * maxPullMm;
 }
