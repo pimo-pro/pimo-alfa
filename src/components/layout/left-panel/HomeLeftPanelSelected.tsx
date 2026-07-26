@@ -20,6 +20,8 @@ import BoxRemateDrawer from "../../settings/remate/BoxRemateDrawer";
 import CornerOrientationPanel from "../../settings/corner/CornerOrientationPanel";
 import { SectionTitleWithHelp } from "../../ui/MiniHelpTooltip";
 import { useDrawerModeloAActive } from "../../../hooks/useDrawerModeloAActive";
+import { EuropeanDrawerConfigPanel } from "../../../core/drawers/european/ui";
+import type { EuropeanDrawerBoxConfig } from "../../../core/drawers/european/types";
 
 const HOME_SELECTED_SECTION_HELP_TEXT =
   "Controles principais da caixa selecionada e definição inicial do projeto.";
@@ -357,7 +359,29 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
                     </div>
                   )}
                 </>
-              ) : null}
+              ) : (
+                <UnifiedPopover
+                  id={BOX_PANEL_IDS.gavetas}
+                  fullWidth
+                  layout={panelPopoverLayout}
+                  open={isPanelOpen(BOX_PANEL_IDS.gavetas)}
+                  onOpenChange={(open) => setPanelOpen(BOX_PANEL_IDS.gavetas, open)}
+                  triggerVariant="ghost"
+                  triggerTitle="Sistema Europeu de Gavetas (Modelo B)."
+                  trigger={
+                    <span>
+                      GAVETAS EU — <strong>{selectedGavetas}</strong>
+                    </span>
+                  }
+                >
+                  <EuropeanDrawerConfigPanel
+                    box={selectedBox}
+                    onChange={(config: EuropeanDrawerBoxConfig, count: number) => {
+                      actions.setEuropeanDrawerConfig?.(config, count);
+                    }}
+                  />
+                </UnifiedPopover>
+              )}
               <UnifiedPopover
                 id={BOX_PANEL_IDS.porta}
                 fullWidth

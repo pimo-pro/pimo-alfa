@@ -30,6 +30,11 @@ import {
   restoreLayerMaterials,
 } from "../core/viewer/materialPreservation";
 import { isDrawerModeloAActive } from "../core/drawers/drawerSystemFlags";
+import {
+  defaultEuropeanDrawerConfig,
+  generateEuropeanDrawer,
+  europeanResultToLayerItems,
+} from "../core/drawers/european";
 
 export interface BoxLayersState {
   doorsLayer: DoorLayerItem[];
@@ -251,11 +256,53 @@ export function regenerateLayersForBox(
   }
 
   // GAVETAS:
-  // - Geral: gerar se gavetas > 0 e Modelo A ativo
-  // - Roupeiro H/J (cfg7/cfg8): gerar apenas no lado direito e apenas na zona inferior
-  // - Modelo A off: preservar drawersLayer sem regenerar (código/dados intactos)
+  // - Modelo A activo: pipeline clássico
+  // - Modelo A off: Sistema Europeu (Modelo B) substitui o pipeline
   if (!modeloAActive) {
-    drawersLayer.push(...(box.drawersLayer ?? []));
+    const euCount = Math.max(0, Math.floor(box.gavetas || 0));
+    if (euCount > 0) {
+      const systemId = box.europeanDrawerConfig?.systemId ?? "blum-legrabox";
+      const euConfig = {
+        ...defaultEuropeanDrawerConfig(
+          {
+            id: box.id,
+            nome: box.nome,
+            dimensoes: box.dimensoes,
+            espessura: thickness,
+            gavetas: euCount,
+            material: box.material,
+            europeanDrawerConfig: box.europeanDrawerConfig,
+          },
+          systemId
+        ),
+        ...box.europeanDrawerConfig,
+        count: euCount,
+        systemId,
+      };
+      const result = generateEuropeanDrawer(systemId, {
+        id: box.id,
+        nome: box.nome,
+        dimensoes: box.dimensoes,
+        espessura: thickness,
+        gavetas: euCount,
+        material: box.material,
+        europeanDrawerConfig: euConfig,
+      });
+      drawersLayer.push(...europeanResultToLayerItems(result, box.id));
+      // Preserva isOpen / materiais se existir layer anterior com mesmo índice
+      for (let i = 0; i < drawersLayer.length; i++) {
+        const existing = (box.drawersLayer ?? []).find((d) => d.metadata?.modeloB && d.id === drawersLayer[i]!.id)
+          ?? (box.drawersLayer ?? [])[i];
+        if (existing) {
+          drawersLayer[i] = {
+            ...drawersLayer[i]!,
+            isOpen: existing.isOpen ?? false,
+            materialId: existing.materialId ?? drawersLayer[i]!.materialId,
+            material: existing.material ?? drawersLayer[i]!.material,
+          };
+        }
+      }
+    }
   } else if (hasDrawers) {
     const drawerSettings = settings.gavetas;
     const drawerType = box.drawerType ?? "normal";

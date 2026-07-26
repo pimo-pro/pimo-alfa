@@ -503,6 +503,11 @@ export interface ProjectActions {
   renameBox: (_nome: string) => void;
   setPrateleiras: (_quantidade: number) => void;
   setGavetas: (_quantidade: number) => void;
+  /** Modelo B — aplica config europeia + quantidade e regenera layers. */
+  setEuropeanDrawerConfig?: (
+    _config: import("../core/drawers/european/types").EuropeanDrawerBoxConfig,
+    _count: number
+  ) => void;
   setDrawerHeightMode: (_mode: import("../core/drawers/drawerHeightModeTypes").DrawerHeightMode) => void;
   setPortaTipo: (_portaTipo: BoxModule["portaTipo"]) => void;
   setTipoBorda: (_tipoBorda: TipoBorda) => void;

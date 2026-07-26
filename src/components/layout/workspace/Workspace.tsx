@@ -326,9 +326,10 @@ export default function Workspace({
 
   useEffect(() => {
     viewerApi.setOnBoxDoubleClick?.((boxId) => {
-      if (!isDrawerModeloAActive()) return;
       const box = project.workspaceBoxes.find((workspaceBox) => workspaceBox.id === boxId);
       if (!box || (box.drawersLayer?.length ?? 0) === 0) return;
+      // Modelo A off: so permite gavetas do Modelo B
+      if (!isDrawerModeloAActive() && !(box.drawersLayer ?? []).some((d) => d.metadata?.modeloB)) return;
 
       actions.selectBox(boxId);
       setSelectedObject({ type: "box", id: boxId });
@@ -347,9 +348,12 @@ export default function Workspace({
 
   useEffect(() => {
     viewerApi.setOnDrawerLayerClick?.((boxId, drawerLayerId) => {
-      if (!isDrawerModeloAActive()) return;
       const box = projectRef.current.workspaceBoxes.find((workspaceBox) => workspaceBox.id === boxId);
       if (!box) return;
+      if (!isDrawerModeloAActive()) {
+        const layer = (box.drawersLayer ?? []).find((d) => d.id === drawerLayerId);
+        if (!layer?.metadata?.modeloB) return;
+      }
 
       if (project.selectedWorkspaceBoxId !== boxId) {
         actions.selectBox(boxId);

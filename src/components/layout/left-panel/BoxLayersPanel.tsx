@@ -19,6 +19,7 @@ import DrawerConfigPanel, {
 } from "../../panels/DrawerConfigPanel";
 import { useDrawerModeloAActive } from "../../../hooks/useDrawerModeloAActive";
 import { resolveActiveDrawersLayer } from "../../../core/drawers/drawerModeloAGate";
+import { EuropeanDrawerConfigPanel } from "../../../core/drawers/european/ui";
 
 type BoxLayersPanelProps = {
   embedded?: boolean;
@@ -514,7 +515,21 @@ export default function BoxLayersPanel({ embedded = false }: BoxLayersPanelProps
           })
         )}
           </>
-        ) : null}
+        ) : (
+          <div style={{ marginTop: 8 }}>
+            <EuropeanDrawerConfigPanel
+              box={selectedBox}
+              onChange={(config, count) => {
+                actions.setEuropeanDrawerConfig?.(config, count);
+              }}
+            />
+            {drawers.length > 0 ? (
+              <div style={{ marginTop: 8, fontSize: 11, color: "var(--text-muted)" }}>
+                {drawers.length} gaveta(s) europeia(s) gerada(s)
+              </div>
+            ) : null}
+          </div>
+        )}
       </div>
     </>
   );

@@ -589,6 +589,7 @@ export const convertWorkspaceToBox = (box: WorkspaceBox): BoxModule => {
     material: box.material,
     doorsLayer: box.doorsLayer ?? [],
     drawersLayer: box.drawersLayer ?? [],
+    europeanDrawerConfig: box.europeanDrawerConfig,
     divisores: box.divisores ?? [],
     separadores: box.separadores ?? [],
     catalogItemId: box.catalogItemId,

@@ -76,6 +76,10 @@ export type DrawerLayerMetadata = {
   metalBoxHeightMm?: number;
   /** Profundidade externa do módulo (mm) — referência flush da frente no 3D. */
   profundidadeUtilMm?: number;
+  /** Modelo B: id do sistema europeu. */
+  europeanSystemId?: string;
+  /** Modelo B: marca o layer como gerado pelo Sistema Europeu. */
+  modeloB?: boolean;
 };
 
 export interface DrawerLayerItem {

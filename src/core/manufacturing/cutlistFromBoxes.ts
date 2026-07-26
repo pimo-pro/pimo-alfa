@@ -32,7 +32,6 @@ import {
   resolveEuropeanModuleRunnerLinesYMm,
 } from "../drawers/drilling/DrawerDrillingRules";
 import {
-  isDrawerModeloAActive,
   resolveActiveDrawersLayer,
   resolveActiveGavetasCount,
 } from "../drawers";
@@ -176,11 +175,9 @@ export function cutlistComPrecoFromBox(
   const hasShelves = Math.max(0, Math.floor(box.prateleiras ?? 0)) > 0;
   const drawersLayer = resolveActiveDrawersLayer(box);
   const isPiBox = isPiBaseCabinetId(box.baseCabinetId);
-  const hasDrawers = !isDrawerModeloAActive()
-    ? false
-    : isPiBox
-      ? drawersLayer.length > 0
-      : resolveActiveGavetasCount(box) > 0 || drawersLayer.length > 0;
+  const hasDrawers = isPiBox
+    ? drawersLayer.length > 0
+    : resolveActiveGavetasCount(box) > 0 || drawersLayer.length > 0;
   // Roupeiros: gavetas apenas na zona inferior; furos 32mm de prateleira devem ser calculados sem “bloqueio” por gavetas.
   const hasDrawersForShelfDrilling = isWardrobeModel(box.baseCabinetId) ? false : hasDrawers;
 

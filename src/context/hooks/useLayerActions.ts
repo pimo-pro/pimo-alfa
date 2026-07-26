@@ -25,6 +25,7 @@ export type LayerActions = Pick<
   ProjectActions,
   | "setPrateleiras"
   | "setGavetas"
+  | "setEuropeanDrawerConfig"
   | "setDrawerHeightMode"
   | "setPortaTipo"
   | "setDoorMaterial"
@@ -87,10 +88,59 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
         );
       },
       setGavetas: (quantidade) => {
-        // Gate Modelo A: sistema desativado → nenhuma gaveta é reconhecida/criada.
-        if (!isDrawerModeloAActive()) return;
-
         const valor = Math.max(0, Math.floor(quantidade));
+
+        // Modelo B (Sistema Europeu): Modelo A desactivado — permite quantidade + regenera europeu.
+        if (!isDrawerModeloAActive()) {
+          updateProject(
+            (prev) => {
+              const workspaceBoxes = prev.workspaceBoxes.map((box) => {
+                if (box.id !== prev.selectedWorkspaceBoxId) return box;
+                const updatedBox = {
+                  ...box,
+                  gavetas: valor,
+                  portaTipo: valor > 0 ? ("sem_porta" as const) : box.portaTipo,
+                  prateleiras: valor > 0 ? 0 : box.prateleiras,
+                  doorsLayer: valor > 0 ? [] : box.doorsLayer,
+                  europeanDrawerConfig: {
+                    ...(box.europeanDrawerConfig ?? {
+                      systemId: "blum-legrabox" as const,
+                      heightMm: 90,
+                      heightCode: "M",
+                      depthMm: 500,
+                      softClose: true,
+                      pushOpen: false,
+                    }),
+                    count: valor,
+                  },
+                  drawerConfigError: undefined,
+                  panelIds: ensureBoxPanelIds(box.panelIds, panelIdOptionsFromBox(box, {
+                    gavetas: valor,
+                    portaTipo: valor > 0 ? "sem_porta" : box.portaTipo,
+                    prateleiras: valor > 0 ? 0 : box.prateleiras,
+                  })),
+                };
+                const layers = regenerateLayersForBox(updatedBox);
+                return { ...updatedBox, ...layers };
+              });
+              return recomputeState(
+                prev,
+                {
+                  workspaceBoxes,
+                  changelog: appendChangelog(prev.changelog, {
+                    timestamp: new Date(),
+                    type: "box",
+                    message: `Gavetas europeias (Modelo B) ajustadas para ${valor}`,
+                  }),
+                },
+                true
+              );
+            },
+            true
+          );
+          return;
+        }
+
         updateProject(
           (prev) => {
             const workspaceBoxes = prev.workspaceBoxes.map((box) => {
@@ -143,6 +193,49 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
                   timestamp: new Date(),
                   type: "box",
                   message: `Gavetas ajustadas para ${valor}`,
+                }),
+              },
+              true
+            );
+          },
+          true
+        );
+      },
+      setEuropeanDrawerConfig: (config, count) => {
+        const valor = Math.max(0, Math.floor(count));
+        updateProject(
+          (prev) => {
+            const workspaceBoxes = prev.workspaceBoxes.map((box) => {
+              if (box.id !== prev.selectedWorkspaceBoxId) return box;
+              const updatedBox = {
+                ...box,
+                gavetas: valor,
+                portaTipo: valor > 0 ? ("sem_porta" as const) : box.portaTipo,
+                prateleiras: valor > 0 ? 0 : box.prateleiras,
+                doorsLayer: valor > 0 ? [] : box.doorsLayer,
+                europeanDrawerConfig: { ...config, count: valor },
+                drawerConfigError: undefined,
+                drawerConfigWarnings: undefined,
+                panelIds: ensureBoxPanelIds(
+                  box.panelIds,
+                  panelIdOptionsFromBox(box, {
+                    gavetas: valor,
+                    portaTipo: valor > 0 ? "sem_porta" : box.portaTipo,
+                    prateleiras: valor > 0 ? 0 : box.prateleiras,
+                  })
+                ),
+              };
+              const layers = regenerateLayersForBox(updatedBox);
+              return { ...updatedBox, ...layers };
+            });
+            return recomputeState(
+              prev,
+              {
+                workspaceBoxes,
+                changelog: appendChangelog(prev.changelog, {
+                  timestamp: new Date(),
+                  type: "box",
+                  message: `Modelo B: ${config.systemId} ×${valor}`,
                 }),
               },
               true

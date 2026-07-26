@@ -15,6 +15,10 @@ import { appendResumoFinanceiroSection } from "./pdfResumoFinanceiro";
 import { appendPecasTotaisSection } from "./pdfPecasTotais";
 import { appendFerragensTotaisSection } from "./pdfFerragensTotais";
 import { isDrawerModeloAActive } from "../drawers/drawerSystemFlags";
+import {
+  appendEuropeanDrawerPdfSection,
+  generateEuropeanDrawer,
+} from "../drawers/european";
 import type { RematePiece } from "../remate/rematePieceTypes";
 import type { ProjectRodape } from "../rodape/rodapeTypes";
 import type { MaterialIndustrial } from "../manufacturing/materials";
@@ -92,9 +96,30 @@ function addPortasSection(doc: jsPDF, project: ProjectForPdfWithExtracted): void
   });
 }
 
+function addEuropeanGavetasSection(doc: jsPDF, project: ProjectForPdfWithExtracted): void {
+  const boxes = project.boxes.filter((b) => (b.gavetas ?? 0) > 0 || (b.drawersLayer ?? []).some((d) => d.metadata?.modeloB));
+  if (boxes.length === 0) return;
+
+  for (const box of boxes) {
+    const result = generateEuropeanDrawer(box.europeanDrawerConfig?.systemId ?? "blum-legrabox", {
+      id: box.id,
+      nome: box.nome,
+      dimensoes: box.dimensoes,
+      espessura: box.espessura,
+      gavetas: box.gavetas,
+      material: box.material,
+      europeanDrawerConfig: box.europeanDrawerConfig,
+    });
+    appendEuropeanDrawerPdfSection(doc, result.pdf, MARGIN);
+  }
+}
+
 function addGavetasSection(doc: jsPDF, project: ProjectForPdfWithExtracted): void {
-  // Gate Modelo A: sem secção de gavetas no PDF quando o sistema atual está desativado.
-  if (!isDrawerModeloAActive()) return;
+  // Modelo A off: secção europeia (Modelo B) substitui a secção clássica.
+  if (!isDrawerModeloAActive()) {
+    addEuropeanGavetasSection(doc, project);
+    return;
+  }
 
   const comGavetas = project.boxes.filter((b) => (b.gavetas ?? 0) > 0);
   if (comGavetas.length === 0) return;

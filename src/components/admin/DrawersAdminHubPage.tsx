@@ -2,12 +2,7 @@
  * DrawersAdminHubPage
  *
  * Admin ? Produtos ? Gavetas
- * Hub unificado do sistema de gavetas:
- * - Toggle para desativar o Sistema Atual (Modelo A) sem apagar cùdigo
- * - Inventùrio / referùncia do Modelo A
- * - Regras editùveis (DrawerRulesAdminPage)
- * - Mapa do sistema unificado (DrawerSystemUnifiedAdminPage)
- * - Prù-visualizaùùo da estrutura do Modelo B (Sistema Europeu)
+ * Hub unificado: toggle Modelo A, inventario, regras, mapa e catalogo Modelo B.
  */
 
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
@@ -25,32 +20,18 @@ import {
   DRAWER_OFFICIAL_PIPELINE,
   countDrawerReferenceStats,
 } from "../../core/drawers/DrawerSystemReference";
+import { listEuropeanDrawerModels } from "../../core/drawers/european";
 
 type HubSection = "visao" | "regras" | "mapa" | "modelo-b";
 
 const MODELO_A_INVENTORY = [
-  { area: "Domùnio", path: "src/core/drawers/**", note: "Parametria, geraùùo, motion, drilling, catùlogo" },
+  { area: "Dominio", path: "src/core/drawers/**", note: "Parametria, geracao, motion, drilling, catalogo" },
   { area: "UI projeto", path: "HomeLeftPanelSelected / BoxLayersPanel / DrawerConfigPanel", note: "Stepper, layers, config por gaveta" },
   { area: "Layers", path: "src/services/boxLayersService.ts", note: "Regenera drawersLayer" },
-  { area: "Cutlist", path: "drawerCutlistAdapter + cutlistFromBoxes", note: "Peùas gaveta_* + furos corrediùa" },
-  { area: "PDF", path: "pdfUnified / pdfEtiquetas / pdfFerragensTotais*", note: "Secùùes e classificaùùo GAV_*" },
+  { area: "Cutlist", path: "drawerCutlistAdapter + cutlistFromBoxes", note: "Pecas gaveta_* + furos corredica" },
+  { area: "PDF", path: "pdfUnified / pdfEtiquetas / pdfFerragensTotais*", note: "Secoes e classificacao GAV_*" },
   { area: "Viewer", path: "useCalculadoraSync + DrawerController", note: "Meshes e open/close" },
-  { area: "Admin legado", path: "Regras das Gavetas + Sistema Unificado", note: "Mantidos; tambùm embutidos abaixo" },
-] as const;
-
-const MODELO_B_STRUCTURE = [
-  "src/core/drawers/european/README.md",
-  "src/core/drawers/european/index.ts",
-  "src/core/drawers/european/types.ts",
-  "src/core/drawers/european/catalog.ts",
-  "src/core/drawers/european/models/blum-legrabox/",
-  "src/core/drawers/european/models/blum-tandembox-antaro/",
-  "src/core/drawers/european/models/hettich-innotech-atira/",
-  "src/core/drawers/european/models/grass-nova-pro-scala/",
-  "src/core/drawers/european/geometry/",
-  "src/core/drawers/european/drilling/",
-  "src/core/drawers/european/measures/",
-  "src/core/drawers/european/ui/",
+  { area: "Admin legado", path: "Regras das Gavetas + Sistema Unificado", note: "Mantidos; tambem embutidos abaixo" },
 ] as const;
 
 const tabBtn = (active: boolean): CSSProperties => ({
@@ -68,6 +49,7 @@ export default function DrawersAdminHubPage() {
   const [section, setSection] = useState<HubSection>("visao");
   const [modeloAActive, setModeloAActive] = useState(() => isDrawerModeloAActive());
   const stats = useMemo(() => countDrawerReferenceStats(), []);
+  const europeanModels = useMemo(() => listEuropeanDrawerModels(), []);
 
   useEffect(() => subscribeDrawerModeloAFlags(setModeloAActive), []);
 
@@ -76,13 +58,13 @@ export default function DrawersAdminHubPage() {
   return (
     <div style={{ ...adminPageShellStyle, maxWidth: 1200 }}>
       <AdminPageHeader
-        title="Gavetas ù Sistema Unificado (Modelo A)"
-        subtitle="Centro Admin de gavetas: inventùrio do sistema atual, toggle de desativaùùo e estrutura do Sistema Europeu (Modelo B)."
+        title="Gavetas ó Sistema Unificado"
+        subtitle="Centro Admin: Modelo A (toggle), inventario, regras e catalogo europeu Modelo B."
       />
 
       <Panel
         title="Desativar Sistema Atual de Gavetas (Modelo A)"
-        description="Quando ativo, o Modelo A fica invisùvel e inativo (sem regras, furos, PDF, botùes nem geraùùo). O cùdigo e os dados do projeto sùo preservados."
+        description="Quando activo, o Modelo A fica inactivo e o Modelo B (Sistema Europeu) assume UI/cutlist/PDF/viewer."
       >
         <label
           style={{
@@ -109,11 +91,10 @@ export default function DrawersAdminHubPage() {
               Desativar Sistema Atual de Gavetas (Modelo A)
             </strong>
             <span style={{ fontSize: 11, color: "var(--text-muted)", lineHeight: 1.45 }}>
-              Estado atual:{" "}
+              Estado:{" "}
               <strong style={{ color: deactivated ? "#f87171" : "#34d399" }}>
-                {deactivated ? "DESATIVADO (inativo)" : "ATIVO"}
+                {deactivated ? "Modelo A OFF ? Modelo B activo" : "Modelo A ATIVO"}
               </strong>
-              . Default do projeto = ativo (zero regressùo). Nùo apaga o sistema.
             </span>
           </span>
         </label>
@@ -122,7 +103,7 @@ export default function DrawersAdminHubPage() {
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
         {(
           [
-            ["visao", "Visùo geral"],
+            ["visao", "Visao geral"],
             ["regras", "Regras (Modelo A)"],
             ["mapa", "Mapa unificado"],
             ["modelo-b", "Modelo B (Europeu)"],
@@ -136,14 +117,14 @@ export default function DrawersAdminHubPage() {
 
       {section === "visao" ? (
         <>
-          <Panel title="Resumo do mapeamento (Modelo A)" description="Estatùsticas de DrawerSystemReference.ts">
+          <Panel title="Resumo do mapeamento (Modelo A)" description="Estatisticas de DrawerSystemReference.ts">
             <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
               {[
-                { label: "Domùnios", value: stats.domains },
+                { label: "Dominios", value: stats.domains },
                 { label: "Regras", value: stats.rules },
                 { label: "Oficiais", value: stats.official },
                 { label: "Legado", value: stats.legacy },
-                { label: "Inconsistùncias", value: stats.inconsistencies },
+                { label: "Inconsistencias", value: stats.inconsistencies },
               ].map((item) => (
                 <div
                   key={item.label}
@@ -161,12 +142,12 @@ export default function DrawersAdminHubPage() {
             </div>
           </Panel>
 
-          <Panel title="Inventùrio ù onde vive o Modelo A" description="Referùncia para manutenùùo; nada ù apagado ao desativar.">
+          <Panel title="Inventario ó Modelo A" description="Referencia; nada e apagado ao desativar.">
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                 <thead>
                   <tr>
-                    <th style={thStyle}>ùrea</th>
+                    <th style={thStyle}>Area</th>
                     <th style={thStyle}>Local</th>
                     <th style={thStyle}>Nota</th>
                   </tr>
@@ -186,7 +167,7 @@ export default function DrawersAdminHubPage() {
             </div>
           </Panel>
 
-          <Panel title="Pipelines" description="Oficial vs legado (referùncia)">
+          <Panel title="Pipelines" description="Oficial vs legado (referencia)">
             <div style={{ display: "flex", flexWrap: "wrap", gap: 24 }}>
               <ol style={{ margin: 0, paddingLeft: 18, fontSize: 11, color: "var(--text-muted)", lineHeight: 1.6, flex: "1 1 280px" }}>
                 <div style={{ fontWeight: 700, color: "#34d399", marginBottom: 6 }}>Pipeline oficial</div>
@@ -210,18 +191,42 @@ export default function DrawersAdminHubPage() {
 
       {section === "modelo-b" ? (
         <Panel
-          title="Sistema Europeu de Gavetas ù Modelo B"
-          description="Apenas estrutura base (pastas/stubs). Sem regras, furos ou medidas nesta fase."
+          title="Sistema Europeu de Gavetas ó Modelo B"
+          description="Catalogo oficial implementado. Activo no projeto quando o Modelo A esta desactivado."
         >
           <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 0, lineHeight: 1.5 }}>
-            Modelos previstos: Blum Legrabox, Blum TandemBox Antaro, Hettich InnoTech Atira, Grass Nova Pro Scala.
-            A implementaùùo completa aguarda as especificaùùes da prùxima fase.
+            API: <code>generateEuropeanDrawer(systemId, box)</code> ó measures, geometry, drilling, cutlist, PDF e viewer.
           </p>
-          <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, fontFamily: "monospace", lineHeight: 1.7 }}>
-            {MODELO_B_STRUCTURE.map((path) => (
-              <li key={path}>{path}</li>
-            ))}
-          </ul>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+              <thead>
+                <tr>
+                  <th style={thStyle}>Sistema</th>
+                  <th style={thStyle}>Alturas</th>
+                  <th style={thStyle}>Profundidades</th>
+                  <th style={thStyle}>Folga</th>
+                  <th style={thStyle}>Furos</th>
+                </tr>
+              </thead>
+              <tbody>
+                {europeanModels.map((m) => (
+                  <tr key={m.id}>
+                    <td style={tdStyle}>
+                      <strong>{m.displayName}</strong>
+                    </td>
+                    <td style={tdStyle}>{m.heights.map((h) => h.label).join(", ")}</td>
+                    <td style={tdStyle}>
+                      {m.depthProfile.minMm}ñ{m.depthProfile.maxMm} mm
+                    </td>
+                    <td style={tdStyle}>2◊{m.side.clearanceMm} mm</td>
+                    <td style={tdStyle}>
+                      {m.holePattern.setbackFrontMm} / {m.holePattern.bottomGapMm} / {m.holePattern.systemPitchMm}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Panel>
       ) : null}
     </div>

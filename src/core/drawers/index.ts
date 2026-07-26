@@ -26,6 +26,7 @@ export {
 } from "./drawerSystemFlags";
 export {
   boxHasActiveDrawers,
+  isDrawerModeloBActive,
   resolveActiveDrawersLayer,
   resolveActiveGavetasCount,
 } from "./drawerModeloAGate";
