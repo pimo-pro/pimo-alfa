@@ -130,6 +130,130 @@ export {
 } from "./robustness";
 
 export {
+  runSafetyConfigGate,
+  runSafetyMeasuresGate,
+  runSafetyGeometryGate,
+  runSafetyDrillingGate,
+  runSafetyCutlistGate,
+  runSafetyPdfGate,
+  runSafetyViewerGate,
+  runPrePipelineSafetyGates,
+  runPostPipelineSafetyGates,
+  mergeSafetyReports,
+  buildSafetyReport,
+  formatSafetyReportText,
+  type EuropeanSafetyReport,
+  type EuropeanSafetyGateResult,
+} from "./safety";
+
+export {
+  buildEuropeanIndustrialDocs,
+  buildEuropeanIndustrialMetadata,
+  buildFichaTecnica,
+  buildMultiPagePdf,
+  buildDocsReport,
+  formatDocsReportText,
+  type EuropeanIndustrialDocs,
+  type EuropeanIndustrialMetadata,
+  type EuropeanFichaTecnica,
+  type EuropeanMultiPagePdf,
+  type EuropeanDocsReport,
+} from "./docs";
+
+export {
+  buildEuropeanDXF,
+  buildTechnicalDrawingMode,
+  buildFrontView,
+  buildSideView,
+  buildTopView,
+  buildExplodedView,
+  buildEuropeanDxfDocument,
+  buildDxfReport,
+  formatDxfReportText,
+  EUROPEAN_DXF_LAYERS,
+  buildEuropeanDXFFileContents,
+  prepareEuropeanDXFFiles,
+  buildDxfFileReport,
+  type EuropeanDXFExport,
+  type EuropeanTechnicalDrawingMode,
+  type EuropeanTechnicalView,
+  type EuropeanDxfReport,
+  type EuropeanDxfDocument,
+  type DxfExportReport,
+  type DxfExportOptions,
+} from "./dxf";
+
+export {
+  buildEuropeanOverlay,
+  buildOverlayMeasures,
+  buildOverlayAberturas,
+  buildOverlayGaps,
+  buildOverlayRemates,
+  buildOverlayRodaPe,
+  buildOverlayReport,
+  formatOverlayReportText,
+  type EuropeanOverlay,
+  type EuropeanOverlayMeasures,
+  type EuropeanOverlayAberturas,
+  type EuropeanOverlayGaps,
+  type EuropeanOverlayReport,
+} from "./overlay";
+
+export {
+  buildEuropeanReleaseNotes,
+  collectEuropeanReleaseEvents,
+  formatEuropeanReleaseSections,
+  formatEuropeanReleaseText,
+  buildReleaseReport,
+  formatReleaseReportText,
+  EUROPEAN_RELEASE_VERSION,
+  EUROPEAN_RELEASE_AUTHOR,
+  type EuropeanReleaseNotes,
+  type EuropeanReleaseReport,
+  type EuropeanReleaseSection,
+} from "./release";
+
+export {
+  buildEuropeanCncPrograms,
+  prepareEuropeanCNCFiles,
+  buildEuropeanCNCFileContents,
+  buildCncFileReport,
+  formatCncReportText,
+  buildCncFileName,
+  resolveCncPieceKeyFromCodigo,
+  mapEuropeanResultToCncPieces,
+  mapHolePieceRefToCodigo,
+  DEFAULT_CNC_EXPORT_DIR,
+  type CncExportReport,
+  type CncExportOptions,
+  type CncExportStatus,
+  type EuropeanCncFormat,
+  type EuropeanCncPieceKey,
+  type CncPieceProgram,
+} from "./cnc";
+
+export {
+  buildIndustrialPricing,
+  buildKitchenLibraryPricing,
+  calculateMaterialCost,
+  calculateCncCost,
+  type IndustrialPricing,
+  type PricingStatus,
+} from "../../pricing";
+
+export {
+  enforceNaming,
+  enforceCutlistIdentity,
+  enforcePdfIdentity,
+  enforceDrillingIdentity,
+  enforceViewerIdentity,
+  enforcePieceIdentity,
+  isCanonicalEuropeanCode,
+  EUROPEAN_INDUSTRIAL_CODES,
+  EUROPEAN_INDUSTRIAL_NAMES,
+} from "./consistency";
+
+export {
   ALL_SCENARIOS,
   buildEuropeanQaScenarios,
   runScenario,
@@ -172,11 +296,116 @@ import {
 import { bumpEuropeanPerfConfigEpoch } from "./perf/memo";
 import { ensureConfigSafe } from "./robustness/safeConfig";
 import {
+  enforceCutlistIdentity,
+  enforceDrillingIdentity,
+  enforcePdfIdentity,
+  enforcePieceIdentity,
+  enforceViewerIdentity,
+} from "./consistency";
+import {
+  mergeSafetyReports,
+  runPostPipelineSafetyGates,
+  runPrePipelineSafetyGates,
+  type EuropeanSafetyReport,
+} from "./safety";
+import { buildEuropeanIndustrialDocs } from "./docs";
+import { buildEuropeanDXF, buildTechnicalDrawingMode } from "./dxf";
+import { buildEuropeanOverlay } from "./overlay";
+import { buildEuropeanReleaseNotes } from "./release";
+import { buildIndustrialPricing } from "../../pricing";
+import {
   HETTICH_RUNNER_LENGTHS_MM,
   isHettichRunnerLengthMm,
   pickHettichRunnerForBox,
   resolveEuropeanUsefulInternalDepthMm,
 } from "./measures";
+
+function attachIndustrialDocs(
+  result: EuropeanDrawerResult,
+  box?: EuropeanDrawerBoxInput
+): EuropeanDrawerResult {
+  const withDocs: EuropeanDrawerResult = {
+    ...result,
+    docs: buildEuropeanIndustrialDocs(result, box),
+  };
+  const dxf = buildEuropeanDXF(withDocs);
+  const technical = buildTechnicalDrawingMode(withDocs);
+  const withTech: EuropeanDrawerResult = {
+    ...withDocs,
+    dxf,
+    technical,
+  };
+  const overlay = buildEuropeanOverlay(withTech, box);
+  const withOverlay: EuropeanDrawerResult = {
+    ...withTech,
+    overlay,
+  };
+  const releaseNotes = buildEuropeanReleaseNotes(withOverlay);
+  const withRelease: EuropeanDrawerResult = {
+    ...withOverlay,
+    releaseNotes,
+  };
+  const pricing = buildIndustrialPricing(withRelease);
+  return {
+    ...withRelease,
+    pricing,
+  };
+}
+
+function toResultSafetyReport(report: EuropeanSafetyReport): NonNullable<EuropeanDrawerResult["safetyReport"]> {
+  return {
+    status: report.status,
+    totalDurationMs: report.totalDurationMs,
+    errors: report.errors.map((e) => ({
+      gate: e.gate,
+      code: e.code,
+      message: e.message,
+      piece: e.piece,
+    })),
+    warnings: report.warnings.map((w) => ({
+      gate: w.gate,
+      code: w.code,
+      message: w.message,
+      piece: w.piece,
+    })),
+    piecesAffected: report.piecesAffected,
+    gates: report.gates.map((g) => ({
+      gate: g.gate,
+      ok: g.ok,
+      durationMs: g.durationMs,
+    })),
+  };
+}
+
+function safetyFailResult(
+  model: DrawerEuropeanModel,
+  config: EuropeanDrawerBoxConfig,
+  box: EuropeanDrawerBoxInput,
+  report: EuropeanSafetyReport,
+  geometry?: ReturnType<typeof buildEuropeanDrawerGeometry>,
+  assembly?: ReturnType<typeof getAssemblyRules>
+): EuropeanDrawerResult {
+  const geo = geometry ?? buildEuropeanDrawerGeometry(box, model, config, 0, 1);
+  return attachIndustrialDocs(
+    {
+      systemId: model.id,
+      model,
+      config,
+      valid: false,
+      errors: report.errors.map((e) => `[safety:${e.gate}/${e.code}] ${e.message}`),
+      warnings: report.warnings.map((w) => `[safety:${w.gate}/${w.code}] ${w.message}`),
+      autoFixes: [],
+      geometry: geo,
+      holes: [],
+      cutlist: [],
+      pdf: emptyPdf(model, config, geo, box.nome),
+      viewer: { drawers: [] },
+      assembly: assembly ?? getAssemblyRules(model),
+      safetyReport: toResultSafetyReport(report),
+    },
+    box
+  );
+}
 
 function resolveModel(
   modelOrId: DrawerEuropeanModel | EuropeanDrawerSystemId
@@ -242,7 +471,6 @@ function buildPipeline(
 ) {
   const count = Math.max(1, Math.floor(config.count ?? box.gavetas ?? 1));
   const drawersGeo = [];
-  const allHoles = [];
   const allCutlist = [];
   const frontMat = config.frontMaterialId ?? box.material;
 
@@ -272,24 +500,50 @@ function buildPipeline(
       geometry,
       holes,
     });
-    allHoles.push(...holes);
     allCutlist.push(...cutlist);
   }
 
-  const primaryGeometry =
-    drawersGeo[0]?.geometry ?? buildEuropeanDrawerGeometry(box, model, config, 0, count);
+  const primaryGeometry = enforcePieceIdentity(
+    drawersGeo[0]?.geometry ?? buildEuropeanDrawerGeometry(box, model, config, 0, count)
+  );
   const assembly = getAssemblyRules(model);
-  const pdf = buildEuropeanDrawerPdfSection({
-    model,
-    config,
-    geometry: primaryGeometry,
-    cutlist: allCutlist,
-    holes: allHoles,
-    boxName: box.nome,
-  });
-  const viewer = buildEuropeanViewerData({ drawers: drawersGeo });
 
-  return { primaryGeometry, allHoles, allCutlist, pdf, viewer, assembly, drawersGeo };
+  const allCutlistEnforced = enforceCutlistIdentity(allCutlist, { drawerCount: count });
+
+  for (const d of drawersGeo) {
+    d.geometry = enforcePieceIdentity(d.geometry);
+    d.holes = enforceDrillingIdentity(d.holes, {
+      drawerCount: count,
+      drawerIndex0: d.index,
+    });
+  }
+  // Reagregar furos já normalizados por índice de gaveta (evita colapsar fronts multi).
+  const allHolesEnforced = drawersGeo.flatMap((d) => d.holes);
+
+  const pdf = enforcePdfIdentity(
+    buildEuropeanDrawerPdfSection({
+      model,
+      config,
+      geometry: primaryGeometry,
+      cutlist: allCutlistEnforced,
+      holes: allHolesEnforced,
+      boxName: box.nome,
+    }),
+    { drawerCount: count }
+  );
+  const viewer = enforceViewerIdentity(buildEuropeanViewerData({ drawers: drawersGeo }), {
+    drawerCount: count,
+  });
+
+  return {
+    primaryGeometry,
+    allHoles: allHolesEnforced,
+    allCutlist: allCutlistEnforced,
+    pdf,
+    viewer,
+    assembly,
+    drawersGeo,
+  };
 }
 
 export type GenerateEuropeanDrawerOptions = {
@@ -334,23 +588,26 @@ export function generateEuropeanDrawer(
 
   if (isDrawerModeloAActive()) {
     const emptyGeo = buildEuropeanDrawerGeometry(boxWithUseful, model, config, 0, 1);
-    return {
-      systemId: model.id,
-      model,
-      config,
-      valid: false,
-      errors: [
-        "Modelo A ainda activo — desactivar em Admin ? Produtos ? Gavetas para usar o Modelo B.",
-      ],
-      warnings: [],
-      autoFixes: [],
-      geometry: emptyGeo,
-      holes: [],
-      cutlist: [],
-      pdf: emptyPdf(model, config, emptyGeo, box.nome),
-      viewer: { drawers: [] },
-      assembly: getAssemblyRules(model),
-    };
+    return attachIndustrialDocs(
+      {
+        systemId: model.id,
+        model,
+        config,
+        valid: false,
+        errors: [
+          "Modelo A ainda activo — desactivar em Admin ? Produtos ? Gavetas para usar o Modelo B.",
+        ],
+        warnings: [],
+        autoFixes: [],
+        geometry: emptyGeo,
+        holes: [],
+        cutlist: [],
+        pdf: emptyPdf(model, config, emptyGeo, box.nome),
+        viewer: { drawers: [] },
+        assembly: getAssemblyRules(model),
+      },
+      boxWithUseful
+    );
   }
 
   // AutoFix antes da geracao (mesmas regras; so se caixa incompativel)
@@ -369,7 +626,34 @@ export function generateEuropeanDrawer(
     }
   }
 
+  // Fase 10 — Safety Gates pré-pipeline (bloqueio; sem auto-correção)
+  const preSafety = runPrePipelineSafetyGates(config, boxWithUseful, model);
+  if (preSafety.status === "INVALID") {
+    return safetyFailResult(model, config, boxWithUseful, preSafety);
+  }
+
   const built = buildPipeline(boxWithUseful, model, config);
+
+  // Fase 10 — Safety Gates pós-pipeline
+  const postSafety = runPostPipelineSafetyGates({
+    geometry: built.primaryGeometry,
+    holes: built.allHoles,
+    cutlist: built.allCutlist,
+    pdf: built.pdf,
+    viewer: built.viewer,
+  });
+  const safetyReport = mergeSafetyReports(preSafety, postSafety);
+  if (safetyReport.status === "INVALID") {
+    return safetyFailResult(
+      model,
+      config,
+      boxWithUseful,
+      safetyReport,
+      built.primaryGeometry,
+      built.assembly
+    );
+  }
+
   const validation = validateAll({
     box: boxWithUseful,
     model,
@@ -388,40 +672,54 @@ export function generateEuropeanDrawer(
   }));
 
   if (!validation.valid) {
-    return {
-      systemId: model.id,
-      model,
-      config,
-      valid: false,
-      errors: validation.errors.map((e) => e.message),
-      warnings: validation.warnings.map((w) => w.message),
-      autoFixes: autoFixMeta,
-      geometry: built.primaryGeometry,
-      holes: [],
-      cutlist: [],
-      pdf: emptyPdf(model, config, built.primaryGeometry, box.nome),
-      viewer: { drawers: [] },
-      assembly: built.assembly,
-    };
+    return attachIndustrialDocs(
+      {
+        systemId: model.id,
+        model,
+        config,
+        valid: false,
+        errors: validation.errors.map((e) => e.message),
+        warnings: [
+          ...validation.warnings.map((w) => w.message),
+          ...safetyReport.warnings.map((w) => `[safety:${w.gate}/${w.code}] ${w.message}`),
+        ],
+        autoFixes: autoFixMeta,
+        geometry: built.primaryGeometry,
+        holes: [],
+        cutlist: [],
+        pdf: emptyPdf(model, config, built.primaryGeometry, box.nome),
+        viewer: { drawers: [] },
+        assembly: built.assembly,
+        safetyReport: toResultSafetyReport(safetyReport),
+      },
+      boxWithUseful
+    );
   }
 
   void HETTICH_RUNNER_LENGTHS_MM;
 
-  return {
-    systemId: model.id,
-    model,
-    config,
-    valid: true,
-    errors: [],
-    warnings: validation.warnings.map((w) => w.message),
-    autoFixes: autoFixMeta,
-    geometry: built.primaryGeometry,
-    holes: built.allHoles,
-    cutlist: built.allCutlist,
-    pdf: built.pdf,
-    viewer: built.viewer,
-    assembly: built.assembly,
-  };
+  return attachIndustrialDocs(
+    {
+      systemId: model.id,
+      model,
+      config,
+      valid: true,
+      errors: [],
+      warnings: [
+        ...validation.warnings.map((w) => w.message),
+        ...safetyReport.warnings.map((w) => `[safety:${w.gate}/${w.code}] ${w.message}`),
+      ],
+      autoFixes: autoFixMeta,
+      geometry: built.primaryGeometry,
+      holes: built.allHoles,
+      cutlist: built.allCutlist,
+      pdf: built.pdf,
+      viewer: built.viewer,
+      assembly: built.assembly,
+      safetyReport: toResultSafetyReport(safetyReport),
+    },
+    boxWithUseful
+  );
 }
 
 /**

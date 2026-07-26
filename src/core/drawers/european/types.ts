@@ -239,7 +239,7 @@ export type EuropeanDrawerBoxInput = {
   espessura: number;
   gavetas?: number;
   material?: string;
-  /** Profundidade ˙til interna (mm) ó preferida para seleÁ„o Hettich. */
+  /** Profundidade ùtil interna (mm) ù preferida para seleùùo Hettich. */
   profundidadeInternaUtilMm?: number;
   espessuraCosta?: number;
   costaAtiva?: boolean;
@@ -263,6 +263,27 @@ export type EuropeanDrawerResult = {
   /** Dados para o viewer (meshes / animacao). */
   viewer: EuropeanDrawerViewerData;
   assembly: DrawerAssemblyRules;
+  /** Relatorio dos Industrial Safety Gates (Fase 10). */
+  safetyReport?: {
+    status: "VALID" | "INVALID";
+    totalDurationMs: number;
+    errors: Array<{ gate: string; code: string; message: string; piece?: string }>;
+    warnings: Array<{ gate: string; code: string; message: string; piece?: string }>;
+    piecesAffected: string[];
+    gates: Array<{ gate: string; ok: boolean; durationMs: number }>;
+  };
+  /** Documentaùùo industrial completa (Fase 11) ù camada somente-leitura. */
+  docs?: import("./docs").EuropeanIndustrialDocs;
+  /** Export DXF em memùria (Fase 12). */
+  dxf?: import("./dxf").EuropeanDXFExport;
+  /** Modo de desenho tùcnico / vistas industriais (Fase 12). */
+  technical?: import("./dxf").EuropeanTechnicalDrawingMode;
+  /** MC Overlay avancado (Fase 13). */
+  overlay?: import("./overlay").EuropeanOverlay;
+  /** Release Notes industriais automaticas (Fase 14). */
+  releaseNotes?: import("./release").EuropeanReleaseNotes;
+  /** Custo industrial (Fase 18) ó camada somente-leitura. */
+  pricing?: import("../../pricing").IndustrialPricing;
 };
 
 /** Dados de renderizacao do viewer Modelo B. */
