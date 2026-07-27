@@ -3,50 +3,34 @@
  *
  * Feature flags do sistema de gavetas (domínio de design — NÃO industrial / PIMO-TRAK).
  *
- * Modelo A = sistema atual (src/core/drawers/**, UI, cutlist, PDF, furação europeia).
- * Modelo B = Sistema Europeu de Gavetas (esqueleto em src/core/drawers/european/**).
+ * Modelo A = sistema clássico / Sistema Unificado (src/core/drawers/**).
+ * Modelo B = Sistema Europeu (src/core/drawers/european/**) — em restauro: morto em runtime.
  *
- * Regras:
- * - Default: Modelo B ATIVO (Modelo A desactivado em runtime; codigo A preservado).
- * - Desativar NAO apaga codigo nem dados do projeto — apenas ignora o Modelo A em runtime.
+ * Regras (restauro Modelo A):
+ * - Default: Modelo A ACTIVO; Modelo B DESACTIVADO.
+ * - isDrawerModeloAActive() devolve sempre true (único sistema activo).
  * - Nunca tocar em src/industrial/** a partir deste modulo.
  */
 
 export const DRAWER_MODELO_A_STORAGE_KEY = "pimo_drawer_modelo_a_enabled";
 export const DRAWER_MODELO_A_CHANGE_EVENT = "pimo:drawer-modelo-a-changed";
-/** Migração one-shot: após o binding Modelo B, limpa `true` legado no localStorage. */
+/** Legacy key — migração B desactivada no restauro. */
 export const DRAWER_MODELO_B_DEFAULT_MIGRATION_KEY = "pimo_drawer_modelo_b_product_default_v1";
 
-/** Default de produto: Sistema Europeu (Modelo B) activo — Modelo A preservado mas inactivo.
- * Em Vitest mantém Modelo A activo para não quebrar suites unitárias do pipeline legado
- * (os testes do Modelo B fazem mock explícito de isDrawerModeloAActive=false). */
-export const DRAWER_MODELO_A_DEFAULT_ENABLED =
-  typeof process !== "undefined" && process.env.VITEST === "true" ? true : false;
-
-let modeloBDefaultMigrationAttempted = false;
+/** Default de produto: Modelo A activo (Sistema Unificado). */
+export const DRAWER_MODELO_A_DEFAULT_ENABLED = true;
 
 /**
- * Garante que um `localStorage=true` antigo (pré-binding B) não mantém o Modelo A
- * activo por omissão. Corre uma vez por browser; depois o Admin pode reactivar A.
- * Em Vitest não corre (suites A dependem do default de teste).
+ * Migração B desactivada — Modelo A é o único sistema activo.
+ * Mantida como no-op para não quebrar imports/testes existentes.
  */
 export function applyModeloBProductDefaultMigration(): void {
-  if (modeloBDefaultMigrationAttempted) return;
-  modeloBDefaultMigrationAttempted = true;
-  if (typeof process !== "undefined" && process.env.VITEST === "true") return;
-  if (typeof localStorage === "undefined") return;
-  try {
-    if (localStorage.getItem(DRAWER_MODELO_B_DEFAULT_MIGRATION_KEY) === "1") return;
-    localStorage.setItem(DRAWER_MODELO_A_STORAGE_KEY, "false");
-    localStorage.setItem(DRAWER_MODELO_B_DEFAULT_MIGRATION_KEY, "1");
-  } catch {
-    // ignore quota / private mode
-  }
+  // no-op: restauro Modelo A
 }
 
 /** Reset interno para testes unitários da migração. */
 export function __resetModeloBProductDefaultMigrationForTests(): void {
-  modeloBDefaultMigrationAttempted = false;
+  // no-op
 }
 
 function readStorage(): boolean | null {
@@ -73,39 +57,41 @@ function writeStorage(enabled: boolean): void {
 
 /**
  * Indica se o Sistema Atual de Gavetas (Modelo A) está ativo.
- * Quando false: UI, geração, furos, PDF e reconhecimento de gavetas ficam inativos.
+ * Restauro: sempre true — Modelo B morto em runtime.
  */
 export function isDrawerModeloAActive(): boolean {
-  applyModeloBProductDefaultMigration();
-  const stored = readStorage();
-  return stored ?? DRAWER_MODELO_A_DEFAULT_ENABLED;
+  return true;
 }
 
 /**
  * Ativa ou desativa o Modelo A.
- * @param enabled true = sistema atual ativo; false = completamente inativo (código preservado).
+ * Restauro: ignora desactivação — Modelo A permanece sempre activo.
  */
 export function setDrawerModeloAEnabled(enabled: boolean): void {
-  writeStorage(enabled);
+  writeStorage(true);
   if (typeof window !== "undefined") {
     window.dispatchEvent(
       new CustomEvent(DRAWER_MODELO_A_CHANGE_EVENT, {
-        detail: { enabled },
+        detail: { enabled: true },
       })
     );
   }
+  void enabled;
+  void readStorage;
 }
 
 /**
- * Atalho semântico para o toggle Admin:
- * "Desativar Sistema Atual de Gavetas (Modelo A)" marcado = Modelo A desligado.
+ * Atalho semântico para o toggle Admin.
+ * Restauro: nunca pedido — A está sempre activo.
  */
 export function isDrawerModeloADeactivationRequested(): boolean {
-  return !isDrawerModeloAActive();
+  return false;
 }
 
 export function setDrawerModeloADeactivated(deactivated: boolean): void {
-  setDrawerModeloAEnabled(!deactivated);
+  // Restauro: ignorar pedido de desactivação
+  setDrawerModeloAEnabled(true);
+  void deactivated;
 }
 
 /**
@@ -118,15 +104,15 @@ export function subscribeDrawerModeloAFlags(listener: (_enabled: boolean) => voi
   const onCustom = (event: Event) => {
     const detail = (event as CustomEvent<{ enabled?: boolean }>).detail;
     if (typeof detail?.enabled === "boolean") {
-      listener(detail.enabled);
+      listener(true);
       return;
     }
-    listener(isDrawerModeloAActive());
+    listener(true);
   };
 
   const onStorage = (event: StorageEvent) => {
     if (event.key !== DRAWER_MODELO_A_STORAGE_KEY) return;
-    listener(isDrawerModeloAActive());
+    listener(true);
   };
 
   window.addEventListener(DRAWER_MODELO_A_CHANGE_EVENT, onCustom);
