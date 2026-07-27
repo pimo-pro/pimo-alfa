@@ -12,7 +12,6 @@ import FerragensAdminPage from "../components/admin/FerragensAdminPage";
 import SystemSettingsBase from "../components/admin/SystemSettingsBase";
 import DrawerRulesAdminPage from "../components/admin/DrawerRulesAdminPage";
 import DrawerSystemUnifiedAdminPage from "../components/admin/DrawerSystemUnifiedAdminPage";
-import DrawersAdminHubPage from "../components/admin/DrawersAdminHubPage";
 import { DivSepRulesAdminPage } from "../admin/rules/divSepRules/DivSepRulesAdminPage";
 import { InvariantRulesAdminPage } from "../admin/invariants/InvariantRulesAdminPage";
 import { DoorRulesAdminPage } from "../admin/rules/doorRules/DoorRulesAdminPage";
@@ -44,7 +43,6 @@ type AdminTab =
   | "Project Progress"
   | "Painel Referência"
   | "System Settings"
-  | "Gavetas"
   | "Regras das Gavetas"
   | "Configurações das Gavetas (Sistema Unificado)"
   | "DIV/SEP Rules"
@@ -69,7 +67,6 @@ const DEFAULT_ADMIN_TAB: AdminTab = "Gestão de Materiais";
 
 const adminMenu: AdminMenuEntry[] = [
   { type: "group", label: "Produtos" },
-  { type: "item", id: "Gavetas", label: "Gavetas" },
   {
     type: "item",
     id: "Configurações das Gavetas (Sistema Unificado)",
@@ -127,7 +124,6 @@ const menuIconByTab: Partial<Record<AdminTab, Parameters<typeof Icon>[0]["name"]
   "Gestor de Ficheiros": "adminArchive",
   "Deploy": "adminLab",
   "System Settings": "adminTools",
-  Gavetas: "adminRuler",
   "Regras das Gavetas": "adminRuler",
   "Configurações das Gavetas (Sistema Unificado)": "adminRuler",
   "DIV/SEP Rules": "adminRuler",
@@ -275,8 +271,6 @@ export default function AdminPanel() {
             <DeployAdminPage />
           ) : active === "System Settings" ? (
             <SystemSettingsBase />
-          ) : active === "Gavetas" ? (
-            <DrawersAdminHubPage />
           ) : active === "Regras das Gavetas" ? (
             <DrawerRulesAdminPage />
           ) : active === "Configurações das Gavetas (Sistema Unificado)" ? (

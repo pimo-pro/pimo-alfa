@@ -12,7 +12,6 @@ import { resolveDrawerErgonomicsRules } from "../core/drawers/drawerErgonomicsCo
 import { isErgonomicDrawerHeightMode } from "../core/drawers/drawerHeightModeTypes";
 import { devLogger } from "../utils/devLogger";
 import { getDefaultOfficialMaterial, resolveCostaThicknessMm } from "../core/materials/materials.api";
-import { getProfundidadeInternaUtilMm } from "../core/box/boxDepthHelpers";
 import {
   computeWardrobeLocalLayout,
   getWardrobeDoorCountForWidth,

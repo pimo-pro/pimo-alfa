@@ -35,7 +35,6 @@ import MePage from "./pages/MePage";
 import ProjectsPage from "./pages/ProjectsPage";
 import ProjectsViewerPage from "./pages/ProjectsViewerPage";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
-import KitchenPlannerPage from "./pages/KitchenPlannerPage";
 import RegisterPage from "./pages/RegisterPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import UsersAdminPage from "./pages/admin/UsersAdminPage";
@@ -463,7 +462,6 @@ export default function App() {
             />
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/projects/:id" element={<ProjectDetailPage />} />
-            <Route path="/kitchen-planner" element={<KitchenPlannerPage />} />
             <Route
               path="/admin/users"
               element={

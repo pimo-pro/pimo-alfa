@@ -38,12 +38,6 @@ export default function Navbar() {
             </span>
                 <span>Projects</span>
               </NavLink>
-              <NavLink to="/kitchen-planner" className={({ isActive }) => `ui-nav-link${isActive ? " ui-nav-link--active" : ""}`}>
-                <span className="ui-nav-link__icon" aria-hidden>
-                  <Icon name="grid" size={16} aria-hidden />
-                </span>
-                <span>Kitchen Planner</span>
-              </NavLink>
             </>
           ) : null}
           {!authenticated ? (

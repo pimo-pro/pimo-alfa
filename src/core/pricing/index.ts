@@ -55,15 +55,6 @@ export {
 } from "./marginCalculator";
 
 export {
-  buildIndustrialPricing,
-  buildKitchenLibraryPricing,
-  DEFAULT_INDUSTRIAL_PRICING_CONFIG,
-  type IndustrialPricing,
-  type IndustrialPricingConfig,
-  type PricingBuildOptions,
-} from "./pricingBuilder";
-
-export {
   buildPricingReport,
   formatPricingReportText,
   type PricingReport,
