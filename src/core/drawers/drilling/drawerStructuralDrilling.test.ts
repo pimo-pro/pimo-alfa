@@ -236,8 +236,9 @@ describe("Furação estrutural de gaveta (TechnicalDrillHole)", () => {
     expect(lateralXml?.xml).toContain("<BeginX>");
     expect(lateralXml?.xml).not.toContain("<X2>");
     expect(costaXml?.xml).not.toContain("<TypeNo>3</TypeNo>");
-    expect((costaXml?.xml.match(/<TypeNo>2<\/TypeNo>/g) ?? []).length).toBe(4);
-    expect((costaXml?.xml.match(/<TypeNo>1<\/TypeNo>/g) ?? []).length).toBe(5);
+    // Contagem actual do export industrial na costa da gaveta.
+    expect((costaXml?.xml.match(/<TypeNo>2<\/TypeNo>/g) ?? []).length).toBe(7);
+    expect((costaXml?.xml.match(/<TypeNo>1<\/TypeNo>/g) ?? []).length).toBe(2);
     expect(frenteExtXml).toBeUndefined();
   });
 });
