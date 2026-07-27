@@ -8,13 +8,37 @@ export interface IndustrialLayoutProps {
 
 export function IndustrialLayout({ title, description, children }: IndustrialLayoutProps) {
   return (
-    <main style={{ display: 'grid', gap: 24, padding: 24 }}>
+    <main style={{ display: 'grid', gap: 20, padding: 24, color: '#f1f5f9', lineHeight: 1.5 }}>
       <header>
-        <p style={{ margin: 0, color: '#64748b', fontSize: 12, letterSpacing: 1, textTransform: 'uppercase' }}>
+        <p
+          style={{
+            margin: 0,
+            color: '#a3b2c2',
+            fontSize: 12,
+            fontWeight: 600,
+            letterSpacing: 1,
+            textTransform: 'uppercase',
+            lineHeight: 1.5,
+          }}
+        >
           PIMO-TRAK Industrial
         </p>
-        <h1 style={{ margin: '4px 0 0', fontSize: 28 }}>{title}</h1>
-        {description ? <p style={{ margin: '8px 0 0', color: '#475569' }}>{description}</p> : null}
+        <h1 style={{ margin: '4px 0 0', fontSize: 28, fontWeight: 700, color: '#f1f5f9', lineHeight: 1.5 }}>
+          {title}
+        </h1>
+        {description ? (
+          <p
+            style={{
+              margin: '10px 0 0',
+              fontSize: 12,
+              fontWeight: 400,
+              color: '#a3b2c2',
+              lineHeight: 1.5,
+            }}
+          >
+            {description}
+          </p>
+        ) : null}
       </header>
       {children}
     </main>

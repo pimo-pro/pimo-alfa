@@ -1,5 +1,9 @@
 import type { StationToolMode } from './stationTypes';
-import { industrialBtnStyle } from '@/industrial/ui/layouts/industrialStyles';
+import {
+  INDUSTRIAL_CONTROL_CLASS,
+  ensureIndustrialInteractionStyles,
+  industrialBtnStyle,
+} from '@/industrial/ui/layouts/industrialStyles';
 
 interface StationToolbarProps {
   toolMode: StationToolMode;
@@ -20,25 +24,48 @@ export default function StationToolbar({
   onToggleSidebar,
   sidebarOpen = true,
 }: StationToolbarProps) {
+  ensureIndustrialInteractionStyles();
+
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-      <button type="button" onClick={() => onToolMode('move')} style={industrialBtnStyle(toolMode === 'move')}>
+      <button
+        type="button"
+        className={INDUSTRIAL_CONTROL_CLASS}
+        onClick={() => onToolMode('move')}
+        style={industrialBtnStyle(toolMode === 'move')}
+      >
         Mover
       </button>
-      <button type="button" onClick={() => onToolMode('rotate')} style={industrialBtnStyle(toolMode === 'rotate')}>
+      <button
+        type="button"
+        className={INDUSTRIAL_CONTROL_CLASS}
+        onClick={() => onToolMode('rotate')}
+        style={industrialBtnStyle(toolMode === 'rotate')}
+      >
         Rodar
       </button>
-      <button type="button" onClick={onToggleSnap} style={industrialBtnStyle(snapEnabled)}>
-        Snap {snapEnabled ? 'ON' : 'OFF'}
+      <button
+        type="button"
+        className={INDUSTRIAL_CONTROL_CLASS}
+        onClick={onToggleSnap}
+        style={industrialBtnStyle(snapEnabled)}
+      >
+        Snap
       </button>
       {onReload ? (
-        <button type="button" onClick={onReload} style={industrialBtnStyle(false)}>
-          Recarregar
+        <button type="button" className={INDUSTRIAL_CONTROL_CLASS} onClick={onReload} style={industrialBtnStyle(false)}>
+          Actualizar
         </button>
       ) : null}
       {onToggleSidebar ? (
-        <button type="button" onClick={onToggleSidebar} style={industrialBtnStyle(sidebarOpen)}>
-          {sidebarOpen ? 'Ocultar histórico' : 'Mostrar histórico'}
+        <button
+          type="button"
+          className={INDUSTRIAL_CONTROL_CLASS}
+          title="Ocultar/mostrar histórico"
+          onClick={onToggleSidebar}
+          style={industrialBtnStyle(sidebarOpen)}
+        >
+          Histórico
         </button>
       ) : null}
     </div>

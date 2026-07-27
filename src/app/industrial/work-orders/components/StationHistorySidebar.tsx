@@ -2,7 +2,12 @@ import type { ReactNode } from 'react';
 
 import { getWorkOrderPieceDisplay } from '@/industrial/work-orders/resolveWorkOrderPiece';
 import type { IndustrialWorkOrder, IndustrialWorkOrderTask } from '@/industrial/work-orders/types';
-import { industrialListItemStyle, industrialSectionTitleStyle } from '@/industrial/ui/layouts/industrialStyles';
+import {
+  INDUSTRIAL_LIST_ITEM_CLASS,
+  ensureIndustrialInteractionStyles,
+  industrialListItemStyle,
+  industrialSectionTitleStyle,
+} from '@/industrial/ui/layouts/industrialStyles';
 
 interface StationHistorySidebarProps {
   tasks: IndustrialWorkOrderTask[];
@@ -24,6 +29,7 @@ function taskProjectId(task: IndustrialWorkOrderTask, orders: IndustrialWorkOrde
 }
 
 export default function StationHistorySidebar({ tasks, orders, eventLog }: StationHistorySidebarProps) {
+  ensureIndustrialInteractionStyles();
   const completed = tasks.filter((t) => t.status === 'completed' || t.status === 'rejected');
 
   const renderTask = (task: IndustrialWorkOrderTask) => {
@@ -53,8 +59,12 @@ export default function StationHistorySidebar({ tasks, orders, eventLog }: Stati
         <ul style={{ margin: 0, padding: 0, display: 'grid', gap: 4 }}>
           {tasks
             .filter((t) => t.status === 'pending' || t.status === 'in_progress')
-            .map((task) => (
-              <li key={task.id} style={industrialListItemStyle}>
+            .map((task, index) => (
+              <li
+                key={task.id}
+                className={INDUSTRIAL_LIST_ITEM_CLASS}
+                style={{ ...industrialListItemStyle, animationDelay: `${index * 30}ms` }}
+              >
                 {renderTask(task)}
               </li>
             ))}
@@ -66,8 +76,12 @@ export default function StationHistorySidebar({ tasks, orders, eventLog }: Stati
           {completed.length === 0 ? (
             <li style={{ fontSize: 12, color: '#94a3b8' }}>Sem histórico.</li>
           ) : (
-            completed.slice(0, 12).map((task) => (
-              <li key={task.id} style={industrialListItemStyle}>
+            completed.slice(0, 12).map((task, index) => (
+              <li
+                key={task.id}
+                className={INDUSTRIAL_LIST_ITEM_CLASS}
+                style={{ ...industrialListItemStyle, animationDelay: `${index * 30}ms` }}
+              >
                 {renderTask(task)}
               </li>
             ))
@@ -80,8 +94,12 @@ export default function StationHistorySidebar({ tasks, orders, eventLog }: Stati
           {eventLog.length === 0 ? (
             <li style={{ fontSize: 12, color: '#94a3b8' }}>Sem eventos registados.</li>
           ) : (
-            eventLog.slice(0, 10).map((event) => (
-              <li key={event.id} style={industrialListItemStyle}>
+            eventLog.slice(0, 10).map((event, index) => (
+              <li
+                key={event.id}
+                className={INDUSTRIAL_LIST_ITEM_CLASS}
+                style={{ ...industrialListItemStyle, animationDelay: `${index * 30}ms` }}
+              >
                 <div style={{ fontWeight: 600 }}>{event.type}</div>
                 <div style={{ color: '#94a3b8', marginTop: 2 }}>
                   {new Date(event.at).toLocaleString('pt-PT')}

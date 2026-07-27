@@ -1,7 +1,11 @@
 import { Link, useLocation } from 'react-router-dom';
 
 import { INDUSTRIAL_STATIONS, STATION_LABELS, type IndustrialStation } from '@/industrial/work-orders/types';
-import { industrialBtnStyle } from '@/industrial/ui/layouts/industrialStyles';
+import {
+  INDUSTRIAL_CONTROL_CLASS,
+  ensureIndustrialInteractionStyles,
+  industrialBtnStyle,
+} from '@/industrial/ui/layouts/industrialStyles';
 
 interface StationSidebarProps {
   activeStation: IndustrialStation;
@@ -11,13 +15,21 @@ interface StationSidebarProps {
   chatOpen?: boolean;
 }
 
-function StationIcon({ label }: { label: string }) {
-  return (
-    <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 0.3, textTransform: 'uppercase' }}>
-      {label.slice(0, 3)}
-    </span>
-  );
-}
+const RAIL_LABEL_STYLE = {
+  fontSize: 9,
+  fontWeight: 700,
+  letterSpacing: 0.3,
+  textTransform: 'uppercase' as const,
+};
+
+const STATION_RAIL_LABEL: Record<IndustrialStation, string> = {
+  warehouse: 'SUP',
+  nesting: 'NES',
+  drill: 'DRI',
+  orlar: 'ORL',
+  montagem: 'MON',
+  embalagem: 'EMB',
+};
 
 export default function StationSidebar({
   activeStation,
@@ -26,6 +38,7 @@ export default function StationSidebar({
   onToggleChat,
   chatOpen = false,
 }: StationSidebarProps) {
+  ensureIndustrialInteractionStyles();
   const location = useLocation();
 
   return (
@@ -35,6 +48,8 @@ export default function StationSidebar({
         gap: 8,
         justifyItems: 'center',
         alignContent: 'start',
+        color: '#f1f5f9',
+        lineHeight: 1.5,
       }}
       aria-label="Navegação de estações"
     >
@@ -46,6 +61,8 @@ export default function StationSidebar({
             key={station}
             to={path}
             title={STATION_LABELS[station]}
+            className={INDUSTRIAL_CONTROL_CLASS}
+            data-active={active ? 'true' : undefined}
             style={{
               ...industrialBtnStyle(active),
               width: 40,
@@ -54,9 +71,10 @@ export default function StationSidebar({
               placeItems: 'center',
               textDecoration: 'none',
               padding: 0,
+              ...RAIL_LABEL_STYLE,
             }}
           >
-            <StationIcon label={STATION_LABELS[station]} />
+            {STATION_RAIL_LABEL[station]}
           </Link>
         );
       })}
@@ -66,6 +84,7 @@ export default function StationSidebar({
       {onToggleNotifications ? (
         <button
           type="button"
+          className={INDUSTRIAL_CONTROL_CLASS}
           title="Notificações"
           onClick={onToggleNotifications}
           style={{
@@ -74,9 +93,10 @@ export default function StationSidebar({
             height: 40,
             padding: 0,
             position: 'relative',
+            ...RAIL_LABEL_STYLE,
           }}
         >
-          🔔
+          NTF
           {notificationCount > 0 ? (
             <span
               style={{
@@ -102,6 +122,7 @@ export default function StationSidebar({
       {onToggleChat ? (
         <button
           type="button"
+          className={INDUSTRIAL_CONTROL_CLASS}
           title="Chat industrial"
           onClick={onToggleChat}
           style={{
@@ -109,15 +130,18 @@ export default function StationSidebar({
             width: 40,
             height: 40,
             padding: 0,
+            ...RAIL_LABEL_STYLE,
           }}
+          data-active={chatOpen ? 'true' : undefined}
         >
-          💬
+          CHT
         </button>
       ) : null}
 
       <Link
         to="/industrial/work-orders"
-        title="Lista de ordens"
+        title="Ordens de trabalho"
+        className={INDUSTRIAL_CONTROL_CLASS}
         style={{
           ...industrialBtnStyle(false),
           width: 40,
@@ -126,10 +150,10 @@ export default function StationSidebar({
           placeItems: 'center',
           textDecoration: 'none',
           padding: 0,
-          fontSize: 14,
+          ...RAIL_LABEL_STYLE,
         }}
       >
-        ≡
+        WOS
       </Link>
     </nav>
   );

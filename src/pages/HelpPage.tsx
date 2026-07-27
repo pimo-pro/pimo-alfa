@@ -368,6 +368,102 @@ const SECTIONS: Section[] = [
       { type:"warning", text:"Não confundir Orçamentos com portes: logística (€/kg) é independente dos portes P3.6." },
     ],
   },
+  {
+    id:"sistema-industrial",
+    icon:"engineering",
+    label:"Sistema Industrial",
+    accent:C.system,
+    title:"Sistema Industrial — Documentação Completa",
+    intro:"O módulo Industrial do PIMO Criativo consolida o chão de fábrica em painéis visuais (estação, operador e supervisor): do QR ao runtime completo, sem alterar APIs, rotas ou lógica de execução existente.",
+    subsections:[
+      {
+        title:"Introdução",
+        steps:[
+          { title:"O que é o sistema industrial", text:"Camada visual unificada sobre dados já presentes no UI: work-orders, estações, peças, operadores, custos estimados, produtividade e consolidação final." },
+          { title:"Onde aparece", text:"Estações (/industrial/work-orders/…), sessão do operador (/industrial/operador) e dashboard do supervisor (/industrial/supervisor)." },
+          { title:"Princípio KHALED‑PRO", text:"Tudo é cosmético + leitura leve. As APIs de QR, execução, dados e work-orders permanecem intactas." },
+        ],
+      },
+      {
+        title:"Fases Visuais (1 → 6)",
+        steps:[
+          { title:"Fase Visual 1 — Página principal", text:"Layout industrial de entrada com colunas e canvas stub, alinhado ao shell das estações." },
+          { title:"Fase Visual 2 — Shell e rails", text:"Reforço de bordas, toolbar e labels curtos (SUP/NES/DRI…) nos rails." },
+          { title:"Fase Visual 3 — Tipografia e densidade", text:"Espaçamento, tipografia e controlos com foco industrial consistente." },
+          { title:"Fase Visual 4 — Motion", text:"Transições e entradas suaves em painéis, listas e rails activos." },
+          { title:"Fase Visual 5 — Clarity", text:"Contraste, sombras e densidades para leitura rápida no chão de fábrica." },
+          { title:"Fase Visual 6 — Vision Tracking", text:"Glows, bordas de fluxo e ênfase na peça seleccionada no canvas." },
+        ],
+      },
+      {
+        title:"Fases Industriais (1 → 12)",
+        steps:[
+          { title:"Fase 1 — QR / execução / dados", text:"Chips visuais de QR e estados waiting/in-progress/completed/blocked sobre dados UI." },
+          { title:"Fase 2 — Work Orders Engine", text:"Timeline NES→EMB, progresso, ligação peça→estação, alertas e resumo no supervisor." },
+          { title:"Fase 3 — Productivity Engine", text:"Métricas, heatmap, score, timeline e avisos de produtividade (estimativas visuais)." },
+          { title:"Fase 4 — Cost Engine", text:"Breakdown, heatmap e resumo de custos estimados por etapa/estação/operador." },
+          { title:"Fase 5 — Real Execution Engine", text:"Fluxo actual/seguinte/concluída, sinais e timeline de execução visual." },
+          { title:"Fase 6 — Real Data Engine", text:"Indicadores de dados reais (carregados/pendentes/incompletos/inconsistentes)." },
+          { title:"Fase 7 — Full Production Engine", text:"Fluxo de produção, sinais, timeline e resumo por estação/operador/etapa." },
+          { title:"Fase 8 — Real Integration Engine", text:"Mapa peça→estação→operador→fluxo→produção e sinais de integração." },
+          { title:"Fase 9 — Full Industrial Runtime", text:"Runtime activo/pendente/concluído/bloqueado com timeline e resumo." },
+          { title:"Fase 10 — Real Operations Engine", text:"Operações activas/pendentes/concluídas/bloqueadas com sinais e resumo." },
+          { title:"Fase 11 — Industrial Performance Engine", text:"Eficiência, velocidade, estabilidade, qualidade e heatmap de performance." },
+          { title:"Fase 12 — Final Industrial Consolidation", text:"Mapa de consolidação de todos os motores visuais e avisos finais de estabilidade." },
+        ],
+      },
+      {
+        title:"Fluxos Industriais",
+        steps:[
+          { title:"QR", text:"Indicador válido/inválido/pendente a partir da peça seleccionada e do código no painel." },
+          { title:"Dados reais", text:"Estado visual dos dados já carregados no UI (snapshot, secções, peças)." },
+          { title:"Work-orders", text:"Timeline industrial e progresso derivados de operationType/status existentes." },
+          { title:"Produção", text:"Representação activa/pendente/concluída/bloqueada sem alterar produção real." },
+          { title:"Runtime", text:"Visão do runtime industrial completo, apenas cosmético." },
+          { title:"Integração", text:"Ligações visuais entre peça, estação, operador, fluxo e produção." },
+          { title:"Performance", text:"Scores e heatmaps calculados no render a partir de estados UI." },
+          { title:"Operações", text:"Sinais e timelines operacionais espelhados no painel." },
+          { title:"Consolidação", text:"Resumo final que agrega todos os motores visuais no supervisor." },
+        ],
+      },
+      {
+        title:"Como funciona no UI",
+        steps:[
+          { title:"Só leitura de estado existente", text:"Os painéis leem props/hooks já ligados (selectedTask, pieces, filteredTasks, snapshot)." },
+          { title:"Sem APIs novas", text:"Nenhum endpoint, handler ou caminho core/* foi criado ou reescrito nestas fases." },
+          { title:"Estimativas visuais", text:"Tempos e custos são constantes/heurísticas de UI para leitura humana — não são facturação real." },
+        ],
+        alerts:[
+          { type:"tip", text:"Use o supervisor para a visão macro; a estação e o operador mostram o mesmo vocabulário visual no contexto local." },
+        ],
+      },
+      {
+        title:"Garantias Industriais",
+        steps:[
+          { title:"Sem APIs novas", text:"QR, execução, dados, work-orders, custos e produção reais mantêm-se intactos." },
+          { title:"Sem rotas novas", text:"As rotas /industrial existentes não foram alteradas." },
+          { title:"Sem lógica nova de execução", text:"StationPageShell, hooks de operador/supervisor e backend não foram modificados nestas camadas." },
+          { title:"Impacto operacional zero", text:"Alterações cosméticas e documentais — o chão de fábrica continua a operar como antes." },
+        ],
+        alerts:[
+          { type:"best-practice", text:"Qualquer integração real futura deve ligar-se às APIs existentes; as camadas visuais já estão preparadas para reflectir esses estados." },
+          { type:"warning", text:"Não interpretar scores/custos/tempos desta camada como valores financeiros ou SLA reais." },
+        ],
+      },
+      {
+        title:"Finalização",
+        steps:[
+          { title:"Sistema completo", text:"Fases Visuais 1–6 e Industriais 1–12 estão consolidadas nos painéis StationPanel, OperatorSessionPanel e SupervisorMainArea." },
+          { title:"Pronto para integração real futura", text:"A documentação e a UI visual estão fechadas; a ligação a pipelines reais pode evoluir sem reescrever estes painéis." },
+          { title:"Tag de finalização", text:"Release industrial final documentada no Centro de Ajuda e nos comentários internos (Finalization Layer)." },
+        ],
+      },
+    ],
+    steps:[],
+    alerts:[
+      { type:"tip", text:"Esta secção descreve apenas a camada visual industrial. A execução real continua nas APIs e fluxos já existentes do PIMO." },
+    ],
+  },
 ];
 
 // ── Componentes internos ──────────────────────────────────────────────────────
@@ -505,7 +601,7 @@ export default function HelpPage() {
           </p>
           {viewMode === "user" ? (
           <div style={{ display:"flex",gap:16,marginTop:20,flexWrap:"wrap" }}>
-            {[["11 secções","cobrindo todo o fluxo",C.accent],["Baseado em","código real",C.green],["PT-PT","português europeu",C.purple]].map(([a,b,c])=>(
+            {[["12 secções","cobrindo todo o fluxo",C.accent],["Baseado em","código real",C.green],["PT-PT","português europeu",C.purple]].map(([a,b,c])=>(
               <div key={a} style={{ display:"flex",alignItems:"center",gap:6,fontSize:11,color:C.muted }}>
                 <div style={{ width:6,height:6,borderRadius:"50%",background:c as string,flexShrink:0 }}/>
                 <strong style={{ color:C.text }}>{a}</strong> — {b}

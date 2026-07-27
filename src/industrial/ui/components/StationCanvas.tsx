@@ -4,7 +4,7 @@ import { Edges, OrbitControls, PerspectiveCamera } from '@react-three/drei';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import * as THREE from 'three';
 
-import { industrialCanvasShellStyle } from '@/industrial/ui/layouts/industrialStyles';
+import { industrialCanvasShellStyle, INDUSTRIAL_CANVAS_MOTION_CLASS, INDUSTRIAL_HINT_MOTION_CLASS, ensureIndustrialInteractionStyles } from '@/industrial/ui/layouts/industrialStyles';
 
 import StationChatOverlay from './StationChatOverlay';
 import StationNotificationsOverlay from './StationNotificationsOverlay';
@@ -92,8 +92,14 @@ function StationScene({
             }}
           >
             <boxGeometry args={[w, h, d]} />
-            <meshStandardMaterial color={color} roughness={0.65} metalness={0.05} />
-            {selected || piece.highlighted ? <Edges color="#38bdf8" /> : null}
+            <meshStandardMaterial
+              color={color}
+              roughness={0.65}
+              metalness={0.05}
+              emissive={selected || piece.highlighted ? '#1d4ed8' : '#000000'}
+              emissiveIntensity={selected || piece.highlighted ? 0.28 : 0}
+            />
+            {selected || piece.highlighted ? <Edges color="#60a5fa" /> : null}
           </mesh>
         );
       })}
@@ -126,19 +132,41 @@ export default function StationCanvas({
 
   const displayPieces = useMemo(() => pieces.slice(0, 24), [pieces]);
 
+  ensureIndustrialInteractionStyles();
+
   return (
-    <div style={industrialCanvasShellStyle}>
+    <div
+      className={INDUSTRIAL_CANVAS_MOTION_CLASS}
+      style={{
+        ...industrialCanvasShellStyle,
+        boxShadow: '0 0 0 1px #334155, 0 6px 18px rgba(0,0,0,0.55)',
+        transition: 'all 140ms ease-out',
+      }}
+    >
       <div
+        className={INDUSTRIAL_HINT_MOTION_CLASS}
         style={{
           position: 'absolute',
           top: 8,
           left: 8,
           zIndex: 2,
-          fontSize: 11,
-          color: '#94a3b8',
-          background: 'rgba(2,6,23,0.7)',
-          padding: '4px 8px',
-          borderRadius: 6,
+          fontSize: 12,
+          fontWeight: 400,
+          color: '#a3b2c2',
+          background: selectedPieceId ? 'rgba(255,255,255,0.06)' : 'rgba(2,6,23,0.78)',
+          padding: '6px 8px',
+          borderRadius: 8,
+          border: '1px solid var(--border, #334155)',
+          borderLeft: selectedPieceId ? '2px solid rgba(59,130,246,0.45)' : '1px solid var(--border, #334155)',
+          lineHeight: 1.5,
+          boxShadow: selectedPieceId
+            ? '0 0 0 2px rgba(59,130,246,0.45), 0 0 0 1px #334155, 0 6px 18px rgba(0,0,0,0.55)'
+            : '0 0 0 1px #334155, 0 6px 18px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.04)',
+          outline: selectedPieceId ? '2px solid rgba(59,130,246,0.55)' : undefined,
+          backdropFilter: 'blur(2px)',
+          WebkitBackdropFilter: 'blur(2px)',
+          transition: 'all 140ms ease-out',
+          transform: selectedPieceId ? 'translateY(-2px)' : undefined,
         }}
       >
         {stationLabel} · {selectedPieceId ? `Peça ${selectedPieceId}` : hint} · Modo {toolMode}
