@@ -239,6 +239,14 @@ export type PimoViewerApi = {
     _drawerLayerItems?: import("../models/BoxLayers").DrawerLayerItem[]
   ) => void;
   updateFixedFrontMaterial?: (_boxId: string, _materialId: string) => void;
+  /** Facade: porta | frente gaveta | frente fixa. */
+  updateFrontMaterial?: (
+    _partType: "door" | "drawer-front" | "fixed-front",
+    _boxId: string,
+    _materialId: string,
+    _layerId?: string,
+    _drawerLayerItems?: import("../models/BoxLayers").DrawerLayerItem[]
+  ) => void;
   setMaterialMode?: (_mode: "performance" | "showcase" | "realistic") => void;
   getMaterialMode?: () => "performance" | "showcase" | "realistic";
   setReflectionsEnabled?: (_enabled: boolean) => void;

@@ -1,11 +1,21 @@
 {
-  "updatedAt": "2026-07-27T21:23:52.805Z",
+  "updatedAt": "2026-07-27T22:33:15.510Z",
   "news": [
+    {
+      "version": "v6.0728.2332",
+      "title": "Finalizacao da remocao do Modelo B, restauracao completa do Modelo A, limpeza de gates, QA validado — pronto para pro...",
+      "description": "Finalizacao da remocao do Modelo B, restauracao completa do Modelo A, limpeza de gates, QA validado — pronto para producao.",
+      "publishedAt": "2026-07-27T22:33:15.433Z",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "update",
+      "commit": "c6ceecd"
+    },
     {
       "version": "v6.0727.2223",
       "title": "Finalizacao da remocao do Modelo B, restauracao completa do Modelo A, limpeza de gates, QA validado — pronto para pro...",
       "description": "Finalizacao da remocao do Modelo B, restauracao completa do Modelo A, limpeza de gates, QA validado — pronto para producao.",
-      "publishedAt": "2026-07-27T21:23:52.706Z",
+      "publishedAt": "2026-07-27T22:25:29+01:00",
       "type": "update",
       "author": "pimo-pro",
       "icon": "update",

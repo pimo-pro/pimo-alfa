@@ -1,7 +1,7 @@
 {
-  "version": "v6.0727.2223",
-  "updatedAt": "27.07.2026 22:23",
-  "tag": "v6.0726.3D-B-FIX",
-  "commit": "942114f01c94180fb837a6ca9dbaf8b8db635af8",
-  "deployedAt": ""
+    "updatedAt":  "27.07.2026 23:32",
+    "commit":  "cc36ba2ee1179b546621bf8791dd467d35959e1b",
+    "version":  "v6.0728.2332",
+    "tag":  "v6.0728.2332",
+    "deployedAt":  ""
 }

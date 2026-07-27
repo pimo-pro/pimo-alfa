@@ -525,7 +525,8 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
                     viewerApi?.updateDoorMaterial?.(boxId, doorLayerId, materialName);
                     showToast("Material aplicado à porta.", "info");
                   }}
-                  onDrawerMaterialChange={() => {
+                  onDrawerMaterialChange={(boxId, drawerLayerId, materialName) => {
+                    viewerApi?.updateDrawerMaterial?.(boxId, drawerLayerId, materialName);
                     showToast("Material aplicado à gaveta.", "info");
                   }}
                   onFixedFrontMaterialChange={(boxId, materialName) => {

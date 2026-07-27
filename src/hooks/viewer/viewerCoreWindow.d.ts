@@ -399,6 +399,13 @@ declare global {
       setBoxNoBackPanel?: (boxId: string, enabled: boolean) => boolean;
       updateDoorMaterial?: (boxId: string, doorLayerId: string, materialName: string) => void;
       updateDrawerMaterial?: (boxId: string, drawerLayerId: string, materialName: string) => void;
+      updateFixedFrontMaterial?: (boxId: string, materialName: string) => void;
+      updateFrontMaterial?: (
+        partType: "door" | "drawer-front" | "fixed-front",
+        boxId: string,
+        materialName: string,
+        layerId?: string
+      ) => void;
       setMaterialMode?: (mode: unknown) => void;
       getMaterialMode?: () => unknown;
       setMaterialQuality?: (quality: unknown) => void;

@@ -778,6 +778,10 @@ export class BoxSceneController {
         material,
         drillMarkersByPanel: opts.drillMarkersByPanel,
         materialName,
+        frenteFixaMaterialId:
+          typeof opts.frenteFixaMaterialId === "string" && opts.frenteFixaMaterialId.trim()
+            ? opts.frenteFixaMaterialId.trim()
+            : undefined,
         noBackPanel: resolveNoBackPanelFromOptions(opts),
       },
     };

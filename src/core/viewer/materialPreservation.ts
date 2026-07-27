@@ -7,7 +7,10 @@ import {
 
 export type LayerMaterialBackup = {
   doors: Map<number, { materialId?: string; material?: string; id?: string; manual?: DoorManualDimensionBackup }>;
-  drawers: Map<number, { materialId?: string; material?: string; id?: string }>;
+  drawers: Map<
+    number,
+    { materialId?: string; material?: string; id?: string; frontMaterial?: string }
+  >;
   boxMaterial?: string;
 };
 
@@ -18,7 +21,10 @@ export function backupLayerMaterials(box: {
   drawersLayer?: DrawerLayerItem[];
 }): LayerMaterialBackup {
   const doors = new Map<number, { materialId?: string; material?: string; id?: string; manual?: DoorManualDimensionBackup }>();
-  const drawers = new Map<number, { materialId?: string; material?: string; id?: string }>();
+  const drawers = new Map<
+    number,
+    { materialId?: string; material?: string; id?: string; frontMaterial?: string }
+  >();
   (box.doorsLayer ?? []).forEach((door, index) => {
     doors.set(index, {
       id: door.id,
@@ -32,6 +38,7 @@ export function backupLayerMaterials(box: {
       id: drawer.id,
       materialId: drawer.materialId,
       material: drawer.material,
+      frontMaterial: drawer.metadata?.frontMaterial,
     });
   });
   return { doors, drawers, boxMaterial: box.material };
@@ -55,16 +62,24 @@ function applyDoorMaterial(
 
 function applyDrawerMaterial(
   drawer: DrawerLayerItem,
-  backup: { materialId?: string; material?: string; id?: string } | undefined
+  backup:
+    | { materialId?: string; material?: string; id?: string; frontMaterial?: string }
+    | undefined
 ): DrawerLayerItem {
   if (!backup) return drawer;
   const materialId = backup.materialId ?? backup.material ?? drawer.materialId;
   const material = backup.material ?? backup.materialId ?? drawer.material;
+  const frontMaterial =
+    backup.frontMaterial ?? backup.materialId ?? backup.material ?? drawer.metadata?.frontMaterial;
   return {
     ...drawer,
     id: backup.id ?? drawer.id,
     materialId,
     material,
+    metadata: {
+      ...drawer.metadata,
+      ...(frontMaterial ? { frontMaterial } : {}),
+    },
   };
 }
 

@@ -474,10 +474,21 @@ export default function BoxLayersPanel({ embedded = false }: BoxLayersPanelProps
                       showHardware={showAllHardware || expandedDrawerIds[item.id]}
                       onUpdate={(partial) => actions.updateDrawerLayerItem(item.id, partial)}
                       onFrontMaterialChange={(materialId) => {
+                        const nextItems = (selectedBox.drawersLayer ?? []).map((d) =>
+                          d.id === item.id
+                            ? {
+                                ...d,
+                                material: materialId,
+                                materialId,
+                                metadata: { ...d.metadata, frontMaterial: materialId },
+                              }
+                            : d
+                        );
                         viewerApi?.updateDrawerMaterial?.(
                           selectedBox.id,
                           item.id,
-                          getViewerMaterialId(materialId)
+                          getViewerMaterialId(materialId),
+                          nextItems
                         );
                       }}
                     />

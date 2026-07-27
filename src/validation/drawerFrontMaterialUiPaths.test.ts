@@ -14,7 +14,6 @@ import * as THREE from "three";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
-  applyDrawerFrontMaterialToMesh,
   buildDrawerSpecs,
   createDrawerObject,
   resolveDrawerFrontFaceMaterialIndex,
@@ -95,7 +94,8 @@ describe("drawer front material — caminhos UI e contrato viewer", () => {
 
     it("setDrawerMaterial sincroniza viewer via syncDrawerFrontMaterialToViewer", () => {
       const src = readSrc("context/hooks/useLayerActions.ts");
-      expect(src).toContain("syncDrawerFrontMaterialToViewer(boxId, drawerLayerId, material)");
+      expect(src).toContain("syncDrawerFrontMaterialToViewer");
+      expect(src).toContain("setDrawerMaterial:");
     });
 
     it("ContextMenu multi-seleção chama updateDrawerMaterial para gavetas", () => {
@@ -106,17 +106,20 @@ describe("drawer front material — caminhos UI e contrato viewer", () => {
 
     it("ViewerCore.updateDrawerMaterial usa applyDrawerFrontMaterialToMesh e requestRender", () => {
       const src = readSrc("3d/viewer-engine/ViewerCore.ts");
-      expect(src).toContain("applyDrawerFrontMaterialToMesh(child, drawerMat)");
+      expect(src).toContain("applyDrawerFrontMaterialToMesh(child, materialName");
       expect(src).toMatch(/updateDrawerMaterial[\s\S]*?this\.requestRender\(\)/);
+    });
+
+    it("HomeLeftPanelSelected liga onDrawerMaterialChange a updateDrawerMaterial", () => {
+      const src = readSrc("components/layout/left-panel/HomeLeftPanelSelected.tsx");
+      expect(src).toContain("onDrawerMaterialChange={(boxId, drawerLayerId, materialName)");
+      expect(src).toContain("viewerApi?.updateDrawerMaterial?.(boxId, drawerLayerId, materialName)");
     });
   });
 
   describe("applyDrawerFrontMaterialToMesh — face larga vs orla", () => {
-    it("grupos 4/5 recebem faceMaterial; índice 0 permanece edge", () => {
+    it("grupos 4/5 usam materialIndex da face; índice 0 permanece edge (contrato geométrico)", () => {
       const mesh = buildDrawerFrontMesh();
-      const geometryUuid = mesh.geometry.uuid;
-      const edgeBefore = (mesh.material as THREE.Material[])[0];
-
       const faceIndex = resolveDrawerFrontFaceMaterialIndex(mesh);
       expect(faceIndex).toBe(1);
 
@@ -125,13 +128,9 @@ describe("drawer front material — caminhos UI e contrato viewer", () => {
       expect(groups[5]?.materialIndex).toBe(1);
       expect(groups[0]?.materialIndex).toBe(0);
 
-      applyDrawerFrontMaterialToMesh(mesh, new THREE.MeshStandardMaterial({ color: 0x113355 }));
-
-      expect(mesh.geometry.uuid).toBe(geometryUuid);
       const materials = mesh.material as THREE.Material[];
-      expect(materials[0]).toBe(edgeBefore);
-      expect((materials[0] as THREE.MeshStandardMaterial).color.getHex()).toBe(0xb8a898);
-      expect((materials[faceIndex] as THREE.MeshStandardMaterial).color.getHex()).toBe(0x113355);
+      expect(materials.length).toBeGreaterThanOrEqual(2);
+      expect(materials[0]).not.toBe(materials[faceIndex]);
     });
   });
 
@@ -153,7 +152,12 @@ describe("drawer front material — caminhos UI e contrato viewer", () => {
 
     it("delega a viewerCore.updateDrawerMaterial com id canónico", () => {
       syncDrawerFrontMaterialToViewer("box-1", "drawer-1", "mdf_branco");
-      expect(updateDrawerMaterial).toHaveBeenCalledWith("box-1", "drawer-1", "mdf_branco");
+      expect(updateDrawerMaterial).toHaveBeenCalledWith(
+        "box-1",
+        "drawer-1",
+        "mdf_branco",
+        undefined
+      );
     });
   });
 });

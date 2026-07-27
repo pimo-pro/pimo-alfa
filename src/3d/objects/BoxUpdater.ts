@@ -247,14 +247,26 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
     (c) => c instanceof THREE.Mesh && c.name === "frente-fixa"
   ) as THREE.Mesh | undefined;
   const ffHoles = drillMap.frente_fixa ?? [];
+  const bodyOrDefaultFf =
+    typeof opts.bodyMaterialId === "string" && opts.bodyMaterialId.trim().length > 0
+      ? opts.bodyMaterialId.trim()
+      : typeof opts.materialName === "string" && opts.materialName.trim().length > 0
+        ? opts.materialName.trim()
+        : deps.getDefaultOfficialMaterialId();
+  const existingFfId =
+    typeof (ffPanel?.userData as { frenteFixaMaterialId?: string } | undefined)?.frenteFixaMaterialId ===
+    "string"
+      ? String((ffPanel!.userData as { frenteFixaMaterialId?: string }).frenteFixaMaterialId).trim()
+      : "";
+  // Chave presente → override (vazio = seguir corpo). Omitida → preservar mesh.
   const ffMaterialId =
-    typeof opts.frenteFixaMaterialId === "string" && opts.frenteFixaMaterialId.trim().length > 0
-      ? opts.frenteFixaMaterialId.trim()
-      : typeof opts.bodyMaterialId === "string" && opts.bodyMaterialId.trim().length > 0
-        ? opts.bodyMaterialId.trim()
-        : typeof opts.materialName === "string" && opts.materialName.trim().length > 0
-          ? opts.materialName.trim()
-          : deps.getDefaultOfficialMaterialId();
+    "frenteFixaMaterialId" in opts
+      ? typeof opts.frenteFixaMaterialId === "string" && opts.frenteFixaMaterialId.trim().length > 0
+        ? opts.frenteFixaMaterialId.trim()
+        : bodyOrDefaultFf
+      : existingFfId.length > 0
+        ? existingFfId
+        : bodyOrDefaultFf;
   if (ffPanel) {
     const ffUserData = ffPanel.userData as Record<string, unknown>;
     if (ffUserData.frenteFixaMaterialId !== ffMaterialId) {

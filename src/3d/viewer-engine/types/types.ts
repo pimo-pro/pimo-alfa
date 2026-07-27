@@ -37,6 +37,11 @@ export interface ViewerBoxEntry {
   material: LoadedWoodMaterial | null;
   /** Material aplicado (viewerMaterialId); usado ao reaplicar ao trocar de modo. */
   materialName?: string;
+  /**
+   * Material da frente fixa (viewer/canonical id). Persistido no entry para não
+   * cair no corpo quando updateBox omite `frenteFixaMaterialId`.
+   */
+  frenteFixaMaterialId?: string;
   /** Id do modelo base (ex.: pi-base-*); furação lateral PI sempre aplicada no mesh. */
   baseCabinetId?: string;
   /** Sem costa traseira (cavidade interna alinhada ao fundo). */

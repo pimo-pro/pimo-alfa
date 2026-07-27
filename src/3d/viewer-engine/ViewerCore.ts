@@ -404,10 +404,12 @@ export class ViewerCore {
     rodape: false,
   };
   private readonly pendingBoxStructureUpdates = new Map<string, Partial<BoxOptions>>();
-  /** Contexto transitório para sync de frentes independentes durante updateBox(materialName). */
+  /** Contexto transitório para sync de frentes independentes durante updateBox(materialName).
+   * frenteFixaMaterialId: string = override; null = seguir corpo; undefined = preservar mesh/entry.
+   */
   private readonly pendingMaterialSyncContext = new Map<
     string,
-    { drawerLayerItems?: DrawerLayerItem[]; frenteFixaMaterialId?: string }
+    { drawerLayerItems?: DrawerLayerItem[]; frenteFixaMaterialId?: string | null }
   >();
   /** Outline da parede selecionada (Room Box). */
   private wallSelectionOutline!: WallSelectionOutlineController;
@@ -2615,7 +2617,8 @@ export class ViewerCore {
 
   /**
    * Aplica um material à frente de uma gaveta (por boxId e drawerLayerId).
-   * Com drawerLayerItems completos, delega em updateBox (rebuild = fluxo A).
+   * Com drawerLayerItems: rebuild via updateBox; depois reaplica o materialName
+   * explícito na face (paridade com updateDoorMaterial — o id pedido pela UI ganha).
    */
   updateDrawerMaterial(
     boxId: string,
@@ -2627,14 +2630,20 @@ export class ViewerCore {
     if (!entry) return;
 
     if (drawerLayerItems?.length) {
+      const ffFromEntry = entry.frenteFixaMaterialId?.trim();
+      const ffFromMesh = (
+        this.findFixedFrontPanel(entry.mesh)?.userData as { frenteFixaMaterialId?: string } | undefined
+      )?.frenteFixaMaterialId?.trim();
+      const preservedFf = ffFromEntry || ffFromMesh || undefined;
       this.updateBox(boxId, {
         drawerLayerItems,
         materialName: entry.materialName ?? this.defaultMaterialName,
+        ...(preservedFf ? { frenteFixaMaterialId: preservedFf } : {}),
       });
-      if (this.viewerState.getSelectedBox() === boxId) this.refreshOutlineTarget();
-      return;
     }
 
+    // Sempre aplicar o material pedido na face visível (evita herdar branco do corpo
+    // quando sync/discover não tem materialId nos items).
     entry.mesh.traverse((child) => {
       if (child instanceof THREE.Mesh) {
         const ud = (child as THREE.Mesh & { userData: { drawerLayerId?: string; drawerPart?: string; drawerFrontMaterialId?: string } }).userData;
@@ -2655,13 +2664,35 @@ export class ViewerCore {
     if (this.viewerState.getSelectedBox() === boxId) this.refreshOutlineTarget();
   }
 
+  /**
+   * Facade unificada para matérias de frente (porta / gaveta / frente fixa).
+   * Delega nos updaters existentes — sem novo pipeline.
+   */
+  updateFrontMaterial(
+    partType: "door" | "drawer-front" | "fixed-front",
+    boxId: string,
+    materialName: string,
+    layerId?: string,
+    drawerLayerItems?: DrawerLayerItem[]
+  ): void {
+    if (partType === "door") {
+      if (!layerId) return;
+      this.updateDoorMaterial(boxId, layerId, materialName);
+      return;
+    }
+    if (partType === "drawer-front") {
+      if (!layerId) return;
+      this.updateDrawerMaterial(boxId, layerId, materialName, drawerLayerItems);
+      return;
+    }
+    this.updateFixedFrontMaterial(boxId, materialName);
+  }
+
   /** Aplica material independente à peça frente-fixa (canto v2). */
   updateFixedFrontMaterial(boxId: string, materialName: string): void {
     const entry = this.boxes.get(boxId);
     if (!entry) return;
-    const ffPanel = entry.mesh.children.find(
-      (c) => c instanceof THREE.Mesh && c.name === "frente-fixa"
-    ) as THREE.Mesh | undefined;
+    const ffPanel = this.findFixedFrontPanel(entry.mesh);
     if (!ffPanel) return;
     const mat = createClonedMaterialWithDetailMaps(materialName, {
       onMapsApplied: () => this.requestRender(),
@@ -2669,6 +2700,7 @@ export class ViewerCore {
     if (!mat) return;
     ffPanel.material = mat;
     (ffPanel.userData as Record<string, unknown>).frenteFixaMaterialId = materialName;
+    entry.frenteFixaMaterialId = materialName;
     this.requestRender();
     if (this.viewerState.getSelectedBox() === boxId) this.refreshOutlineTarget();
   }
@@ -2688,28 +2720,62 @@ export class ViewerCore {
     const seen = new Set<string>();
     root.traverse((child) => {
       if (!(child instanceof THREE.Mesh)) return;
-      const ud = child.userData as { drawerLayerId?: string; drawerPart?: string };
+      const ud = child.userData as {
+        drawerLayerId?: string;
+        drawerPart?: string;
+        drawerFrontMaterialId?: string;
+      };
       if (ud.drawerPart !== "front" || !ud.drawerLayerId?.trim()) return;
       const layerId = ud.drawerLayerId.trim();
       if (seen.has(layerId)) return;
       seen.add(layerId);
-      items.push({ id: layerId } as DrawerLayerItem);
+      const frontMat = ud.drawerFrontMaterialId?.trim();
+      items.push(
+        (frontMat
+          ? { id: layerId, material: frontMat, materialId: frontMat, metadata: { frontMaterial: frontMat } }
+          : { id: layerId }) as DrawerLayerItem
+      );
     });
     return items;
   }
 
-  /** Reaplica material independente à frente fixa (canto v2) após troca de material da caixa. */
+  /** Reaplica material independente à frente fixa (canto v2) após troca de material da caixa.
+   * @param explicit `string` = override; `null` = seguir corpo; `undefined` = preservar mesh/entry.
+   */
   private syncFixedFrontMaterialForBox(
     boxId: string,
     boxMaterialId: string,
-    explicitFrenteFixaMaterialId?: string
+    explicitFrenteFixaMaterialId?: string | null
   ): void {
     const entry = this.boxes.get(boxId);
     if (!entry || !this.findFixedFrontPanel(entry.mesh)) return;
-    const materialId = explicitFrenteFixaMaterialId?.trim()
-      ? getViewerMaterialId(explicitFrenteFixaMaterialId)
-      : boxMaterialId;
-    this.updateFixedFrontMaterial(boxId, materialId);
+
+    if (explicitFrenteFixaMaterialId === null) {
+      entry.frenteFixaMaterialId = undefined;
+      this.updateFixedFrontMaterial(boxId, boxMaterialId);
+      // Seguir corpo: não guardar override no entry
+      entry.frenteFixaMaterialId = undefined;
+      const panel = this.findFixedFrontPanel(entry.mesh);
+      if (panel) {
+        (panel.userData as Record<string, unknown>).frenteFixaMaterialId = boxMaterialId;
+      }
+      return;
+    }
+
+    if (typeof explicitFrenteFixaMaterialId === "string" && explicitFrenteFixaMaterialId.trim()) {
+      const materialId = getViewerMaterialId(explicitFrenteFixaMaterialId);
+      this.updateFixedFrontMaterial(boxId, materialId);
+      return;
+    }
+
+    // omitido → preservar (nunca herdar corpo se já houver matéria na frente)
+    const fromEntry = entry.frenteFixaMaterialId?.trim();
+    const fromMesh = (
+      this.findFixedFrontPanel(entry.mesh)?.userData as { frenteFixaMaterialId?: string } | undefined
+    )?.frenteFixaMaterialId?.trim();
+    const preserved = fromEntry || fromMesh;
+    if (!preserved) return;
+    this.updateFixedFrontMaterial(boxId, preserved);
   }
 
   /** Garante material independente nas frentes após rebuild incremental da caixa. */
@@ -2723,13 +2789,18 @@ export class ViewerCore {
     const items = this.discoverDrawerLayerItemsFromMesh(entry.mesh, drawerLayerItems);
     if (!items.length) return;
     for (const drawerItem of items) {
-      const frontMaterialId = resolveDrawerFrontMaterialId(drawerItem, boxMaterialId);
       entry.mesh.traverse((child) => {
         if (!(child instanceof THREE.Mesh)) return;
         const ud = (child as THREE.Mesh & {
           userData: { drawerLayerId?: string; drawerPart?: string; drawerFrontMaterialId?: string };
         }).userData;
         if (ud?.drawerLayerId !== drawerItem.id || ud?.drawerPart !== "front") return;
+        // Preferir matéria da frente já no mesh se o item não trouxer material (evita herdar corpo).
+        const fromItem = resolveDrawerFrontMaterialId(drawerItem, "");
+        const frontMaterialId =
+          fromItem.trim().length > 0
+            ? fromItem
+            : ud.drawerFrontMaterialId?.trim() || boxMaterialId;
         applyDrawerFrontMaterialToMesh(child, frontMaterialId, () => this.requestRender());
         ud.drawerFrontMaterialId = frontMaterialId;
       });
@@ -3388,6 +3459,11 @@ export class ViewerCore {
       });
     }
     if (!entry) return false;
+    if ("frenteFixaMaterialId" in opts) {
+      const v =
+        typeof opts.frenteFixaMaterialId === "string" ? opts.frenteFixaMaterialId.trim() : "";
+      entry.frenteFixaMaterialId = v || undefined;
+    }
     if (
       (opts.size !== undefined && (!Number.isFinite(opts.size) || opts.size <= 0)) ||
       (opts.width !== undefined && (!Number.isFinite(opts.width) || opts.width <= 0)) ||
@@ -3467,7 +3543,13 @@ export class ViewerCore {
     if (opts.materialName) {
       this.pendingMaterialSyncContext.set(id, {
         drawerLayerItems: opts.drawerLayerItems,
-        frenteFixaMaterialId: opts.frenteFixaMaterialId,
+        // string = override; null = seguir corpo; undefined (chave omitida) = preservar
+        frenteFixaMaterialId:
+          "frenteFixaMaterialId" in opts
+            ? opts.frenteFixaMaterialId?.trim()
+              ? opts.frenteFixaMaterialId
+              : null
+            : undefined,
       });
     }
     try {

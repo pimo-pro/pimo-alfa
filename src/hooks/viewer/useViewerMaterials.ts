@@ -14,6 +14,7 @@ const MATERIALS_NOOP_API = {
   updateDoorMaterial: NOOP,
   updateDrawerMaterial: NOOP,
   updateFixedFrontMaterial: NOOP,
+  updateFrontMaterial: NOOP,
   setMaterialMode: NOOP,
   getMaterialMode: NOOP_RETURN_UNDEFINED,
   setMaterialQuality: NOOP,
@@ -41,6 +42,9 @@ export function useViewerMaterials() {
       updateDrawerMaterial: bind(viewerCore.updateDrawerMaterial),
       updateFixedFrontMaterial: bind(
         (viewerCore as { updateFixedFrontMaterial?: (..._args: unknown[]) => unknown }).updateFixedFrontMaterial
+      ),
+      updateFrontMaterial: bind(
+        (viewerCore as { updateFrontMaterial?: (..._args: unknown[]) => unknown }).updateFrontMaterial
       ),
       setMaterialMode: bind(viewerCore.setMaterialMode),
       getMaterialMode: bind(viewerCore.getMaterialMode),
