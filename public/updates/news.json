@@ -1,11 +1,21 @@
 {
-  "updatedAt": "2026-07-27T10:56:27.041Z",
+  "updatedAt": "2026-07-27T21:23:52.805Z",
   "news": [
+    {
+      "version": "v6.0727.2223",
+      "title": "Finalizacao da remocao do Modelo B, restauracao completa do Modelo A, limpeza de gates, QA validado — pronto para pro...",
+      "description": "Finalizacao da remocao do Modelo B, restauracao completa do Modelo A, limpeza de gates, QA validado — pronto para producao.",
+      "publishedAt": "2026-07-27T21:23:52.706Z",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "update",
+      "commit": "0a601b2"
+    },
     {
       "version": "v6.0727.1156",
       "title": "PIMO Industrial — Finalização completa (Fases 1→12) + Documentação Centro de Ajuda + Consolidação Final",
       "description": "PIMO Industrial — Finalização completa (Fases 1→12) + Documentação Centro de Ajuda + Consolidação Final",
-      "publishedAt": "2026-07-27T10:56:26.967Z",
+      "publishedAt": "2026-07-27T11:58:03+01:00",
       "type": "update",
       "author": "pimo-pro",
       "icon": "update",
