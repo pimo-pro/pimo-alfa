@@ -508,21 +508,28 @@ O safe build confirma que o «sistema novo» é uma camada **posterior** sobre o
 
 ---
 
-## Próximo passo (aguarda nova instrução)
-
-Conforme pedido: **nenhuma remoção foi executada**.  
-Nesta fase apenas:
-
-- Análise  
-- Mapeamento  
-- Documentação neste ficheiro  
-
-Na fase seguinte, após instrução explícita:
-
-- Desligar Admin → Produtos → **Gavetas**  
-- Restaurar Modelo A como único sistema activo  
-- Remover/isolar o Modelo B com as garantias da secção D  
-
 ---
 
-*Fim do mapa — fase de análise apenas.*
+## Estado pos-restauracao (FASES 1-4 executadas ? 2026-07-27)
+
+| Fase | Commit | Resultado |
+|---|---|---|
+| 1 Flags | `0e87978` | Modelo A sempre activo (`isDrawerModeloAActive() === true`) |
+| 2 Gates | `a3b9173` | Ramos B removidos dos ficheiros partilhados |
+| 3 Remocao | `bf83b22` | Hub Gavetas, european/**, satelites B apagados |
+| 4 QA | este commit | tsc OK; Admin so Unificado + Regras |
+
+### Garantias verificadas
+- Menu Admin Produtos: sem entrada Gavetas (Modelo B)
+- Mantidos: Configuracoes das Gavetas (Sistema Unificado) + Regras das Gavetas
+- kitchenFinish/** e src/industrial/** preservados
+- Zero imports de drawers/european / generateEuropeanDrawer / DrawersAdminHubPage
+- Typecheck (npx tsc --noEmit) passou
+- Suites src/core/drawers: 36 passed / 2 failed (fora do ambito B)
+
+### Residual intencional
+- drawerSystemFlags.ts ? shim A sempre ON
+- drawerModeloAGate.ts ? filtra orfas metadata.modeloB
+- europeanDrawerConfig?: Record<string, unknown> em tipos (legado ignorado)
+
+**Veredicto: Modelo B removido, Modelo A restaurado como unico sistema activo.**
