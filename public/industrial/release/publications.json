@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-27T10:56:26.316Z",
+      "author": "pimo-pro",
+      "commitMessage": "PIMO Industrial — Finalização completa (Fases 1→12) + Documentação Centro de Ajuda + Consolidação Final",
+      "version": "v6.0727.1156"
+    },
+    {
       "publishedAt": "2026-07-26T23:21:00.608Z",
       "author": "pimo-pro",
       "commitMessage": "fix(freeagem): tornar workspaceBoxes opcional nos slices de PDF/financeiro",

@@ -1,11 +1,21 @@
 {
-  "updatedAt": "2026-07-26T23:21:01.364Z",
+  "updatedAt": "2026-07-27T10:56:27.041Z",
   "news": [
+    {
+      "version": "v6.0727.1156",
+      "title": "PIMO Industrial — Finalização completa (Fases 1→12) + Documentação Centro de Ajuda + Consolidação Final",
+      "description": "PIMO Industrial — Finalização completa (Fases 1→12) + Documentação Centro de Ajuda + Consolidação Final",
+      "publishedAt": "2026-07-27T10:56:26.967Z",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "update",
+      "commit": "74b9eb6"
+    },
     {
       "version": "v6.0727.0021",
       "title": "fix(freeagem): tornar workspaceBoxes opcional nos slices de PDF/financeiro",
       "description": "fix(freeagem): tornar workspaceBoxes opcional nos slices de PDF/financeiro",
-      "publishedAt": "2026-07-26T23:21:01.282Z",
+      "publishedAt": "2026-07-27T00:22:35+01:00",
       "type": "fix",
       "author": "pimo-pro",
       "icon": "fix",
