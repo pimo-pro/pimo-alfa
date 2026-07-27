@@ -17,9 +17,7 @@ import DrawerConfigPanel, {
   DrawerCustomHeightsTable,
   getDrawerStatusBadges,
 } from "../../panels/DrawerConfigPanel";
-import { useDrawerModeloAActive } from "../../../hooks/useDrawerModeloAActive";
 import { resolveActiveDrawersLayer } from "../../../core/drawers/drawerModeloAGate";
-import { EuropeanDrawerConfigPanel } from "../../../core/drawers/european/ui";
 
 type BoxLayersPanelProps = {
   embedded?: boolean;
@@ -46,7 +44,6 @@ const badgeStyle = {
 export default function BoxLayersPanel({ embedded = false }: BoxLayersPanelProps) {
   const { project, actions } = useProject();
   const { viewerApi } = usePimoViewerContext();
-  const modeloAActive = useDrawerModeloAActive();
   const [expandedDoorIds, setExpandedDoorIds] = useState<Record<string, boolean>>({});
   const [expandedDrawerIds, setExpandedDrawerIds] = useState<Record<string, boolean>>({});
   const [showHeightEditor, setShowHeightEditor] = useState(false);
@@ -80,26 +77,20 @@ export default function BoxLayersPanel({ embedded = false }: BoxLayersPanelProps
   const settings = getSettings().gavetas;
   const heightMode = selectedBox.drawerHeightMode ?? settings.gavetaAlturaModoPadrao;
   const drawerPresets = normalizeDrawerPresets(project.drawerPresets);
-  const boxAlerts = modeloAActive
-    ? validateBoxDrawerConfiguration(selectedBox, settings)
-    : [];
-  const errorAlerts = modeloAActive
-    ? [
-        ...(selectedBox.drawerConfigError
-          ? [{ level: "error" as const, message: selectedBox.drawerConfigError }]
-          : []),
-        ...boxAlerts.filter((a) => a.level === "error"),
-      ]
-    : [];
-  const warningAlerts = modeloAActive
-    ? [
-        ...(selectedBox.drawerConfigWarnings ?? []).map((message) => ({
-          level: "warning" as const,
-          message,
-        })),
-        ...boxAlerts.filter((a) => a.level === "warning"),
-      ]
-    : [];
+  const boxAlerts = validateBoxDrawerConfiguration(selectedBox, settings);
+  const errorAlerts = [
+    ...(selectedBox.drawerConfigError
+      ? [{ level: "error" as const, message: selectedBox.drawerConfigError }]
+      : []),
+    ...boxAlerts.filter((a) => a.level === "error"),
+  ];
+  const warningAlerts = [
+    ...(selectedBox.drawerConfigWarnings ?? []).map((message) => ({
+      level: "warning" as const,
+      message,
+    })),
+    ...boxAlerts.filter((a) => a.level === "warning"),
+  ];
   const uniqueWarnings = Array.from(new Map(warningAlerts.map((a) => [a.message, a])).values());
 
   const content = (
@@ -273,8 +264,6 @@ export default function BoxLayersPanel({ embedded = false }: BoxLayersPanelProps
           ))
         )}
 
-        {modeloAActive ? (
-          <>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
           <strong style={{ fontSize: 12 }}>Gavetas</strong>
           {drawers.length > 0 && (
@@ -513,22 +502,6 @@ export default function BoxLayersPanel({ embedded = false }: BoxLayersPanelProps
               </div>
             );
           })
-        )}
-          </>
-        ) : (
-          <div style={{ marginTop: 8 }}>
-            <EuropeanDrawerConfigPanel
-              box={selectedBox}
-              onChange={(config, count) => {
-                actions.setEuropeanDrawerConfig?.(config, count);
-              }}
-            />
-            {drawers.length > 0 ? (
-              <div style={{ marginTop: 8, fontSize: 11, color: "var(--text-muted)" }}>
-                {drawers.length} gaveta(s) europeia(s) gerada(s)
-              </div>
-            ) : null}
-          </div>
         )}
       </div>
     </>

@@ -9,11 +9,18 @@
  * - Movimento e animação (DrawerMotionService)
  * - Adaptadores para layers (adapters/)
  *
- * Modelo A = sistema legado (este domínio). Pode ser desativado via drawerSystemFlags.
- * Modelo B = Sistema Europeu (`./european/`) — binding de produto por omissão.
+ * Sistema activo: Modelo A / Sistema Unificado (clássico).
  */
 
-// Feature flags / gates Modelo A
+// Helpers de camada activa (clássico; ignora órfãs Modelo B)
+export {
+  boxHasActiveDrawers,
+  isDrawerModeloBActive,
+  resolveActiveDrawersLayer,
+  resolveActiveGavetasCount,
+} from "./drawerModeloAGate";
+
+// Feature flags (restauro: Modelo A sempre activo)
 export {
   DRAWER_MODELO_A_CHANGE_EVENT,
   DRAWER_MODELO_A_DEFAULT_ENABLED,
@@ -26,25 +33,6 @@ export {
   setDrawerModeloAEnabled,
   subscribeDrawerModeloAFlags,
 } from "./drawerSystemFlags";
-export {
-  boxHasActiveDrawers,
-  isDrawerModeloBActive,
-  resolveActiveDrawersLayer,
-  resolveActiveGavetasCount,
-} from "./drawerModeloAGate";
-
-/** Binding de produto: factory → generateEuropeanDrawer (Modelo B). */
-export {
-  drawerFactory,
-  resolveDrawerFactoryMode,
-  generateEuropeanDrawer,
-  defaultEuropeanDrawerConfig,
-  drawerEuropeanConfig,
-  drawerEuropeanGenerate,
-  drawerEuropeanDXF,
-  drawerEuropeanCNC,
-  drawerEuropeanOverlay,
-} from "./drawerFactory";
 
 // Core types
 export type { DrawerDimensions, DrawerPieceSpec, DrawerCalculatedSpecs, DrawerParametricSettings, DrawerParametricOverrides } from "./DrawerParametrics";

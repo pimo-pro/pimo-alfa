@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import type { BoxModule, WorkspaceBox } from "../core/types";
 import { convertWorkspaceToBox } from "../context/projectState";
 import { getProfundidadeInternaUtilMm } from "../core/box/boxDepthHelpers";
@@ -14,9 +14,7 @@ import { devLogger } from "../utils/devLogger";
 import { getViewerMaterialId } from "../core/materials/service";
 import { resolveDrawerFrontMaterialId } from "../core/drawers/drawerFrontMaterial";
 import {
-  isDrawerModeloAActive,
   resolveActiveDrawersLayer,
-  subscribeDrawerModeloAFlags,
 } from "../core/drawers";
 import { syncDrawerFrontMaterialToViewer } from "../industrial/viewerIntegration";
 import { buildViewerDrillMarkersByPanel } from "../modules/drilling/drillingAdapter";
@@ -119,7 +117,6 @@ function getStructureFingerprint(
     piLateralDrillCountSig: piLateralDrillCountSig ?? null,
     doors: doorSig,
     drawers: drawerSig,
-    modeloAActive: isDrawerModeloAActive(),
     divisores: divSig,
     separadores: sepSig,
     material: wsBox.material,
@@ -231,9 +228,6 @@ export const useCalculadoraSync = (
   /** Última estrutura conhecida por box id; quando igual, só enviamos position/rotation para evitar rebuild no Viewer. */
   const lastStructureFingerprintRef = useRef<Map<string, string>>(new Map());
   const lastDrawerFrontMaterialsFingerprintRef = useRef<Map<string, string>>(new Map());
-  const [modeloAActive, setModeloAActive] = useState(() => isDrawerModeloAActive());
-
-  useEffect(() => subscribeDrawerModeloAFlags(setModeloAActive), []);
 
   // Atualizar refs durante o render para que o effect de sync use sempre boxes/workspaceBoxes mais recentes
   // (evita condição de corrida em que o effect roda antes dos refs serem atualizados).
@@ -507,7 +501,7 @@ export const useCalculadoraSync = (
       prevViewerReadyRef.current = true;
     }
     syncFromCalculator();
-  }, [boxes, workspaceBoxes, syncFromCalculator, viewerReady, showDrawerDrilling, modeloAActive]);
+  }, [boxes, workspaceBoxes, syncFromCalculator, viewerReady, showDrawerDrilling]);
 
   useEffect(() => {
     const api = viewerApiRef.current;

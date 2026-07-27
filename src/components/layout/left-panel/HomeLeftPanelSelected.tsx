@@ -19,9 +19,6 @@ import CostaMaterialControl from "./CostaMaterialControl";
 import BoxRemateDrawer from "../../settings/remate/BoxRemateDrawer";
 import CornerOrientationPanel from "../../settings/corner/CornerOrientationPanel";
 import { SectionTitleWithHelp } from "../../ui/MiniHelpTooltip";
-import { useDrawerModeloAActive } from "../../../hooks/useDrawerModeloAActive";
-import { EuropeanDrawerConfigPanel } from "../../../core/drawers/european/ui";
-import type { EuropeanDrawerBoxConfig } from "../../../core/drawers/european/types";
 
 const HOME_SELECTED_SECTION_HELP_TEXT =
   "Controles principais da caixa selecionada e definição inicial do projeto.";
@@ -45,7 +42,6 @@ export type HomeLeftPanelSelectedProps = {
 export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelectedProps) {
   const { project, actions } = useProject();
   const { showToast } = useToast();
-  const modeloAActive = useDrawerModeloAActive();
   const selectedBox = project.workspaceBoxes.find(
     (box) => box.id === project.selectedWorkspaceBoxId
   );
@@ -330,57 +326,31 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
               >
                 <DivSepPanel box={selectedBox} actions={actions} embedded section="sep" />
               </UnifiedPopover>
-              {modeloAActive ? (
-                <>
-                  <StepperPopover
-                    id={BOX_PANEL_IDS.gavetas}
-                    label="Gavetas"
-                    value={selectedGavetas}
-                    onChange={(v) => actions.setGavetas(v)}
-                    fullWidth
-                    layout={panelPopoverLayout}
-                    open={isPanelOpen(BOX_PANEL_IDS.gavetas)}
-                    onOpenChange={(open) => setPanelOpen(BOX_PANEL_IDS.gavetas, open)}
-                    triggerVariant="ghost"
-                    triggerTitle="Quantidade de gavetas aplicadas ao módulo."
-                  />
-                  {selectedBox.drawerConfigError && (
-                    <div
-                      style={{
-                        fontSize: 11,
-                        padding: "6px 8px",
-                        borderRadius: 6,
-                        background: "rgba(239,68,68,0.12)",
-                        color: "#fca5a5",
-                        border: "1px solid rgba(239,68,68,0.35)",
-                      }}
-                    >
-                      {selectedBox.drawerConfigError}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <UnifiedPopover
-                  id={BOX_PANEL_IDS.gavetas}
-                  fullWidth
-                  layout={panelPopoverLayout}
-                  open={isPanelOpen(BOX_PANEL_IDS.gavetas)}
-                  onOpenChange={(open) => setPanelOpen(BOX_PANEL_IDS.gavetas, open)}
-                  triggerVariant="ghost"
-                  triggerTitle="Sistema Europeu de Gavetas (Modelo B)."
-                  trigger={
-                    <span>
-                      GAVETAS EU — <strong>{selectedGavetas}</strong>
-                    </span>
-                  }
+              <StepperPopover
+                id={BOX_PANEL_IDS.gavetas}
+                label="Gavetas"
+                value={selectedGavetas}
+                onChange={(v) => actions.setGavetas(v)}
+                fullWidth
+                layout={panelPopoverLayout}
+                open={isPanelOpen(BOX_PANEL_IDS.gavetas)}
+                onOpenChange={(open) => setPanelOpen(BOX_PANEL_IDS.gavetas, open)}
+                triggerVariant="ghost"
+                triggerTitle="Quantidade de gavetas aplicadas ao módulo."
+              />
+              {selectedBox.drawerConfigError && (
+                <div
+                  style={{
+                    fontSize: 11,
+                    padding: "6px 8px",
+                    borderRadius: 6,
+                    background: "rgba(239,68,68,0.12)",
+                    color: "#fca5a5",
+                    border: "1px solid rgba(239,68,68,0.35)",
+                  }}
                 >
-                  <EuropeanDrawerConfigPanel
-                    box={selectedBox}
-                    onChange={(config: EuropeanDrawerBoxConfig, count: number) => {
-                      actions.setEuropeanDrawerConfig?.(config, count);
-                    }}
-                  />
-                </UnifiedPopover>
+                  {selectedBox.drawerConfigError}
+                </div>
               )}
               <UnifiedPopover
                 id={BOX_PANEL_IDS.porta}

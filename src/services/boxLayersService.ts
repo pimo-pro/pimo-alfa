@@ -30,13 +30,6 @@ import {
   backupLayerMaterials,
   restoreLayerMaterials,
 } from "../core/viewer/materialPreservation";
-import { isDrawerModeloAActive } from "../core/drawers/drawerSystemFlags";
-import {
-  defaultEuropeanDrawerConfig,
-  generateEuropeanDrawer,
-  europeanResultToLayerItems,
-} from "../core/drawers/european";
-
 export interface BoxLayersState {
   doorsLayer: DoorLayerItem[];
   drawersLayer: DrawerLayerItem[];
@@ -114,9 +107,7 @@ export function regenerateLayersForBox(
   const thickness = clamp(box.espessura, 18);
 
   const drawerCount = Math.max(0, Math.floor(box.gavetas || 0));
-  // Modelo A desativado: não gera gavetas novas; preserva drawersLayer existente (dados intactos).
-  const modeloAActive = isDrawerModeloAActive();
-  const hasDrawers = modeloAActive && drawerCount > 0;
+  const hasDrawers = drawerCount > 0;
 
   if (isCaixaFornoBox(box)) {
     const synced = syncCaixaFornoOnDimensoesChange(box);
@@ -256,82 +247,8 @@ export function regenerateLayersForBox(
     }
   }
 
-  // GAVETAS:
-  // - Modelo A activo: pipeline clássico
-  // - Modelo A off: Sistema Europeu (Modelo B) substitui o pipeline
-  if (!modeloAActive) {
-    const euCount = Math.max(0, Math.floor(box.gavetas || 0));
-    if (euCount > 0) {
-      const systemId = box.europeanDrawerConfig?.systemId ?? "blum-legrabox";
-      const euConfig = {
-        ...defaultEuropeanDrawerConfig(
-          {
-            id: box.id,
-            nome: box.nome,
-            dimensoes: box.dimensoes,
-            espessura: thickness,
-            gavetas: euCount,
-            material: box.material,
-            europeanDrawerConfig: box.europeanDrawerConfig,
-          },
-          systemId
-        ),
-        ...box.europeanDrawerConfig,
-        count: euCount,
-        systemId,
-      };
-      const result = generateEuropeanDrawer(systemId, {
-        id: box.id,
-        nome: box.nome,
-        dimensoes: box.dimensoes,
-        espessura: thickness,
-        gavetas: euCount,
-        material: box.material,
-        europeanDrawerConfig: euConfig,
-        profundidadeInternaUtilMm: getProfundidadeInternaUtilMm(
-          box,
-          resolveCostaThicknessMm(box)
-        ),
-        espessuraCosta: resolveCostaThicknessMm(box),
-        costaAtiva: box.costaAtiva,
-      });
-      // Validacao industrial: nao renderizar layers se gaveta invalida
-      if (result.valid) {
-        drawersLayer.push(
-          ...europeanResultToLayerItems(result, box.id, {
-            material: box.material,
-            frontMaterial: euConfig.frontMaterialId ?? box.material,
-          })
-        );
-        for (let i = 0; i < drawersLayer.length; i++) {
-          const existing =
-            (box.drawersLayer ?? []).find((d) => d.metadata?.modeloB && d.id === drawersLayer[i]!.id) ??
-            (box.drawersLayer ?? [])[i];
-          if (existing) {
-            const frontMat =
-              existing.materialId ??
-              existing.metadata?.frontMaterial ??
-              existing.material ??
-              drawersLayer[i]!.materialId;
-            drawersLayer[i] = {
-              ...drawersLayer[i]!,
-              isOpen: existing.isOpen ?? false,
-              // Material da frente independente — não reconstrói o corpo
-              materialId: frontMat,
-              material: frontMat,
-              metadata: {
-                ...drawersLayer[i]!.metadata,
-                ...existing.metadata,
-                modeloB: true,
-                frontMaterial: frontMat,
-                europeanSystemId: systemId,
-              },
-            };
-          }
-        }
-      }
-    }
-  } else if (hasDrawers) {
+  // GAVETAS: pipeline clássico (Modelo A / Sistema Unificado)
+  if (hasDrawers) {
     const drawerSettings = settings.gavetas;
     const drawerType = box.drawerType ?? "normal";
     const mode = box.drawerHeightMode ?? drawerSettings.gavetaAlturaModoPadrao;
@@ -488,27 +405,6 @@ export function createManualDoor(box: WorkspaceBox): DoorLayerItem {
 }
 
 export function createManualDrawer(box: WorkspaceBox): DrawerLayerItem {
-  if (!isDrawerModeloAActive()) {
-    // Stub seguro: Modelo A desativado — não cria gaveta real (ação deve ser no-op antes).
-    return {
-      id: createId("drawer-inactive"),
-      parentBoxId: box.id,
-      width: 0,
-      height: 0,
-      depth: 0,
-      frontThickness: 0,
-      posX: 0,
-      posY: 0,
-      posZ: 0,
-      rotY: 0,
-      isOpen: false,
-      openDirection: "pull",
-      pullDistanceMm: 0,
-      material: defaultDrawerMaterial,
-      materialId: defaultDrawerMaterial,
-    };
-  }
-
   const settings = getSettings();
   const thickness = clamp(box.espessura, 18);
   const drawerSettings = settings.gavetas;

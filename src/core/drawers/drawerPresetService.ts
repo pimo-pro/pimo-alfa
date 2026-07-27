@@ -11,7 +11,6 @@ import { getSettings } from "../settings/settingsService";
 import type { DrawerPreset, DrawerPresetDrawerConfig } from "./drawerPresetTypes";
 import { slugDrawerPresetId } from "./drawerPresets";
 import { resolveDrawerFrontHeightMm } from "./drawerLayerCustomization";
-import { isDrawerModeloAActive } from "./drawerSystemFlags";
 
 export function drawerConfigFromLayerItem(item: DrawerLayerItem): DrawerPresetDrawerConfig {
   const metadata = item.metadata ? { ...item.metadata } : undefined;
@@ -125,32 +124,6 @@ export function applyDrawerPresetToBox(
   const drawerCount = Math.max(0, Math.floor(preset.drawerCount));
   if (drawerCount === 0) {
     return { ok: false, reason: "O preset não contém gavetas." };
-  }
-
-  // Modelo B activo: aplica contagem via europeanDrawerConfig + regenerateLayersForBox (generateEuropeanDrawer).
-  if (!isDrawerModeloAActive()) {
-    const updatedBase: WorkspaceBox = {
-      ...box,
-      gavetas: drawerCount,
-      drawerConfigError: undefined,
-      portaTipo: "sem_porta",
-      prateleiras: 0,
-      doorsLayer: [],
-      europeanDrawerConfig: {
-        ...(box.europeanDrawerConfig ?? {
-          systemId: "hettich-innotech-atira",
-          heightMm: 144,
-          depthMm: 450,
-          softClose: true,
-          pushOpen: false,
-        }),
-        count: drawerCount,
-        softClose: preset.drawers[0]?.softClose ?? box.europeanDrawerConfig?.softClose ?? true,
-      },
-    };
-    const layers = regenerateLayersForBox(updatedBase);
-    const updated = { ...updatedBase, ...layers };
-    return { ok: true, box: updated };
   }
 
   const check = canBoxHaveDrawers(

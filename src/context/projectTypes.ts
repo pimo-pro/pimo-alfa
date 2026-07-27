@@ -503,9 +503,9 @@ export interface ProjectActions {
   renameBox: (_nome: string) => void;
   setPrateleiras: (_quantidade: number) => void;
   setGavetas: (_quantidade: number) => void;
-  /** Modelo B — aplica config europeia + quantidade e regenera layers. */
+  /** Legacy stub — ignora config europeia; aplica só contagem clássica. */
   setEuropeanDrawerConfig?: (
-    _config: import("../core/drawers/european/types").EuropeanDrawerBoxConfig,
+    _config: Record<string, unknown>,
     _count: number
   ) => void;
   setDrawerHeightMode: (_mode: import("../core/drawers/drawerHeightModeTypes").DrawerHeightMode) => void;

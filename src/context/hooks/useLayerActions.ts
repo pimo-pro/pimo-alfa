@@ -16,7 +16,6 @@ import {
 } from "../../core/doors/doorLayerGeometry";
 import { validateBoxDrawerConfiguration } from "../../core/drawers/drawerUiValidation";
 import { getSettings } from "../../core/settings/settingsService";
-import { isDrawerModeloAActive } from "../../core/drawers/drawerSystemFlags";
 import { devLogger } from "../../utils/devLogger";
 import type { ProjectActionsExecutionContext } from "./projectActionsDeps";
 import { commitMaterialSync, refreshViewerAfterMaterialSync, syncDrawerFrontMaterialToViewer } from "../../core/materials/materialSync";
@@ -90,57 +89,6 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
       setGavetas: (quantidade) => {
         const valor = Math.max(0, Math.floor(quantidade));
 
-        // Modelo B (Sistema Europeu): Modelo A desactivado — permite quantidade + regenera europeu.
-        if (!isDrawerModeloAActive()) {
-          updateProject(
-            (prev) => {
-              const workspaceBoxes = prev.workspaceBoxes.map((box) => {
-                if (box.id !== prev.selectedWorkspaceBoxId) return box;
-                const updatedBox = {
-                  ...box,
-                  gavetas: valor,
-                  portaTipo: valor > 0 ? ("sem_porta" as const) : box.portaTipo,
-                  prateleiras: valor > 0 ? 0 : box.prateleiras,
-                  doorsLayer: valor > 0 ? [] : box.doorsLayer,
-                  europeanDrawerConfig: {
-                    ...(box.europeanDrawerConfig ?? {
-                      systemId: "blum-legrabox" as const,
-                      heightMm: 90,
-                      heightCode: "M",
-                      depthMm: 500,
-                      softClose: true,
-                      pushOpen: false,
-                    }),
-                    count: valor,
-                  },
-                  drawerConfigError: undefined,
-                  panelIds: ensureBoxPanelIds(box.panelIds, panelIdOptionsFromBox(box, {
-                    gavetas: valor,
-                    portaTipo: valor > 0 ? "sem_porta" : box.portaTipo,
-                    prateleiras: valor > 0 ? 0 : box.prateleiras,
-                  })),
-                };
-                const layers = regenerateLayersForBox(updatedBox);
-                return { ...updatedBox, ...layers };
-              });
-              return recomputeState(
-                prev,
-                {
-                  workspaceBoxes,
-                  changelog: appendChangelog(prev.changelog, {
-                    timestamp: new Date(),
-                    type: "box",
-                    message: `Gavetas europeias (Modelo B) ajustadas para ${valor}`,
-                  }),
-                },
-                true
-              );
-            },
-            true
-          );
-          return;
-        }
-
         updateProject(
           (prev) => {
             const workspaceBoxes = prev.workspaceBoxes.map((box) => {
@@ -201,21 +149,36 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
           true
         );
       },
-      setEuropeanDrawerConfig: (config, count) => {
+      setEuropeanDrawerConfig: (_config, count) => {
         const valor = Math.max(0, Math.floor(count));
         updateProject(
           (prev) => {
             const workspaceBoxes = prev.workspaceBoxes.map((box) => {
               if (box.id !== prev.selectedWorkspaceBoxId) return box;
+
+              if (valor > 0) {
+                const check = canBoxHaveDrawers(
+                  box.dimensoes.largura,
+                  box.dimensoes.altura,
+                  box.dimensoes.profundidade,
+                  valor
+                );
+                if (!check.valid) {
+                  return {
+                    ...box,
+                    drawerConfigError: check.reason ?? "Não é possível adicionar gavetas neste módulo.",
+                    drawerConfigWarnings: [],
+                  };
+                }
+              }
+
               const updatedBox = {
                 ...box,
                 gavetas: valor,
                 portaTipo: valor > 0 ? ("sem_porta" as const) : box.portaTipo,
                 prateleiras: valor > 0 ? 0 : box.prateleiras,
-                doorsLayer: valor > 0 ? [] : box.doorsLayer,
-                europeanDrawerConfig: { ...config, count: valor },
+                doorsLayer: valor > 0 ? box.doorsLayer : [],
                 drawerConfigError: undefined,
-                drawerConfigWarnings: undefined,
                 panelIds: ensureBoxPanelIds(
                   box.panelIds,
                   panelIdOptionsFromBox(box, {
@@ -226,7 +189,14 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
                 ),
               };
               const layers = regenerateLayersForBox(updatedBox);
-              return { ...updatedBox, ...layers };
+              const merged = { ...updatedBox, ...layers };
+              const drawerConfigWarnings = validateBoxDrawerConfiguration(
+                merged,
+                getSettings().gavetas
+              )
+                .filter((alert) => alert.level === "warning")
+                .map((alert) => alert.message);
+              return { ...merged, drawerConfigWarnings };
             });
             return recomputeState(
               prev,
@@ -235,7 +205,7 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
                 changelog: appendChangelog(prev.changelog, {
                   timestamp: new Date(),
                   type: "box",
-                  message: `Modelo B: ${config.systemId} ×${valor}`,
+                  message: `Gavetas ajustadas para ${valor}`,
                 }),
               },
               true
@@ -439,59 +409,6 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
         );
       },
       addDrawerLayerItem: () => {
-        // Modelo B: incrementa contagem europeia e regenera via generateEuropeanDrawer.
-        if (!isDrawerModeloAActive()) {
-          updateProject(
-            (prev) => {
-              const selected = getSelectedOrFirstWorkspaceBox(prev);
-              if (!selected) return prev;
-              const nextCount = Math.max(1, Math.floor((selected.gavetas || 0) + 1));
-              const workspaceBoxes = prev.workspaceBoxes.map((box) => {
-                if (box.id !== selected.id) return box;
-                const updatedBox = {
-                  ...box,
-                  gavetas: nextCount,
-                  portaTipo: "sem_porta" as const,
-                  prateleiras: 0,
-                  doorsLayer: [],
-                  europeanDrawerConfig: {
-                    ...(box.europeanDrawerConfig ?? {
-                      systemId: "hettich-innotech-atira" as const,
-                      heightMm: 144,
-                      depthMm: 450,
-                      softClose: true,
-                      pushOpen: false,
-                    }),
-                    count: nextCount,
-                  },
-                  drawerConfigError: undefined,
-                  panelIds: ensureBoxPanelIds(box.panelIds, panelIdOptionsFromBox(box, {
-                    portaTipo: "sem_porta" as const,
-                    prateleiras: 0,
-                    gavetas: nextCount,
-                  })),
-                };
-                const layers = regenerateLayersForBox(updatedBox);
-                return { ...updatedBox, ...layers };
-              });
-              return recomputeState(
-                prev,
-                {
-                  workspaceBoxes,
-                  changelog: appendChangelog(prev.changelog, {
-                    timestamp: new Date(),
-                    type: "box",
-                    message: "Gaveta europeia (Modelo B) adicionada",
-                  }),
-                },
-                true
-              );
-            },
-            true
-          );
-          return;
-        }
-
         updateProject(
           (prev) => {
             const selected = getSelectedOrFirstWorkspaceBox(prev);

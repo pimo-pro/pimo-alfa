@@ -312,8 +312,8 @@ export interface BoxModule {
   doorsLayer: DoorLayerItem[];
   /** Camada de gavetas da caixa. */
   drawersLayer: DrawerLayerItem[];
-  /** Modelo B — config Sistema Europeu (quando Modelo A desactivado). */
-  europeanDrawerConfig?: import("./drawers/european/types").EuropeanDrawerBoxConfig;
+  /** Legacy opcional (projectos antigos Modelo B) — ignorado em runtime. */
+  europeanDrawerConfig?: Record<string, unknown>;
   /** Divisórios verticais (DIV) internos. */
   divisores: import("./divSep/types").DivisorItem[];
   /** Separadores horizontais (SEP) internos. */
@@ -383,10 +383,9 @@ export interface WorkspaceBox {
   /** Avisos de validação de gavetas (FASE 4 UI). */
   drawerConfigWarnings?: string[];
   /**
-   * Modelo B — configuracao do Sistema Europeu de Gavetas.
-   * Usado apenas quando o Modelo A esta desactivado.
+   * Legacy opcional (projectos antigos Modelo B) — ignorado em runtime.
    */
-  europeanDrawerConfig?: import("./drawers/european/types").EuropeanDrawerBoxConfig;
+  europeanDrawerConfig?: Record<string, unknown>;
   posicaoX_mm: number;
   posicaoY_mm: number;
   /** Posição Z em mm (para manipulação 3D no viewer). */

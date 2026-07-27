@@ -1,29 +1,25 @@
 /**
  * drawerModeloAGate.ts
  *
- * Gates de runtime do Modelo A / B.
- * - Modelo A activo: layers classicas (exclui metadata.modeloB)
- * - Modelo A desactivado: apenas layers do Sistema Europeu (Modelo B)
+ * Helpers de camada de gavetas efectiva (pipeline clássico / Modelo A).
+ * Ignora layers órfãs do antigo Modelo B se ainda existirem no JSON do projecto.
  */
 
 import type { DrawerLayerItem } from "../../models/BoxLayers";
-import { isDrawerModeloAActive } from "./drawerSystemFlags";
 
 /**
- * Camada de gavetas efetiva para UI / cutlist / viewer / PDF.
+ * Camada de gavetas efectiva para UI / cutlist / viewer / PDF.
+ * Apenas layers clássicas (sem metadata.modeloB).
  */
 export function resolveActiveDrawersLayer(box: {
   drawersLayer?: DrawerLayerItem[] | null;
 }): DrawerLayerItem[] {
   const layer = box.drawersLayer ?? [];
-  if (isDrawerModeloAActive()) {
-    return layer.filter((d) => !d.metadata?.modeloB);
-  }
-  return layer.filter((d) => d.metadata?.modeloB === true);
+  return layer.filter((d) => !d.metadata?.modeloB);
 }
 
 /**
- * Contagem efetiva de gavetas.
+ * Contagem efectiva de gavetas.
  */
 export function resolveActiveGavetasCount(box: {
   gavetas?: number | null;
@@ -31,14 +27,11 @@ export function resolveActiveGavetasCount(box: {
 }): number {
   const activeLayer = resolveActiveDrawersLayer(box);
   if (activeLayer.length > 0) return activeLayer.length;
-  if (!isDrawerModeloAActive()) {
-    return Math.max(0, Math.floor(Number(box.gavetas) || 0));
-  }
   return Math.max(0, Math.floor(Number(box.gavetas) || 0));
 }
 
 /**
- * True se o modulo tem gavetas activas no sistema vigente (A ou B).
+ * True se o modulo tem gavetas activas no sistema clássico.
  */
 export function boxHasActiveDrawers(box: {
   gavetas?: number | null;
@@ -47,7 +40,7 @@ export function boxHasActiveDrawers(box: {
   return resolveActiveGavetasCount(box) > 0 || resolveActiveDrawersLayer(box).length > 0;
 }
 
-/** True quando o Sistema Europeu (Modelo B) esta o pipeline activo. */
+/** Modelo B desactivado no restauro — sempre false. */
 export function isDrawerModeloBActive(): boolean {
-  return !isDrawerModeloAActive();
+  return false;
 }
