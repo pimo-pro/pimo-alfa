@@ -48,7 +48,7 @@ type BoxUpdaterDeps = {
   buildDoorSpecs: (_items: DoorLayerItem[]) => DoorSpec[];
   buildDrawerSpecs: (
     _items: DrawerLayerItem[],
-    _options?: { showDrillingMarkers?: boolean; profundidadeUtilM?: number }
+    _options?: { showDrillingMarkers?: boolean; profundidadeUtilM?: number; profundidadeExternaM?: number }
   ) => DrawerSpec[];
   getDoorSpecFingerprint: (_spec: DoorSpec, _materialName?: string) => string;
   getDrawerSpecFingerprint: (_spec: DrawerSpec, _materialName?: string) => string;
@@ -309,6 +309,7 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
     const drawerSpecs = deps.buildDrawerSpecs(drawerLayerItems, {
       showDrillingMarkers: opts.showDrawerDrilling === true,
       profundidadeUtilM: opts.carcassDepthM ?? depth,
+      profundidadeExternaM: opts.layoutDepthM,
     });
     const requiredDrawerIds = new Set(drawerSpecs.map((s) => s.id));
     for (const c of group.children.filter((c) => c.name.startsWith("drawer-layer-"))) {

@@ -56,7 +56,7 @@ type BoxAssemblerDeps = {
   buildDoorSpecs: (_items: DoorLayerItem[]) => DoorSpec[];
   buildDrawerSpecs: (
     _items: DrawerLayerItem[],
-    _options?: { showDrillingMarkers?: boolean; profundidadeUtilM?: number }
+    _options?: { showDrillingMarkers?: boolean; profundidadeUtilM?: number; profundidadeExternaM?: number }
   ) => DrawerSpec[];
   createDoorObject: (_spec: DoorSpec, _material: THREE.Material, _doorHoles?: TechnicalDrillHole[]) => THREE.Object3D;
   createDrawerObject: (
@@ -376,6 +376,7 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
     const drawerSpecs = deps.buildDrawerSpecs(drawerLayerItems, {
       showDrillingMarkers: opts.showDrawerDrilling === true,
       profundidadeUtilM: opts.carcassDepthM ?? depth,
+      profundidadeExternaM: opts.layoutDepthM,
     });
     drawerSpecs.forEach((spec, drawerIndex) => {
       const drawerItem = drawerLayerItems[drawerIndex];

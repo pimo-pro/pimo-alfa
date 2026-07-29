@@ -51,7 +51,7 @@ describe("Geometria da gaveta no módulo", () => {
       }
     });
 
-    it("frente flush, alinhada ao corpo e centrada", () => {
+      it("frente 1 mm à frente da face externa, alinhada ao corpo e centrada", () => {
       const { layers, group } = buildDrawerScenario({
         boxWidth: boxW,
         boxHeight: boxH,
@@ -69,7 +69,7 @@ describe("Geometria da gaveta no módulo", () => {
           layer.height! * DRAWER_SIDE_TOP_CLEARANCE_RATIO,
           0
         );
-        expect(layer.posZ).toBeCloseTo(boxD / 2 - layer.frontThickness / 2, 1);
+        expect(layer.posZ).toBeCloseTo(boxD / 2 + 1 - layer.frontThickness / 2, 1);
         expect(layer.posX ?? 0).toBeCloseTo(0, 1);
         expect(layer.width).toBe(boxW - 2 * drawerSettings.gavetaFolgaFrenteMm);
         expect(layer.bodyWidth).toBe(

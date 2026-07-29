@@ -160,7 +160,7 @@ export function generateDrawerGroup(config: DrawerGenerationConfig): DrawerGroup
       devLogger.warn(`DrawerGenerationService: specs inválidas para gaveta ${i}`);
     }
 
-    // Posicao Z: frente flush com a face externa do módulo (profundidade externa).
+    // Posicao Z: face exterior da frente = profundidade_externa + 1 mm.
     const drawer = createDrawer(
       `drawer-${boxId}-${i}`,
       boxId,

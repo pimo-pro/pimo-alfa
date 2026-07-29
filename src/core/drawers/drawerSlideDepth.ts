@@ -39,21 +39,32 @@ export function resolveDrawerUsableDepthMm(
   return Math.max(0, external - subtract);
 }
 
-/** Face frontal externa da caixa (mm, origem no centro da caixa). */
-export function resolveDrawerFrontOuterZMm(profundidadeExternaMm: number): number {
-  return Math.max(0, Number(profundidadeExternaMm)) / 2;
+/**
+ * Saliência da face exterior da frente face à profundidade externa do módulo (mm).
+ * Regra de produto: frente = profundidade_externa + 1 mm.
+ */
+export const DRAWER_FRONT_FACE_OVERHANG_MM = 1;
+
+/** Face frontal exterior da frente (mm, origem no centro da caixa). */
+export function resolveDrawerFrontOuterZMm(
+  profundidadeExternaMm: number,
+  overhangMm: number = DRAWER_FRONT_FACE_OVERHANG_MM
+): number {
+  const overhang = Number.isFinite(Number(overhangMm)) ? Number(overhangMm) : 0;
+  return Math.max(0, Number(profundidadeExternaMm)) / 2 + overhang;
 }
 
 /**
- * Centro Z da frente da gaveta flush com a face frontal externa da caixa.
- * frontPosZ = (profundidadeExterna / 2) − (espessuraFrente / 2)
+ * Centro Z da frente da gaveta: 1 mm à frente da face externa do módulo.
+ * frontPosZ = (profundidadeExterna / 2) + overhang − (espessuraFrente / 2)
  */
 export function resolveDrawerFrontPosZMm(
   profundidadeExternaMm: number,
-  frontThicknessMm: number
+  frontThicknessMm: number,
+  overhangMm: number = DRAWER_FRONT_FACE_OVERHANG_MM
 ): number {
   const frontT = Math.max(0, Number(frontThicknessMm));
-  return resolveDrawerFrontOuterZMm(profundidadeExternaMm) - frontT / 2;
+  return resolveDrawerFrontOuterZMm(profundidadeExternaMm, overhangMm) - frontT / 2;
 }
 
 /**

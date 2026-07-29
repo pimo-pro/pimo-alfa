@@ -18,6 +18,7 @@ import {
   estimateDrawerCenterHeightsFromFloorMm,
 } from "./drawerErgonomicsHeights";
 import { resolveDrawerErgonomicsRules } from "./drawerErgonomicsContext";
+import { resolveDrawerUsableDepthMm } from "./drawerSlideDepth";
 
 export type DrawerUiAlertLevel = "warning" | "error";
 
@@ -39,15 +40,19 @@ export function resolveDrawerUsableInternalHeightMm(
   return Math.max(1, box.dimensoes.altura - feetHeightMm - gapMm);
 }
 
-/** Profundidade útil para curso da corrediça (mm): profundidade − recuo traseiro − folga corrediça. */
+/**
+ * Profundidade útil para curso da corrediça (mm).
+ * Mesmo modelo industrial: P_ext − costa − frente − folga corrediça
+ * (não usar gavetaRecuoCorpoMm — provoça falso positivo no aviso de curso).
+ */
 export function resolveDrawerUsableInternalDepthMm(
   box: Pick<WorkspaceBox, "dimensoes">,
   settings: SettingsSchema["gavetas"]
 ): number {
   const depth = Number(box.dimensoes.profundidade) || 0;
-  const bodyRecess = Number(settings.gavetaRecuoCorpoMm) || 0;
+  const frontThickness = Number(settings.gavetaEspessuraFrenteMm) || 0;
   const runnerClearance = Number(settings.gavetaRecuoProfundidadeCorredicaMm) || 0;
-  return Math.max(0, depth - bodyRecess - runnerClearance);
+  return resolveDrawerUsableDepthMm(depth, frontThickness, runnerClearance);
 }
 
 export function validateDrawerFeetWarning(

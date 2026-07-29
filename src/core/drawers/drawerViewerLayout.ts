@@ -97,7 +97,7 @@ export function resolveDrawerBottomCenterYMm(
 
 /**
  * Posição Z do grupo da gaveta no sistema local da caixa.
- * Face frontal externa da frente flush com a face frontal externa da caixa.
+ * Face exterior da frente = profundidade_externa + 1 mm.
  */
 export function resolveDrawerGroupPosZMm(
   profundidadeExternaMm: number,
@@ -348,7 +348,7 @@ export type DrawerFrontFlushLayoutMm = {
 };
 
 /**
- * Frente flush com a face frontal externa; corpo imediatamente atrás da frente.
+ * Frente 1 mm à frente da face externa; corpo imediatamente atrás da frente.
  * bodyDepthMm = profundidadeUtil − folgaCorredica
  * bodyCenterZ = frontPosZ − espFrente/2 − bodyDepth/2
  */

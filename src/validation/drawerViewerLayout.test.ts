@@ -14,19 +14,19 @@ import { drawerGroupToLayerItems, generateDrawerGroup } from "../core/drawers";
 import { settingsDefaults } from "../core/settings/settingsSchema";
 
 describe("drawerViewerLayout — geometria 3D industrial", () => {
-  it("frente flush: posZ grupo + meia espessura = face da carcaça", () => {
+  it("frente 1 mm à frente da face externa (após ajuste carcaça)", () => {
     const carcass = 531;
     const layout = 560;
     const frontT = 19;
     const posZ = resolveDrawerGroupPosZMm(layout, frontT);
     const dz = resolveDrawerViewerPosZAdjustmentMm(layout, carcass);
-    expect(posZ + dz + frontT / 2).toBeCloseTo(carcass / 2, 3);
+    expect(posZ + dz + frontT / 2).toBeCloseTo(carcass / 2 + 1, 3);
   });
 
-  it("resolveDrawerFrontFlushLayoutMm — frente flush na profundidade útil", () => {
+  it("resolveDrawerFrontFlushLayoutMm — frente 1 mm fora da profundidade externa", () => {
     const layout = resolveDrawerFrontFlushLayoutMm(550, 521, 19, 21);
-    expect(layout.frontOuterZ).toBe(275);
-    expect(layout.frontPosZ).toBe(265.5);
+    expect(layout.frontOuterZ).toBe(276);
+    expect(layout.frontPosZ).toBe(266.5);
     expect(layout.bodyCenterLocalZ).toBeCloseTo(-259.5, 3);
     expect(layout.frontPosZ + 19 / 2).toBe(layout.frontOuterZ);
   });

@@ -52,6 +52,8 @@ export type BuildDrawerSpecsOptions = {
   showDrillingMarkers?: boolean;
   /** Profundidade útil interna da carcaça (m). */
   profundidadeUtilM?: number;
+  /** Profundidade externa do módulo (m) — SSOT para Z da frente. */
+  profundidadeExternaM?: number;
 };
 
 function metalBoxColor(metalBoxType?: string): number {
@@ -143,6 +145,8 @@ export type DrawerSpec = {
   drawerDisplayName?: string;
   frontDisplayName?: string;
   profundidadeUtilM?: number;
+  /** Profundidade externa do módulo (m). Preferida ao reconstruir Z da frente. */
+  profundidadeExternaM?: number;
 };
 
 export function buildDrawerSpecs(
@@ -260,6 +264,12 @@ export function buildDrawerSpecs(
         Number.isFinite(options.profundidadeUtilM) &&
         options.profundidadeUtilM > 0
           ? options.profundidadeUtilM
+          : undefined,
+      profundidadeExternaM:
+        options.profundidadeExternaM != null &&
+        Number.isFinite(options.profundidadeExternaM) &&
+        options.profundidadeExternaM > 0
+          ? options.profundidadeExternaM
           : undefined,
     };
   });
@@ -395,10 +405,12 @@ function resolveDrawerFlushLayoutM(spec: DrawerSpec) {
   }
   const frontThicknessMm = spec.frontThicknessM * 1000;
   const profundidadeUtilMm = spec.profundidadeUtilM * 1000;
-  const profundidadeExternaMm = resolveProfundidadeExternaFromUtilMm(
-    profundidadeUtilMm,
-    frontThicknessMm
-  );
+  const profundidadeExternaMm =
+    spec.profundidadeExternaM != null &&
+    Number.isFinite(spec.profundidadeExternaM) &&
+    spec.profundidadeExternaM > 0
+      ? spec.profundidadeExternaM * 1000
+      : resolveProfundidadeExternaFromUtilMm(profundidadeUtilMm, frontThicknessMm);
   const folgaCorredicaMm = settingsDefaults.gavetas.gavetaRecuoProfundidadeCorredicaMm;
   return resolveDrawerFrontFlushLayoutMm(
     profundidadeExternaMm,
