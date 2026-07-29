@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-29T20:48:51.980Z",
+      "author": "pimo-pro",
+      "commitMessage": "fix(drawers): frente +1mm + aviso curso real",
+      "version": "v6.0729.2148"
+    },
+    {
       "publishedAt": "2026-07-27T21:23:52.037Z",
       "author": "pimo-pro",
       "commitMessage": "Finalizacao da remocao do Modelo B, restauracao completa do Modelo A, limpeza de gates, QA validado — pronto para producao.",
