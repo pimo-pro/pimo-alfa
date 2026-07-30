@@ -243,8 +243,10 @@ export class ViewerPanelVisibility {
       const panelType = node.userData?.panelType as PanelType | undefined;
       if (panelType) {
         // Defesa: mesh de frente de gaveta sem drawerLayerId nao pode herdar peca de carcaca.
+        // panelType tipado da carcaça não inclui "front"; createPanel marca panelType="front" em runtime.
+        const panelTypeRaw = String(node.userData?.panelType ?? "");
         if (
-          panelType === "front" &&
+          panelTypeRaw === "front" &&
           typeof node.name === "string" &&
           node.name.startsWith("drawer-front-")
         ) {
@@ -252,7 +254,7 @@ export class ViewerPanelVisibility {
             // eslint-disable-next-line no-console
             console.warn(
               `[DRAWER-FRONT-MAT ${performance.now().toFixed(2)}ms] applyPanelIdsToBox.BLOCKED_carcass_front`,
-              { boxId, name: node.name, panelType, materialPresetId }
+              { boxId, name: node.name, panelType: panelTypeRaw, materialPresetId }
             );
           }
           return;

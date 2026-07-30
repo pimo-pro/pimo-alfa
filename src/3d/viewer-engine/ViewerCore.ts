@@ -83,9 +83,7 @@ import {
   getDrawerSpecFromGroup,
   buildDrawerSpecs,
 } from "../objects/DrawerFactory";
-import { resolveDrawerFrontMaterialId } from "../../core/drawers/drawerFrontMaterial";
 import type { DrawerLayerItem } from "../../models/BoxLayers";
-import { getViewerMaterialId } from "../../core/materials/service";
 import { filterTechnicalDrillHolesForViewerMesh, filterViewerDrillMarkersForMesh } from "./drill/viewerCncDrillFilter";
 import {
   expandBox3ByObjectExcludingLayoutProxy,
@@ -2788,74 +2786,6 @@ export class ViewerCore {
     return root.children.find(
       (c) => c instanceof THREE.Mesh && c.name === "frente-fixa"
     ) as THREE.Mesh | undefined;
-  }
-
-  private discoverDrawerLayerItemsFromMesh(
-    root: THREE.Object3D,
-    drawerLayerItems?: DrawerLayerItem[]
-  ): DrawerLayerItem[] {
-    if (drawerLayerItems?.length) return drawerLayerItems;
-    const items: DrawerLayerItem[] = [];
-    const seen = new Set<string>();
-    root.traverse((child) => {
-      if (!(child instanceof THREE.Mesh)) return;
-      const ud = child.userData as {
-        drawerLayerId?: string;
-        drawerPart?: string;
-        drawerFrontMaterialId?: string;
-      };
-      if (ud.drawerPart !== "front" || !ud.drawerLayerId?.trim()) return;
-      const layerId = ud.drawerLayerId.trim();
-      if (seen.has(layerId)) return;
-      seen.add(layerId);
-      const frontMat = ud.drawerFrontMaterialId?.trim();
-      items.push(
-        (frontMat
-          ? { id: layerId, material: frontMat, materialId: frontMat, metadata: { frontMaterial: frontMat } }
-          : { id: layerId }) as DrawerLayerItem
-      );
-    });
-    return items;
-  }
-
-  /** Reaplica material independente à frente fixa (canto v2) após troca de material da caixa.
-   * @param explicit `string` = override; `null` = utilizador pediu seguir corpo; `undefined` = preservar.
-   * Nunca aplica matéria do módulo por omissão / load incompleto.
-   */
-  private syncFixedFrontMaterialForBox(
-    boxId: string,
-    boxMaterialId: string,
-    explicitFrenteFixaMaterialId?: string | null
-  ): void {
-    const entry = this.boxes.get(boxId);
-    if (!entry || !this.findFixedFrontPanel(entry.mesh)) return;
-
-    if (explicitFrenteFixaMaterialId === null) {
-      // Só quando o utilizador limpa explicitamente o override.
-      entry.frenteFixaMaterialId = undefined;
-      this.updateFixedFrontMaterial(boxId, boxMaterialId);
-      entry.frenteFixaMaterialId = undefined;
-      const panel = this.findFixedFrontPanel(entry.mesh);
-      if (panel) {
-        (panel.userData as Record<string, unknown>).frenteFixaMaterialId = boxMaterialId;
-      }
-      return;
-    }
-
-    if (typeof explicitFrenteFixaMaterialId === "string" && explicitFrenteFixaMaterialId.trim()) {
-      const materialId = getViewerMaterialId(explicitFrenteFixaMaterialId);
-      this.updateFixedFrontMaterial(boxId, materialId);
-      return;
-    }
-
-    // undefined → preservar escolha do utilizador (entry/mesh); nunca herdar módulo.
-    const fromEntry = entry.frenteFixaMaterialId?.trim();
-    const fromMesh = (
-      this.findFixedFrontPanel(entry.mesh)?.userData as { frenteFixaMaterialId?: string } | undefined
-    )?.frenteFixaMaterialId?.trim();
-    const preserved = fromEntry || fromMesh;
-    if (!preserved) return;
-    this.updateFixedFrontMaterial(boxId, preserved);
   }
 
   /**
