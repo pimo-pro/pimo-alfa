@@ -249,7 +249,7 @@ export function buildDrawerSpecs(
       handleOffsetXMm: item.metadata?.handleOffsetXMm,
       handleOffsetYMm: item.metadata?.handleOffsetYMm ?? item.handleOffsetMm,
       handlePositionPercent: item.metadata?.handlePositionPercent,
-      slideType: item.slideType ?? "Genérica",
+      slideType: item.slideType ?? "Hettich ArciTech",
       metalBoxType: item.metalBoxType ?? "Nenhuma",
       metalBoxProfileId: item.metadata?.metalBoxProfileId,
       metalBoxHeightMm: item.metadata?.metalBoxHeightMm,

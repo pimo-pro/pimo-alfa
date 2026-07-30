@@ -149,7 +149,7 @@ export function layerItemToDrawer(
     handleType: item.handleType ?? "Nenhum",
     handlePosition: item.handlePosition ?? "Centro",
     handleOffset: item.handleOffsetMm ?? 0,
-    slideType: item.slideType ?? "Genérica",
+    slideType: item.slideType ?? "Hettich ArciTech",
     metalBoxType: item.metalBoxType ?? "Nenhuma",
     softClose: Boolean(item.softClose),
     motion: {

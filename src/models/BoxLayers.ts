@@ -80,6 +80,11 @@ export type DrawerLayerMetadata = {
   europeanSystemId?: string;
   /** Modelo B: marca o layer como gerado pelo Sistema Europeu. */
   modeloB?: boolean;
+  /**
+   * Origem das ferragens: `global` após aplicar Ferragens globais;
+   * `individual` após edição manual (prioridade até novo apply global).
+   */
+  hardwareSource?: "global" | "individual";
 };
 
 export interface DrawerLayerItem {

@@ -323,7 +323,7 @@ export const settingsDefaults: SettingsSchema = {
     gavetaProfundidadesDisponiveisMm: [350, 400, 450, 500, 550, 600],
     gavetaAlturaMinimaMm: 80,
     gavetaAlturaMaximaMm: 350,
-    gavetaTipoCorredica: "Genérica",
+    gavetaTipoCorredica: "Hettich ArciTech",
     gavetaSoftClose: true,
     gavetaCursoTotalMm: 0,
     gavetaCapacidadeCargaKg: 40,

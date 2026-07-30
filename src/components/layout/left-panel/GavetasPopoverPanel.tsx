@@ -15,7 +15,9 @@ import DrawerConfigPanel, {
   DrawerCustomHeightsTable,
   getDrawerStatusBadges,
 } from "../../panels/DrawerConfigPanel";
+import DrawerGlobalHardwarePanel from "./DrawerGlobalHardwarePanel";
 import { resolveActiveDrawersLayer } from "../../../core/drawers/drawerModeloAGate";
+import { markHardwareSourceIndividual } from "../../../core/drawers/drawerHardware";
 import type { WorkspaceBox } from "../../../core/types";
 
 type GavetasPopoverPanelProps = {
@@ -104,7 +106,7 @@ export default function GavetasPopoverPanel({
               cursor: "pointer",
             }}
           >
-            ?
+            -
           </button>
           <span style={{ minWidth: 28, textAlign: "center", fontWeight: 600 }}>{v}</span>
           <button
@@ -125,6 +127,13 @@ export default function GavetasPopoverPanel({
           </button>
         </div>
       </div>
+
+      {drawers.length > 0 && (
+        <DrawerGlobalHardwarePanel
+          drawers={drawers}
+          onApply={(draft) => actions.applyDrawerHardwareGlobal(box.id, draft)}
+        />
+      )}
 
       {errorAlerts.map((alert, index) => (
         <div key={`err-${index}`} style={alertStyle("error")}>
@@ -292,7 +301,7 @@ export default function GavetasPopoverPanel({
                     {resolveDrawerDisplayName(item, index)}
                   </span>
                   <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                    {Math.round(item.width)}×{Math.round(item.height)} mm
+                    {Math.round(item.width)}ï¿½{Math.round(item.height)} mm
                     {item.metadata?.frontHeightMm != null &&
                     item.metadata.frontHeightMm > 0 &&
                     Math.round(item.metadata.frontHeightMm) !==
@@ -319,7 +328,9 @@ export default function GavetasPopoverPanel({
                       index={index}
                       box={box}
                       showHardware
-                      onUpdate={(partial) => actions.updateDrawerLayerItem(item.id, partial)}
+                      onUpdate={(partial) =>
+                        actions.updateDrawerLayerItem(item.id, markHardwareSourceIndividual(partial))
+                      }
                       onFrontMaterialChange={(materialId) => {
                         actions.setDrawerMaterial(box.id, item.id, materialId);
                         const nextItems = (box.drawersLayer ?? []).map((d) =>

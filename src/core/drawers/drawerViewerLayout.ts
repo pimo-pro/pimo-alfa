@@ -134,7 +134,7 @@ export function shouldRenderGenericDrawerSlideRails(
   sideMode: DrawerManufacturedSideMode
 ): boolean {
   if (sideMode !== "none") return false;
-  return !HIDDEN_BRANDED_SLIDE_TYPES.has(slideType ?? "Genérica");
+  return !HIDDEN_BRANDED_SLIDE_TYPES.has(slideType ?? "Hettich ArciTech");
 }
 
 /** Paridade viewer ↔ XML industrial — laterais de madeira. */

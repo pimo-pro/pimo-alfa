@@ -6,12 +6,12 @@ import type {
 } from "../settings/settingsSchema";
 
 export const DRAWER_SLIDE_TYPES: readonly DrawerSlideType[] = [
+  "Hettich ArciTech",
+  "Genérica",
   "Blum Tandem",
   "Blum Movento",
   "Hettich InnoTech",
-  "Hettich ArciTech",
   "Hafele Matrix",
-  "Genérica",
 ] as const;
 
 export const DRAWER_METAL_BOX_TYPES: readonly DrawerMetalBoxType[] = [

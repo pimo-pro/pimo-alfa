@@ -94,6 +94,7 @@ function getStructureFingerprint(
     handlePositionPercent: drawer.metadata?.handlePositionPercent,
     nominalDepth: drawer.metadata?.nominalDepth,
     drawerType: drawer.type ?? drawer.drawerType,
+    hardwareSource: drawer.metadata?.hardwareSource,
     drawerGroupName: drawer.metadata?.drawerGroupName,
     frontPieceName: drawer.metadata?.frontExtPieceName ?? drawer.metadata?.frontPieceName,
     frontIntPieceName: drawer.metadata?.frontIntPieceName,

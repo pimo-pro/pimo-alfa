@@ -596,6 +596,14 @@ export interface ProjectActions {
     _partial: Partial<DoorLayerItem> & { applyVerticalAdjustMm?: number }
   ) => void;
   updateDrawerLayerItem: (_id: string, _partial: Partial<DrawerLayerItem>) => void;
+  /**
+   * Aplica ferragens a todas as gavetas do box seleccionado (origem `global`).
+   * Sobrescreve prioridade individual — o utilizador re-aplica o global de propósito.
+   */
+  applyDrawerHardwareGlobal: (
+    _boxId: string,
+    _draft: import("../core/drawers/drawerHardware").DrawerHardwareDraft
+  ) => void;
   setDoorLayerItemOpen: (_id: string, _isOpen: boolean) => void;
   setDrawerLayerItemOpen: (
     _id: string,

@@ -110,6 +110,8 @@ export function getDrawerStatusBadges(drawer: DrawerLayerItem): string[] {
     badges.push("Metálica");
   }
   if (drawer.softClose) badges.push("Soft-close");
+  if (drawer.metadata?.hardwareSource === "individual") badges.push("Individual");
+  else if (drawer.metadata?.hardwareSource === "global") badges.push("Global");
   return badges;
 }
 

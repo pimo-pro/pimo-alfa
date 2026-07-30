@@ -15,6 +15,7 @@ import {
   resolveDoorOpeningHeightMm,
 } from "../../core/doors/doorLayerGeometry";
 import { validateBoxDrawerConfiguration } from "../../core/drawers/drawerUiValidation";
+import { buildHardwarePartialFromDraft } from "../../core/drawers/drawerHardware";
 import { getSettings } from "../../core/settings/settingsService";
 import { devLogger } from "../../utils/devLogger";
 import type { ProjectActionsExecutionContext } from "./projectActionsDeps";
@@ -39,6 +40,7 @@ export type LayerActions = Pick<
   | "removeDrawerLayerItem"
   | "updateDoorLayerItem"
   | "updateDrawerLayerItem"
+  | "applyDrawerHardwareGlobal"
   | "setDoorLayerItemOpen"
   | "setDrawerLayerItemOpen"
   | "setDoorLayerItemMaterial"
@@ -609,6 +611,51 @@ export function useLayerActions(ctx: ProjectActionsExecutionContext): LayerActio
                   timestamp: new Date(),
                   type: "box",
                   message: "Gaveta atualizada",
+                }),
+              },
+              true
+            );
+          },
+          true
+        );
+      },
+      applyDrawerHardwareGlobal: (boxId, draft) => {
+        updateProject(
+          (prev) => {
+            const workspaceBoxes = prev.workspaceBoxes.map((box) => {
+              if (box.id !== boxId) return box;
+              const nextDrawers = (box.drawersLayer ?? []).map((item) => {
+                // Prioridade individual: não sobrescrever até novo apply explícito sem override.
+                if (item.metadata?.hardwareSource === "individual") {
+                  return item;
+                }
+                const partial = buildHardwarePartialFromDraft(draft, "global", item);
+                return {
+                  ...item,
+                  ...partial,
+                  metadata: {
+                    ...item.metadata,
+                    ...partial.metadata,
+                    hardwareSource: "global" as const,
+                  },
+                };
+              });
+              const mergedBox = { ...box, drawersLayer: nextDrawers };
+              return {
+                ...mergedBox,
+                drawerConfigWarnings: validateBoxDrawerConfiguration(mergedBox, getSettings().gavetas)
+                  .filter((alert) => alert.level === "warning")
+                  .map((alert) => alert.message),
+              };
+            });
+            return recomputeState(
+              prev,
+              {
+                workspaceBoxes,
+                changelog: appendChangelog(prev.changelog, {
+                  timestamp: new Date(),
+                  type: "box",
+                  message: "Ferragens globais aplicadas às gavetas",
                 }),
               },
               true

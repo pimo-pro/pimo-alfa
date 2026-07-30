@@ -50,7 +50,7 @@ export function resolveDrawerMotionCurve(
   slideType?: string,
   softClose?: boolean
 ): (t: number) => number {
-  const type = slideType ?? "Genérica";
+  const type = slideType ?? "Hettich ArciTech";
   let base: (t: number) => number;
   if (type === "Blum Tandem") base = tandemCurve;
   else if (type === "Blum Movento") base = moventoCurve;

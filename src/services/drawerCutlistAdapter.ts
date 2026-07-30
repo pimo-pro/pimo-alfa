@@ -95,7 +95,7 @@ export function extractDrawerHardwareSummaryFromLayerItems(
     drawerId: item.id,
     drawerIndex: index + 1,
     boxId: item.parentBoxId,
-    slideType: item.slideType ?? "Genérica",
+    slideType: item.slideType ?? "Hettich ArciTech",
     slideQuantity: DRAWER_SLIDES_PER_DRAWER,
     slideLengthMm: item.bodyDepth ?? item.depth,
     softClose: Boolean(item.softClose),
@@ -250,7 +250,7 @@ export function drawerLayerItemToCutList(
   const drawerHardware = [
     {
       tipo: "corredica",
-      nome: item.slideType ?? "Genérica",
+      nome: item.slideType ?? "Hettich ArciTech",
       quantidade: DRAWER_SLIDES_PER_DRAWER,
       softClose: Boolean(item.softClose),
       capacidadeCargaKg: item.capacityKg ?? 40,
@@ -287,7 +287,7 @@ export function drawerLayerItemToCutList(
   const internalFrontWidthMm = resolveDrawerInternalFrontWidthMm(item);
 
   const structuralDrawerRules = {
-    slideType: item.slideType ?? "Genérica",
+    slideType: item.slideType ?? "Hettich ArciTech",
     softClose: Boolean(item.softClose),
     metalBoxType: item.metalBoxType ?? "Nenhuma",
     metalBoxProfileId: item.metadata?.metalBoxProfileId,
@@ -303,7 +303,7 @@ export function drawerLayerItemToCutList(
     handleOffsetXMm: item.metadata?.handleOffsetXMm,
     handleOffsetYMm: item.metadata?.handleOffsetYMm ?? item.handleOffsetMm,
     handleOffsetMm: item.handleOffsetMm ?? 0,
-    slideType: item.slideType ?? "Genérica",
+    slideType: item.slideType ?? "Hettich ArciTech",
     softClose: Boolean(item.softClose),
     metalBoxType: item.metalBoxType ?? "Nenhuma",
   };
