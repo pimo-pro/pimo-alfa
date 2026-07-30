@@ -344,14 +344,12 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
       doorFixedGapMm: portasSettings.portaGapDuplaMm,
       doorPosZOffsetMm: portasSettings.portaPosZOffsetMm,
     });
-    const ffMaterialId =
+    const ffExplicit =
       typeof opts.frenteFixaMaterialId === "string" && opts.frenteFixaMaterialId.trim().length > 0
         ? opts.frenteFixaMaterialId.trim()
-        : typeof opts.bodyMaterialId === "string" && opts.bodyMaterialId.trim().length > 0
-          ? opts.bodyMaterialId.trim()
-          : typeof opts.materialName === "string" && opts.materialName.trim().length > 0
-            ? opts.materialName.trim()
-            : deps.getDefaultOfficialMaterialId();
+        : "";
+    // Sem fallback ao módulo: só matéria explícita; senão default oficial (não bodyMaterialId).
+    const ffMaterialId = ffExplicit || deps.getDefaultOfficialMaterialId();
     const ffMat = deps.getMaterialForOfficialId(ffMaterialId) as THREE.Material;
     const ff = deps.panelFactory.createPanel(
       visual.fixedFront.size[0],
@@ -363,7 +361,9 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
     );
     ff.name = "frente-fixa";
     ff.position.set(...visual.fixedFront.pos);
-    (ff.userData as Record<string, unknown>).frenteFixaMaterialId = ffMaterialId;
+    if (ffExplicit) {
+      (ff.userData as Record<string, unknown>).frenteFixaMaterialId = ffExplicit;
+    }
     const ffHoles = drillMap.frente_fixa ?? [];
     if (ffHoles.length > 0) {
       deps.applyDrillHolesToPanelGeometry(ff, "front", ffHoles);
@@ -385,20 +385,24 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
         typeof opts.materialName === "string" && opts.materialName.trim().length > 0
           ? opts.materialName.trim()
           : defaultMaterialId;
-      const frontMaterialId = resolveDrawerFrontMaterialId(drawerItem, bodyMaterialId);
-      const frontMaterial = deps.getMaterialForOfficialId(frontMaterialId);
+      const explicitFrontMaterialId = resolveDrawerFrontMaterialId(drawerItem, "").trim();
+      // Sem fallback ao módulo: pintar com explícito ou default oficial.
+      const frontPaintId = explicitFrontMaterialId || defaultMaterialId;
+      const frontMaterial = deps.getMaterialForOfficialId(frontPaintId);
       const bodyMaterial = deps.getMaterialForOfficialId(bodyMaterialId);
       const drawerGroup = deps.createDrawerObject(spec, {
         front: frontMaterial as THREE.Material,
         body: bodyMaterial as THREE.Material,
-        frontMaterialId,
+        frontMaterialId: explicitFrontMaterialId || undefined,
       });
       drawerGroup.traverse((child) => {
         if (
           child instanceof THREE.Mesh &&
           (child as THREE.Mesh & { userData: { drawerPart?: string } }).userData?.drawerPart === "front"
         ) {
-          child.userData.drawerFrontMaterialId = frontMaterialId;
+          if (explicitFrontMaterialId) {
+            child.userData.drawerFrontMaterialId = explicitFrontMaterialId;
+          }
         }
       });
       root.add(drawerGroup);

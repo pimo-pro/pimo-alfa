@@ -526,7 +526,23 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
                     showToast("Material aplicado à porta.", "info");
                   }}
                   onDrawerMaterialChange={(boxId, drawerLayerId, materialName) => {
-                    viewerApi?.updateDrawerMaterial?.(boxId, drawerLayerId, materialName);
+                    // setDrawerMaterial já persistiu; passar layer com matéria para evitar race sem items.
+                    const nextItems = (selectedBox.drawersLayer ?? []).map((d) =>
+                      d.id === drawerLayerId
+                        ? {
+                            ...d,
+                            material: materialName,
+                            materialId: materialName,
+                            metadata: { ...d.metadata, frontMaterial: materialName },
+                          }
+                        : d
+                    );
+                    viewerApi?.updateDrawerMaterial?.(
+                      boxId,
+                      drawerLayerId,
+                      materialName,
+                      nextItems
+                    );
                     showToast("Material aplicado à gaveta.", "info");
                   }}
                   onFixedFrontMaterialChange={(boxId, materialName) => {

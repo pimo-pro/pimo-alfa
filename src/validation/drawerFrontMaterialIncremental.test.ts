@@ -5,16 +5,17 @@ import {
   applyDrawerFrontMaterialToMesh,
   buildDrawerSpecs,
   createDrawerObject,
-  resolveDrawerFrontFaceMaterialIndex,
 } from "../3d/objects/DrawerFactory";
 import { settingsDefaults } from "../core/settings/settingsSchema";
 
 vi.mock("../3d/objects/BoxMaterialApplier", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../3d/objects/BoxMaterialApplier")>();
   const edgeMat = new THREE.MeshStandardMaterial({ color: 0xb8a898 });
+  const faceMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b, name: "MOCK_FRONT" });
   return {
     ...actual,
     getEdgeMaterial: () => edgeMat,
+    getMaterialForOfficialId: () => faceMat,
   };
 });
 
@@ -42,7 +43,7 @@ function worldBounds(mesh: THREE.Mesh): THREE.Box3 {
 }
 
 describe("viewer — atualização incremental do material da frente da gaveta", () => {
-  it("applyDrawerFrontMaterialToMesh altera só a face larga (+Z), preserva geometria e orlas", () => {
+  it("create singleMaterial; apply cobre peça completa; preserva bounds; sem cap", () => {
     const group = generateDrawerGroup({
       boxWidth: 600,
       boxHeight: 280,
@@ -62,23 +63,15 @@ describe("viewer — atualização incremental do material da frente da gaveta",
 
     const oldFront = new THREE.MeshStandardMaterial({ color: 0xeeeeee });
     const body = new THREE.MeshStandardMaterial({ color: 0x888888 });
-    const drawerLayer = createDrawerObject(spec, { front: oldFront, body });
+    const drawerLayer = createDrawerObject(spec, { front: oldFront, body, frontMaterialId: "carvalho" });
     const frontMesh = findFrontMesh(drawerLayer);
 
-    expect(Array.isArray(frontMesh.material)).toBe(true);
-    const materialsBefore = frontMesh.material as THREE.Material[];
-    const edgeBefore = materialsBefore[0];
-    const faceIndex = resolveDrawerFrontFaceMaterialIndex(frontMesh);
-    expect(faceIndex).toBe(1);
-    expect((materialsBefore[faceIndex] as THREE.MeshStandardMaterial).color.getHex()).toBe(0xeeeeee);
+    expect(Array.isArray(frontMesh.material)).toBe(false);
+    expect(drawerLayer.userData.drawerSpec).toBeTruthy();
 
-    const geometryUuidBefore = frontMesh.geometry.uuid;
     const boundsBefore = worldBounds(frontMesh);
 
-    const newFront = new THREE.MeshStandardMaterial({ color: 0x224466 });
-    applyDrawerFrontMaterialToMesh(frontMesh, newFront);
-
-    expect(frontMesh.geometry.uuid).toBe(geometryUuidBefore);
+    applyDrawerFrontMaterialToMesh(frontMesh, "nogueira");
 
     const boundsAfter = worldBounds(frontMesh);
     expect(boundsAfter.min.x).toBeCloseTo(boundsBefore.min.x, 5);
@@ -88,13 +81,11 @@ describe("viewer — atualização incremental do material da frente da gaveta",
     expect(boundsAfter.min.z).toBeCloseTo(boundsBefore.min.z, 5);
     expect(boundsAfter.max.z).toBeCloseTo(boundsBefore.max.z, 5);
 
-    const materialsAfter = frontMesh.material as THREE.Material[];
-    expect(materialsAfter[0]).toBe(edgeBefore);
-    expect((materialsAfter[0] as THREE.MeshStandardMaterial).color.getHex()).toBe(0xb8a898);
-    expect((materialsAfter[faceIndex] as THREE.MeshStandardMaterial).color.getHex()).toBe(0x224466);
-
-    const groups = (frontMesh.geometry as THREE.BufferGeometry).groups;
-    expect(groups[4]?.materialIndex).toBe(faceIndex);
-    expect(groups[5]?.materialIndex).toBe(faceIndex);
+    expect(Array.isArray(frontMesh.material)).toBe(false);
+    expect(frontMesh.userData.drawerFrontMaterialId).toBe("nogueira");
+    expect((frontMesh.geometry as THREE.BufferGeometry).groups.length).toBe(0);
+    expect(
+      frontMesh.children.some((c) => c.userData?.isDrawerFrontExteriorCap === true)
+    ).toBe(false);
   });
 });

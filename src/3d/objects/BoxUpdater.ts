@@ -247,27 +247,18 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
     (c) => c instanceof THREE.Mesh && c.name === "frente-fixa"
   ) as THREE.Mesh | undefined;
   const ffHoles = drillMap.frente_fixa ?? [];
-  const bodyOrDefaultFf =
-    typeof opts.bodyMaterialId === "string" && opts.bodyMaterialId.trim().length > 0
-      ? opts.bodyMaterialId.trim()
-      : typeof opts.materialName === "string" && opts.materialName.trim().length > 0
-        ? opts.materialName.trim()
-        : deps.getDefaultOfficialMaterialId();
   const existingFfId =
     typeof (ffPanel?.userData as { frenteFixaMaterialId?: string } | undefined)?.frenteFixaMaterialId ===
     "string"
       ? String((ffPanel!.userData as { frenteFixaMaterialId?: string }).frenteFixaMaterialId).trim()
       : "";
-  // Chave presente → override (vazio = seguir corpo). Omitida → preservar mesh.
-  const ffMaterialId =
-    "frenteFixaMaterialId" in opts
-      ? typeof opts.frenteFixaMaterialId === "string" && opts.frenteFixaMaterialId.trim().length > 0
-        ? opts.frenteFixaMaterialId.trim()
-        : bodyOrDefaultFf
-      : existingFfId.length > 0
-        ? existingFfId
-        : bodyOrDefaultFf;
-  if (ffPanel) {
+  // Só aplica override explícito do layer. Vazio/undefined → preservar mesh (nunca módulo).
+  const ffExplicitFromOpts =
+    typeof opts.frenteFixaMaterialId === "string" && opts.frenteFixaMaterialId.trim().length > 0
+      ? opts.frenteFixaMaterialId.trim()
+      : "";
+  const ffMaterialId = ffExplicitFromOpts || existingFfId;
+  if (ffPanel && ffMaterialId) {
     const ffUserData = ffPanel.userData as Record<string, unknown>;
     if (ffUserData.frenteFixaMaterialId !== ffMaterialId) {
       const ffMat = deps.getMaterialForOfficialId(ffMaterialId) as THREE.Material;
@@ -277,6 +268,8 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
     if (ffHoles.length > 0) {
       deps.applyDrillHolesToPanelGeometry(ffPanel, "front", ffHoles);
     }
+  } else if (ffPanel && ffHoles.length > 0) {
+    deps.applyDrillHolesToPanelGeometry(ffPanel, "front", ffHoles);
   }
 
   const doorLayerItems = Array.isArray(opts.doorLayerItems) ? opts.doorLayerItems : [];
@@ -323,28 +316,52 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
         typeof opts.materialName === "string" && opts.materialName.trim().length > 0
           ? opts.materialName.trim()
           : defaultMaterialId;
-      const frontMaterialId = resolveDrawerFrontMaterialId(drawerItem, bodyMaterialId);
+      const explicitFrontMaterialId = resolveDrawerFrontMaterialId(drawerItem, "").trim();
+      const existingDrawer = group.children.find((c) => c.name === `drawer-layer-${spec.id}`) as THREE.Object3D | undefined;
+      let preservedFrontId = "";
+      if (existingDrawer) {
+        existingDrawer.traverse((child) => {
+          if (preservedFrontId) return;
+          if (!(child instanceof THREE.Mesh)) return;
+          const ud = child.userData as { drawerPart?: string; drawerFrontMaterialId?: string };
+          if (ud.drawerPart === "front" && ud.drawerFrontMaterialId?.trim()) {
+            preservedFrontId = ud.drawerFrontMaterialId.trim();
+          }
+        });
+      }
+      // Explicito do layer → mesh existente → nunca matéria do módulo no fingerprint da frente.
+      const frontIdentityId = explicitFrontMaterialId || preservedFrontId || "__unset__";
+      const frontPaintId = explicitFrontMaterialId || preservedFrontId || defaultMaterialId;
       const structureFingerprint = deps.getDrawerStructureFingerprint(spec, {
-        frontMaterial: frontMaterialId,
+        frontMaterial: frontIdentityId,
         bodyMaterial: bodyMaterialId,
       });
       const motionKey = deps.getDrawerMotionKey(spec);
-      const existingDrawer = group.children.find((c) => c.name === `drawer-layer-${spec.id}`) as THREE.Object3D | undefined;
       const drawerUserData = existingDrawer?.userData as Record<string, unknown> | undefined;
       if (existingDrawer && drawerUserData?.[deps.drawerSpecFingerprintKey] === structureFingerprint) {
         if (drawerUserData?.drawerMotionKey !== motionKey) {
           deps.syncDrawerLayerMotion(existingDrawer, spec);
           drawerUserData.drawerMotionKey = motionKey;
         }
+        // Garantir userData da frente após load sem rebuild.
+        if (explicitFrontMaterialId) {
+          existingDrawer.traverse((child) => {
+            if (!(child instanceof THREE.Mesh)) return;
+            const ud = child.userData as { drawerPart?: string; drawerFrontMaterialId?: string };
+            if (ud.drawerPart === "front") {
+              ud.drawerFrontMaterialId = explicitFrontMaterialId;
+            }
+          });
+        }
         return;
       }
       if (existingDrawer) group.remove(existingDrawer);
-      const frontMaterial = deps.getMaterialForOfficialId(frontMaterialId);
+      const frontMaterial = deps.getMaterialForOfficialId(frontPaintId);
       const bodyMaterial = deps.getMaterialForOfficialId(bodyMaterialId);
       const newDrawer = deps.createDrawerObject(spec, {
         front: frontMaterial as THREE.Material,
         body: bodyMaterial as THREE.Material,
-        frontMaterialId,
+        frontMaterialId: explicitFrontMaterialId || preservedFrontId || undefined,
       });
       const newUserData = newDrawer.userData as Record<string, unknown>;
       newUserData[deps.drawerSpecFingerprintKey] = structureFingerprint;
@@ -355,7 +372,10 @@ export function updateBoxGroupWithDeps(group: THREE.Group, options: BoxOptions |
           child instanceof THREE.Mesh &&
           (child as THREE.Mesh & { userData: { drawerPart?: string } }).userData?.drawerPart === "front"
         ) {
-          child.userData.drawerFrontMaterialId = frontMaterialId;
+          const idToStore = explicitFrontMaterialId || preservedFrontId;
+          if (idToStore) {
+            child.userData.drawerFrontMaterialId = idToStore;
+          }
         }
       });
     });

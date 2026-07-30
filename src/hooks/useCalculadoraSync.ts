@@ -130,21 +130,29 @@ function getStructureFingerprint(
     costaMaterialId: wsBox.costaMaterialId,
     costaThicknessMm: wsBox.costaThicknessMm,
     separadorMaterialId: wsBox.separadorMaterialId,
-    frenteFixaMaterialId: wsBox.frenteFixaMaterialId,
+    ...optionalFrenteFixaMaterialOpts(wsBox),
     profundidadeExterna: wsBox.profundidadeExterna,
     viewerDebug: viewerDebug ?? null,
   });
 }
 
+function optionalFrenteFixaMaterialOpts(wsBox: WorkspaceBox): { frenteFixaMaterialId?: string } {
+  const id =
+    typeof wsBox.frenteFixaMaterialId === "string" ? wsBox.frenteFixaMaterialId.trim() : "";
+  return id ? { frenteFixaMaterialId: id } : {};
+}
+
 /** Material das frentes de gaveta (independente do corpo) — sync imediato sem rebuild estrutural. */
 function getDrawerFrontMaterialsFingerprint(
   wsBox: WorkspaceBox,
-  fallbackMaterialId: string
+  _fallbackMaterialId: string
 ): string {
+  void _fallbackMaterialId;
   return JSON.stringify(
     (wsBox.drawersLayer ?? []).map((drawer) => ({
       id: drawer.id,
-      materialId: resolveDrawerFrontMaterialId(drawer, wsBox.material ?? fallbackMaterialId),
+      // Só matéria explícita — nunca herdar a do módulo no fingerprint/sync.
+      materialId: resolveDrawerFrontMaterialId(drawer, "") || null,
     }))
   );
 }
@@ -260,7 +268,9 @@ export const useCalculadoraSync = (
       const lastDrawerMatFp = lastDrawerFrontMaterialsFingerprintRef.current.get(wsBox.id);
       if (lastDrawerMatFp === drawerMatFp) return;
       for (const drawer of wsBox.drawersLayer ?? []) {
-        const matId = resolveDrawerFrontMaterialId(drawer, wsBox.material ?? resolvedMat);
+        // Sem fallback ao módulo: só sincronizar matéria de frente explícita.
+        const matId = resolveDrawerFrontMaterialId(drawer, "").trim();
+        if (!matId) continue;
         syncDrawerFrontMaterialToViewer(wsBox.id, drawer.id, matId);
       }
       lastDrawerFrontMaterialsFingerprintRef.current.set(wsBox.id, drawerMatFp);
@@ -397,9 +407,9 @@ export const useCalculadoraSync = (
           costaAtiva: resolveCostaAtivaForBox(wsBox),
           bodyMaterialId: wsBox.material,
           costaMaterialId: wsBox.costaMaterialId,
-    separadorMaterialId: wsBox.separadorMaterialId,
-    frenteFixaMaterialId: wsBox.frenteFixaMaterialId,
-    ...posRot,
+          separadorMaterialId: wsBox.separadorMaterialId,
+          ...optionalFrenteFixaMaterialOpts(wsBox),
+          ...posRot,
         });
         if (!added) {
           if (import.meta.env.DEV) {
@@ -471,9 +481,9 @@ export const useCalculadoraSync = (
             costaAtiva: resolveCostaAtivaForBox(wsBox),
             bodyMaterialId: wsBox.material,
             costaMaterialId: wsBox.costaMaterialId,
-    separadorMaterialId: wsBox.separadorMaterialId,
-    frenteFixaMaterialId: wsBox.frenteFixaMaterialId,
-    ...posRot,
+            separadorMaterialId: wsBox.separadorMaterialId,
+            ...optionalFrenteFixaMaterialOpts(wsBox),
+            ...posRot,
           });
           lastStructureFingerprintRef.current.set(wsBox.id, structureFingerprint);
           syncDrawerFrontMaterialsIfNeeded(wsBox, resolvedMaterialName);

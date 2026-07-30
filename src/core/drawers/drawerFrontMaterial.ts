@@ -1,6 +1,8 @@
 import type { DrawerLayerItem } from "../../models/BoxLayers";
 
-/** Material canónico da frente (independente do corpo da gaveta / caixa). */
+/** Material canónico da frente (independente do corpo da gaveta / caixa).
+ * Sem fallback silencioso: se não houver matéria explícita, devolve `fallbackId` (passar `""`).
+ */
 export function resolveDrawerFrontMaterialId(
   drawer: Pick<DrawerLayerItem, "material" | "materialId" | "metadata"> | undefined,
   fallbackId: string
@@ -9,6 +11,7 @@ export function resolveDrawerFrontMaterialId(
     drawer?.materialId?.trim() ||
     drawer?.metadata?.frontMaterial?.trim() ||
     drawer?.material?.trim() ||
-    fallbackId;
-  return candidate.length > 0 ? candidate : fallbackId;
+    "";
+  if (candidate.length > 0) return candidate;
+  return typeof fallbackId === "string" ? fallbackId : "";
 }

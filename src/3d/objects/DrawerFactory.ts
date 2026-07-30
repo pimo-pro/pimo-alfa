@@ -1,12 +1,10 @@
 import * as THREE from "three";
-import { createClonedMaterialWithDetailMaps } from "../viewer-engine/materials/MaterialEngine";
-import { applyDrawerFrontFaceGrain } from "../viewer-engine/materials/viewerGrainOrientation";
 import { getDefaultOfficialMaterial } from "../../core/materials/materials.api";
 import type { DrawerLayerItem } from "../../models/BoxLayers";
 import { resolveDrawerExternalFrontHeightMm, resolveDrawerDisplayName, resolveDrawerInternalFrontHeightMm } from "../../core/drawers/drawerLayerCustomization";
 import { devLogger } from "../../utils/devLogger";
 import { PanelFactory } from "./PanelFactory";
-import { getEdgeMaterial, getMaterialForOfficialId, resolvePanelMaterialOptions } from "./BoxMaterialApplier";
+import { getMaterialForOfficialId, resolvePanelMaterialOptions } from "./BoxMaterialApplier";
 import {
   computeDrawerPieceCorredicaHoles,
   getDrawerSlideDrillingRules,
@@ -303,96 +301,51 @@ function normalizeDrawerObjectMaterials(
 }
 
 /**
- * Índice do material da face larga visível (BoxGeometry faces +Z/-Z) num painel frente com edge groups.
- * Usa o grupo geométrico em vez de índice fixo para evitar inversão face/orla.
+ * Índice do material da face larga (legado edge/face). Com singleMaterial (portas) = 0.
+ * Mantido para viewerGrainOrientation.applyDrawerFrontFaceGrain.
  */
+/** Faces BoxGeometry: 0=+X 1=-X 2=+Y 3=-Y 4=+Z 5=-Z (paridade PanelFactory front). */
+export const DRAWER_FRONT_EXTERIOR_FACE_INDEX = 4;
+export const DRAWER_FRONT_INTERIOR_FACE_INDEX = 5;
+
 export function resolveDrawerFrontFaceMaterialIndex(mesh: THREE.Mesh): number {
-  const geometry = mesh.geometry as THREE.BufferGeometry;
-  const groups = geometry.groups;
-  // PanelFactory: [edgeMaterial=0, faceMaterial=1] com groups de 6 faces
   if (Array.isArray(mesh.material) && mesh.material.length >= 2) {
-    if (groups && groups.length >= 6) {
-      const faceGroup = groups.find((g) => g.materialIndex === 1) ?? groups[4] ?? groups[5];
-      if (faceGroup != null && Number.isFinite(faceGroup.materialIndex)) {
-        return faceGroup.materialIndex;
-      }
-      return 1;
+    const groups = (mesh.geometry as THREE.BufferGeometry).groups;
+    if (groups?.length >= 6) {
+      const faceGroup = groups.find((g) => g.materialIndex === 1) ?? groups[4];
+      return faceGroup?.materialIndex ?? 1;
     }
-    // Sem groups: Three.js usa só material[0]
-    return 0;
   }
   return 0;
 }
 
-/** Copia mapas já carregados do material partilhado (cache quente) para clone exclusivo. */
-function copyExclusiveMapsFromShared(
-  target: THREE.MeshStandardMaterial,
-  source: THREE.MeshStandardMaterial
-): boolean {
-  let copied = false;
-  const copyMap = (tex: THREE.Texture | null): THREE.Texture | null => {
-    if (!tex) return null;
-    const clone = tex.clone();
-    clone.needsUpdate = true;
-    return clone;
-  };
-  if (source.map && !target.map) {
-    target.map = copyMap(source.map);
-    copied = true;
-  }
-  if (source.normalMap && !target.normalMap) {
-    target.normalMap = copyMap(source.normalMap);
-    copied = true;
-  }
-  if (source.roughnessMap && !target.roughnessMap) {
-    target.roughnessMap = copyMap(source.roughnessMap);
-    copied = true;
-  }
-  if (copied) target.needsUpdate = true;
-  return copied;
-}
-
-/** Aplica material com mapas PBR à face visível da frente. */
+/**
+ * Atribui matéria à frente — paridade portas: clone do material oficial, singleMaterial.
+ * O caminho principal no Viewer é rebuild via updateDrawerMaterial (como updateDoorMaterial);
+ * esta função existe para sync/testes pontuais.
+ */
 export function applyDrawerFrontMaterialToMesh(
   mesh: THREE.Mesh,
   materialId: string,
   onMapsApplied?: () => void
 ): void {
-  const geometry = mesh.geometry as THREE.BufferGeometry;
-  const hasEdgeFaceGroups = Boolean(geometry.groups?.length >= 6);
-  const faceIndex =
-    Array.isArray(mesh.material) && mesh.material.length >= 2
-      ? resolveDrawerFrontFaceMaterialIndex(mesh)
-      : 0;
-  const shared = getMaterialForOfficialId(materialId) as THREE.MeshStandardMaterial;
-
-  const finish = () => {
-    applyDrawerFrontFaceGrain(mesh, materialId, onMapsApplied);
-  };
-
-  const mat = createClonedMaterialWithDetailMaps(materialId, {
-    onMapsApplied: finish,
-  });
-  if (!mat) return;
-
-  // Cache quente: mapas imediatos (igual ao rebuild via getMaterialForOfficialId().clone())
-  if (copyExclusiveMapsFromShared(mat, shared)) {
-    finish();
-  }
-
-  if (Array.isArray(mesh.material) && mesh.material.length >= 2) {
-    const next = mesh.material.slice() as THREE.Material[];
-    next[faceIndex] = mat;
-    if (hasEdgeFaceGroups) {
-      next[0] = getEdgeMaterial();
-    } else {
-      // Sem groups — único slot visível
-      next[0] = mat;
-    }
-    mesh.material = next;
-    return;
-  }
+  const mat = getMaterialForOfficialId(materialId).clone();
+  mat.needsUpdate = true;
   mesh.material = mat;
+  mesh.userData.drawerFrontMaterialId = materialId;
+  if (mesh.geometry instanceof THREE.BufferGeometry) {
+    mesh.geometry.clearGroups();
+  }
+  // Remover caps legados (patches v8/v9) se existirem.
+  for (const child of [...mesh.children]) {
+    if (child.userData?.isDrawerFrontExteriorCap === true) {
+      mesh.remove(child);
+      if (child instanceof THREE.Mesh) {
+        child.geometry.dispose();
+      }
+    }
+  }
+  onMapsApplied?.();
 }
 
 function resolveDrawerFlushLayoutM(spec: DrawerSpec) {
@@ -496,7 +449,7 @@ function resolveSpecSideCenterYM(spec: DrawerSpec): number {
   );
 }
 
-const DRAWER_VIEWER_LAYOUT_REV = "wood-side-slide-clearance-10mm-v4";
+const DRAWER_VIEWER_LAYOUT_REV = "door-parity-single-material";
 
 export function getDrawerStructureFingerprint(
   spec: DrawerSpec,
@@ -511,6 +464,9 @@ export function getDrawerStructureFingerprint(
     typeof materials === "object" && materials?.bodyMaterial
       ? materials.bodyMaterial
       : legacyName ?? frontMaterial;
+  // Incluir Z efectivo do flush: mudanças em resolveDrawerFrontFlushLayoutMm
+  // devem invalidar o fingerprint (senão o BoxUpdater reutiliza meshes enterrados).
+  const flush = resolveDrawerFlushLayoutM(spec);
   return JSON.stringify({
     drawerViewerLayoutRev: DRAWER_VIEWER_LAYOUT_REV,
     id: spec.id,
@@ -562,6 +518,9 @@ export function getDrawerStructureFingerprint(
     frontMaterial,
     bodyMaterial,
     profundidadeUtilM: spec.profundidadeUtilM,
+    profundidadeExternaM: spec.profundidadeExternaM,
+    viewerFlushFrontPosZMm: flush?.frontPosZ ?? null,
+    viewerFlushFrontOuterZMm: flush?.frontOuterZ ?? null,
   });
 }
 
@@ -626,9 +585,8 @@ export function createDrawerObject(
 ): THREE.Object3D {
   const { front: frontMaterial, body: bodyMaterial, frontMaterialId } =
     normalizeDrawerObjectMaterials(materials);
-  const frontFaceMaterial =
-    (frontMaterialId ? createClonedMaterialWithDetailMaps(frontMaterialId) : null) ??
-    frontMaterial.clone();
+  // Paridade portas: usar o material passado directamente (singleMaterial), sem clone PBR extra / caps.
+  const frontFaceMaterial = frontMaterial;
   frontFaceMaterial.needsUpdate = true;
   const bodyPanelMaterial = bodyMaterial.clone();
   bodyPanelMaterial.needsUpdate = true;
@@ -639,10 +597,26 @@ export function createDrawerObject(
   const flushLayout = resolveDrawerFlushLayoutM(spec);
   const groupPosZ = flushLayout ? flushLayout.frontPosZ / 1000 : spec.z;
 
+  if (import.meta.env.DEV && flushLayout) {
+    const carcassFrontZ = (spec.profundidadeUtilM ?? 0) * 1000 / 2;
+    devLogger.debug("[DRAWER-Z] flush viewer", {
+      id: spec.id,
+      carcassFrontZ,
+      frontOuterZ: flushLayout.frontOuterZ,
+      frontPosZ: flushLayout.frontPosZ,
+      bodyCenterLocalZ: flushLayout.bodyCenterLocalZ,
+      groupPosZMm: groupPosZ * 1000,
+      frontLocalZ: 0,
+      outerMinusCarcass: flushLayout.frontOuterZ - carcassFrontZ,
+      innerMinusCarcass: flushLayout.frontOuterZ - spec.frontThicknessM * 1000 - carcassFrontZ,
+    });
+  }
+
   const group = new THREE.Group();
   group.name = `drawer-layer-${spec.id}`;
   group.userData.drawerDisplayName = spec.drawerDisplayName;
   group.userData.pieceDisplayName = spec.frontDisplayName ?? spec.drawerDisplayName;
+  group.userData.drawerSpec = spec;
   group.position.set(spec.x, spec.y, groupPosZ);
   if (spec.rotY !== 0) group.rotation.y = spec.rotY;
 
@@ -674,19 +648,22 @@ export function createDrawerObject(
       sideThicknessMm: (spec.leftSideWidthM ?? spec.sideThicknessM ?? 0.016) * 1000,
       slideLengthMm,
     });
-    // Frente permanece em frontLocalY (âncora Y=0 no grupo); laterais posicionam-se relativamente a ela.
   }
 
+  // Exactamente como portas: PanelFactory + singleMaterial (todas as faces, sem caps).
   const frontExt = panelFactory.createPanel(
     spec.widthM,
     spec.heightM,
     spec.frontThicknessM,
     `drawer-front-ext-${spec.id}`,
     "front",
-    { edgeMaterial: getEdgeMaterial(), faceMaterial: frontFaceMaterial }
+    { singleMaterial: frontFaceMaterial }
   );
   frontExt.position.set(frontLocalX, frontLocalY, frontLocalZ);
   applyDrawerClickTargetIdentity(frontExt, spec.id, "front");
+  if (frontMaterialId && frontMaterialId.trim()) {
+    frontExt.userData.drawerFrontMaterialId = frontMaterialId.trim();
+  }
   if (spec.frontDisplayName) {
     frontExt.userData.pieceDisplayName = spec.frontDisplayName;
   }
@@ -719,9 +696,10 @@ export function createDrawerObject(
 
   const clickTarget = new THREE.Mesh(
     new THREE.BoxGeometry(spec.widthM, spec.heightM, 0.002),
-    new THREE.MeshBasicMaterial({ visible: false, depthWrite: false })
+    new THREE.MeshBasicMaterial({ visible: false, depthWrite: false, colorWrite: false })
   );
   clickTarget.name = `drawer-click-${spec.id}`;
+  clickTarget.visible = false;
   clickTarget.position.set(
     frontLocalX,
     frontLocalY,
@@ -1115,4 +1093,18 @@ export function createDrawerObject(
   group.add(drawerGroup);
   if (import.meta.env.DEV) devLogger.debug("[BoxLayers][DrawerFactory.createDrawerObject] final", { id: spec.id });
   return group;
+}
+
+/** Extrai DrawerSpec guardado no grupo (paridade getDoorSpecFromGroup). */
+export function getDrawerSpecFromGroup(group: THREE.Object3D): DrawerSpec | null {
+  const stored = group.userData?.drawerSpec as DrawerSpec | undefined;
+  if (stored && typeof stored.id === "string" && stored.id.length > 0) {
+    return stored;
+  }
+  const idFromName =
+    typeof group.name === "string" && group.name.startsWith("drawer-layer-")
+      ? group.name.slice("drawer-layer-".length)
+      : null;
+  if (!idFromName) return null;
+  return null;
 }

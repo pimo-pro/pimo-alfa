@@ -1,11 +1,19 @@
 import * as THREE from "three";
 import type { LoadedWoodMaterial } from "../../materials/WoodMaterial";
+import { isDrawerFrontExteriorMesh } from "./drawerFrontMaterialTrace";
 
 export function isDoorOrDrawerFrontNode(node: THREE.Object3D): boolean {
   const ud = (node as THREE.Mesh & {
-    userData: { doorLayerId?: string; drawerPart?: string };
+    userData: {
+      doorLayerId?: string;
+      drawerPart?: string;
+      isDrawerFrontExteriorCap?: boolean;
+    };
   }).userData;
-  return ud?.doorLayerId != null || ud?.drawerPart === "front";
+  if (ud?.doorLayerId != null) return true;
+  // Frente exterior da gaveta: nunca receber matéria do módulo (updateBoxMaterial).
+  if (isDrawerFrontExteriorMesh(node)) return true;
+  return false;
 }
 
 export function isKitchenFeetNode(node: THREE.Object3D): boolean {

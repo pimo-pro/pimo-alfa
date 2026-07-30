@@ -8,6 +8,7 @@ import WoodGrainLockToggle from "./WoodGrainLockToggle";
 import { resolveDoorLabel } from "../../../core/doors/doorLabels";
 import { isCornerDireitaInferiorModel } from "../../../core/cornerCabinet";
 import { boxHasActiveDrawers } from "../../../core/drawers/drawerModeloAGate";
+import { resolveDrawerFrontMaterialId } from "../../../core/drawers/drawerFrontMaterial";
 
 type SelecionarMaterialSectionProps = {
   boxId: string;
@@ -177,7 +178,10 @@ export default function SelecionarMaterialSection({
 
       {hasDrawers &&
         (box.drawersLayer ?? []).map((drawer, index) => {
-          const drawerMaterialId = drawer.material ?? fallbackMaterialId;
+          const drawerMaterialId =
+            resolveDrawerFrontMaterialId(drawer, "") ||
+            drawer.material ||
+            fallbackMaterialId;
           const label =
             (box.drawersLayer?.length ?? 0) > 1
               ? `Gaveta ${index + 1} — frente`

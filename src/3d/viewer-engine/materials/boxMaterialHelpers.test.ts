@@ -12,10 +12,16 @@ describe("boxMaterialHelpers", () => {
     doorMesh.userData.doorLayerId = "door-1";
     const drawerFront = new THREE.Mesh();
     drawerFront.userData.drawerPart = "front";
+    const exteriorCap = new THREE.Mesh();
+    exteriorCap.userData.isDrawerFrontExteriorCap = true;
+    const namedFront = new THREE.Mesh();
+    namedFront.name = "drawer-front-ext-abc";
     const body = new THREE.Mesh();
 
     expect(isDoorOrDrawerFrontNode(doorMesh)).toBe(true);
     expect(isDoorOrDrawerFrontNode(drawerFront)).toBe(true);
+    expect(isDoorOrDrawerFrontNode(exteriorCap)).toBe(true);
+    expect(isDoorOrDrawerFrontNode(namedFront)).toBe(true);
     expect(isDoorOrDrawerFrontNode(body)).toBe(false);
   });
 

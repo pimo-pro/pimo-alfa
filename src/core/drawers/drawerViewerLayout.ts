@@ -12,8 +12,8 @@ import {
 } from "./drawerGeometryConstants";
 import { isMetalBoxCatalogType } from "./drawerMetalBoxCatalog";
 import {
+  DRAWER_FRONT_FACE_OVERHANG_MM,
   resolveDrawerBodyCenterZFromFrontMm,
-  resolveDrawerFrontOuterZMm,
   resolveDrawerFrontPosZMm,
   resolveDrawerSideDepthMm,
   resolveDrawerViewerBodyDepthMm,
@@ -348,9 +348,23 @@ export type DrawerFrontFlushLayoutMm = {
 };
 
 /**
- * Frente 1 mm à frente da face externa; corpo imediatamente atrás da frente.
- * bodyDepthMm = profundidadeUtil − folgaCorredica
- * bodyCenterZ = frontPosZ − espFrente/2 − bodyDepth/2
+ * Flush viewer da frente overlay face à carcaça 3D (P_útil).
+ *
+ * IMPORTANTE: `P_útil` já desconta a espessura da frente. Por isso NÃO se pode
+ * aplicar o `dz` das portas (`(P_útil−P_ext)/2`) sobre o centro P_ext — isso
+ * enterra a frente quase toda dentro da caixa (regressão FASE A).
+ *
+ * Regra correcta (overlay):
+ *   face da carcaça  = P_útil / 2
+ *   face exterior    = P_útil / 2 + espFrente + overhang (1 mm)
+ *   centro da frente = face exterior − espFrente / 2
+ *
+ * O corpo fica imediatamente atrás da frente em coords locais
+ * (`bodyCenterLocalZ = −(espFrente/2 + bodyDepth/2)`); o grupo usa `frontPosZ`
+ * como origem — sem offset extra em `groupPosZ`.
+ *
+ * `profundidadeExternaMm` mantém-se na assinatura (domínio / callers) mas o Z
+ * do flush viewer ancora-se na carcaça 3D (P_útil).
  */
 export function resolveDrawerFrontFlushLayoutMm(
   profundidadeExternaMm: number,
@@ -358,10 +372,14 @@ export function resolveDrawerFrontFlushLayoutMm(
   frontThicknessMm: number,
   folgaCorredicaMm: number
 ): DrawerFrontFlushLayoutMm {
-  const frontOuterZ = resolveDrawerFrontOuterZMm(profundidadeExternaMm);
-  const frontPosZ = resolveDrawerFrontPosZMm(profundidadeExternaMm, frontThicknessMm);
+  void profundidadeExternaMm;
+  const frontT = Math.max(0, Number(frontThicknessMm));
+  const carcassFrontZ = Math.max(0, Number(profundidadeUtilMm)) / 2;
+  const frontOuterZ =
+    carcassFrontZ + frontT + DRAWER_FRONT_FACE_OVERHANG_MM;
+  const frontPosZ = frontOuterZ - frontT / 2;
   const bodyDepthMm = resolveDrawerViewerBodyDepthMm(profundidadeUtilMm, folgaCorredicaMm);
-  const bodyCenterZ = resolveDrawerBodyCenterZFromFrontMm(frontPosZ, frontThicknessMm, bodyDepthMm);
+  const bodyCenterZ = resolveDrawerBodyCenterZFromFrontMm(frontPosZ, frontT, bodyDepthMm);
   return {
     frontOuterZ,
     frontPosZ,

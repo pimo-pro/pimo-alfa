@@ -23,12 +23,16 @@ describe("drawerViewerLayout — geometria 3D industrial", () => {
     expect(posZ + dz + frontT / 2).toBeCloseTo(carcass / 2 + 1, 3);
   });
 
-  it("resolveDrawerFrontFlushLayoutMm — frente 1 mm fora da profundidade externa", () => {
+  it("resolveDrawerFrontFlushLayoutMm — frente overlay 1 mm à frente da carcaça (P_útil)", () => {
+    // P_útil já desconta t: outer = P_útil/2 + t + 1; centro = outer − t/2
+    // 521/2 + 19 + 1 = 280.5; center = 271; costas da frente = P_útil/2 + 1
     const layout = resolveDrawerFrontFlushLayoutMm(550, 521, 19, 21);
-    expect(layout.frontOuterZ).toBe(276);
-    expect(layout.frontPosZ).toBe(266.5);
+    expect(layout.frontOuterZ).toBe(280.5);
+    expect(layout.frontPosZ).toBe(271);
     expect(layout.bodyCenterLocalZ).toBeCloseTo(-259.5, 3);
     expect(layout.frontPosZ + 19 / 2).toBe(layout.frontOuterZ);
+    expect(layout.frontOuterZ - 19).toBeCloseTo(521 / 2 + 1, 3);
+    expect(layout.frontOuterZ).toBeCloseTo(521 / 2 + 19 + 1, 3);
   });
 
   it("corpo Z = −(esp. frente + slideLength)/2", () => {

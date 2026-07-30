@@ -523,11 +523,7 @@ export class BoxSceneController {
     }
     if (opts.materialName && !entry.cadOnly) {
       params.updateBoxMaterial(id, opts.materialName);
-      params.syncDrawerFrontMaterialsForBox(
-        id,
-        opts.drawerLayerItems,
-        opts.materialName ?? entry.materialName ?? params.defaultMaterialName
-      );
+      // Sem sync automático de frentes de gaveta — só updateDrawerMaterial (UI).
       params.reapplyDisplayMaterials();
     }
     this.applyEntryOptionFlags(entry, opts);
@@ -597,13 +593,7 @@ export class BoxSceneController {
     if (structureChanged) {
       params.applyPanelVisibilityForObject(entry.mesh);
     }
-    if (opts.drawerLayerItems !== undefined) {
-      params.syncDrawerFrontMaterialsForBox(
-        id,
-        opts.drawerLayerItems,
-        opts.materialName ?? entry.materialName ?? params.defaultMaterialName
-      );
-    }
+    // Sem sync automático de frentes de gaveta após rebuild estrutural.
     params.syncOrlaForBox(id);
     params.syncRemateForBox(id);
     if (params.getLockEnabled()) params.applyFloorConstraint(entry.mesh);

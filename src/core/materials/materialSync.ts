@@ -333,6 +333,23 @@ export function commitMaterialSync(
   target: MaterialSyncTarget,
   withLoading = true
 ): { next: ProjectState; sync: MaterialSyncResult } {
+  if (import.meta.env.DEV && (target.kind === "drawer" || target.kind === "drawerLayerItem")) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `[DRAWER-FRONT-MAT ${performance.now().toFixed(2)}ms] commitMaterialSync`,
+      {
+        kind: target.kind,
+        boxId: "boxId" in target ? target.boxId : null,
+        drawerLayerId:
+          target.kind === "drawer"
+            ? target.drawerLayerId
+            : target.kind === "drawerLayerItem"
+              ? target.itemId
+              : null,
+        materialId: "materialId" in target ? target.materialId : null,
+      }
+    );
+  }
   const sync = applyMaterialSync(prev, target);
   invalidateMaterialCutlistCache(prev, sync);
   const next = recomputeState(prev, materialSyncPatch(sync), withLoading);

@@ -1,6 +1,15 @@
 {
-  "updatedAt": "2026-07-29T20:48:52.778Z",
+  "updatedAt": "2026-07-30T14:20:23.594Z",
   "news": [
+    {
+      "version": "v-next-materiais-estaveis",
+      "title": "Novidades do Sistema � estabilidade total das mat�rias da frente da gaveta e frente fixa",
+      "description": "Novidades do Sistema � estabilidade total das mat�rias da frente da gaveta e frente fixa. Sem fallback. Sem substitui��o autom�tica. Fluxo unificado com portas.\n\n� Corre��o completa do fluxo de mat�ria da frente da gaveta.\n� Frente fixa agora preserva a mat�ria escolhida pelo utilizador.\n� Fallback silencioso removido.\n� Nenhuma mat�ria � substitu�da automaticamente ao abrir o projecto.\n� Fluxo unificado com portas (SSOT).\n� Estabilidade garantida no Viewer e no load.",
+      "publishedAt": "2026-07-30T14:20:23.593Z",
+      "type": "fix",
+      "author": "pimo-pro",
+      "icon": "fix"
+    },
     {
       "version": "v6.0729.2148",
       "title": "fix(drawers): frente +1mm + aviso curso real",

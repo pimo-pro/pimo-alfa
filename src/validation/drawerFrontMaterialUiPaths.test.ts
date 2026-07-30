@@ -14,9 +14,9 @@ import * as THREE from "three";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
+  applyDrawerFrontMaterialToMesh,
   buildDrawerSpecs,
   createDrawerObject,
-  resolveDrawerFrontFaceMaterialIndex,
 } from "../3d/objects/DrawerFactory";
 import { generateDrawerGroup, drawerGroupToLayerItems } from "../core/drawers";
 import { settingsDefaults } from "../core/settings/settingsSchema";
@@ -25,9 +25,11 @@ import { syncDrawerFrontMaterialToViewer } from "../industrial/viewerIntegration
 vi.mock("../3d/objects/BoxMaterialApplier", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../3d/objects/BoxMaterialApplier")>();
   const edgeMat = new THREE.MeshStandardMaterial({ color: 0xb8a898 });
+  const faceMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b, name: "MOCK_FRONT" });
   return {
     ...actual,
     getEdgeMaterial: () => edgeMat,
+    getMaterialForOfficialId: () => faceMat,
   };
 });
 
@@ -80,9 +82,10 @@ describe("drawer front material — caminhos UI e contrato viewer", () => {
       expect(src).toContain("metadata: { frontMaterial: materialId }");
     });
 
-    it("BoxLayersPanel liga onFrontMaterialChange a updateDrawerMaterial", () => {
+    it("BoxLayersPanel liga onFrontMaterialChange a setDrawerMaterial e updateDrawerMaterial", () => {
       const src = readSrc("components/layout/left-panel/BoxLayersPanel.tsx");
       expect(src).toContain("onFrontMaterialChange=");
+      expect(src).toContain("actions.setDrawerMaterial");
       expect(src).toContain("updateDrawerMaterial");
     });
 
@@ -104,33 +107,29 @@ describe("drawer front material — caminhos UI e contrato viewer", () => {
       expect(src).toContain("updateDrawerMaterial");
     });
 
-    it("ViewerCore.updateDrawerMaterial usa applyDrawerFrontMaterialToMesh e requestRender", () => {
+    it("ViewerCore.updateDrawerMaterial reconstrói como updateDoorMaterial", () => {
       const src = readSrc("3d/viewer-engine/ViewerCore.ts");
-      expect(src).toContain("applyDrawerFrontMaterialToMesh(child, materialName");
-      expect(src).toMatch(/updateDrawerMaterial[\s\S]*?this\.requestRender\(\)/);
+      expect(src).toContain("createDrawerObject(spec,");
+      expect(src).toContain("getDrawerSpecFromGroup");
+      expect(src).toMatch(/updateDrawerMaterial[\s\S]*?createDrawerObject[\s\S]*?this\.requestRender\(\)/);
     });
 
     it("HomeLeftPanelSelected liga onDrawerMaterialChange a updateDrawerMaterial", () => {
       const src = readSrc("components/layout/left-panel/HomeLeftPanelSelected.tsx");
       expect(src).toContain("onDrawerMaterialChange={(boxId, drawerLayerId, materialName)");
-      expect(src).toContain("viewerApi?.updateDrawerMaterial?.(boxId, drawerLayerId, materialName)");
+      expect(src).toContain("viewerApi?.updateDrawerMaterial?.(");
+      expect(src).toContain("nextItems");
     });
   });
 
-  describe("applyDrawerFrontMaterialToMesh — face larga vs orla", () => {
-    it("grupos 4/5 usam materialIndex da face; índice 0 permanece edge (contrato geométrico)", () => {
+  describe("applyDrawerFrontMaterialToMesh — peça completa", () => {
+    it("createDrawerObject usa singleMaterial; apply cobre +Z/−Z/orlas", () => {
       const mesh = buildDrawerFrontMesh();
-      const faceIndex = resolveDrawerFrontFaceMaterialIndex(mesh);
-      expect(faceIndex).toBe(1);
+      expect(Array.isArray(mesh.material)).toBe(false);
 
-      const groups = (mesh.geometry as THREE.BufferGeometry).groups;
-      expect(groups[4]?.materialIndex).toBe(1);
-      expect(groups[5]?.materialIndex).toBe(1);
-      expect(groups[0]?.materialIndex).toBe(0);
-
-      const materials = mesh.material as THREE.Material[];
-      expect(materials.length).toBeGreaterThanOrEqual(2);
-      expect(materials[0]).not.toBe(materials[faceIndex]);
+      applyDrawerFrontMaterialToMesh(mesh, "carvalho");
+      expect(Array.isArray(mesh.material)).toBe(false);
+      expect(mesh.material).toBeInstanceOf(THREE.Material);
     });
   });
 

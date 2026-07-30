@@ -182,15 +182,17 @@ export class ViewerPanelVisibility {
         node.layers.set(0);
       }
       if (!(node instanceof THREE.Mesh)) return;
-      const panelType = node.userData?.panelType as PanelType | undefined;
-      if (panelType) {
-        const specificId = panelIdByType[panelType];
-        const pieceId = specificId && specificId.trim().length > 0 ? specificId : `${boxId}:${panelType}`;
-        node.userData.panelId = pieceId;
-        node.userData.pieceId = pieceId;
-        node.userData.isPanelMesh = true;
-        node.userData.materialPresetId = materialPresetId;
-        this.applyPanelDimensionMetadata(node, panelType);
+
+      // Porta/gaveta ANTES de panelType: createPanel marca panelType="front" e
+      // senão a frente herdava pieceId `${boxId}:front` + matéria do módulo.
+      // Frente fixa: nunca tratar como carcaca panelType=front.
+      if (typeof node.name === "string" && (node.name === "frente-fixa" || node.name.startsWith("frente-fixa"))) {
+        const ffId = (node.userData?.frenteFixaMaterialId as string | undefined)?.trim();
+        node.userData.panelId = `frente-fixa:${boxId}`;
+        node.userData.pieceId = node.userData.panelId;
+        node.userData.isPieceMesh = true;
+        if (ffId) node.userData.materialPresetId = ffId;
+        this.applyPanelDimensionMetadata(node, "front");
         return;
       }
 
@@ -211,13 +213,57 @@ export class ViewerPanelVisibility {
         const pieceId = `drawer:${drawerLayerId}:${drawerPart ?? "body"}`;
         node.userData.panelId = pieceId;
         node.userData.pieceId = pieceId;
-        node.userData.isPanelMesh = true;
+        node.userData.isPieceMesh = true;
         const drawerFrontMaterialId = node.userData?.drawerFrontMaterialId as string | undefined;
-        node.userData.materialPresetId =
-          drawerPart === "front" && drawerFrontMaterialId?.trim()
-            ? drawerFrontMaterialId.trim()
-            : materialPresetId;
+        if (drawerPart === "front") {
+          if (drawerFrontMaterialId?.trim()) {
+            node.userData.materialPresetId = drawerFrontMaterialId.trim();
+          }
+          // Sem fallback ao modulo: nao sobrescrever materialPresetId da frente.
+        } else {
+          node.userData.materialPresetId = materialPresetId;
+        }
+        if (import.meta.env.DEV && drawerPart === "front") {
+          // eslint-disable-next-line no-console
+          console.warn(
+            `[DRAWER-FRONT-MAT ${performance.now().toFixed(2)}ms] applyPanelIdsToBox.drawer-front`,
+            {
+              boxId,
+              pieceId,
+              materialPresetId: node.userData.materialPresetId,
+              modulePresetArg: materialPresetId,
+              name: node.name,
+            }
+          );
+        }
         this.applyPanelDimensionMetadata(node, "front");
+        return;
+      }
+
+      const panelType = node.userData?.panelType as PanelType | undefined;
+      if (panelType) {
+        // Defesa: mesh de frente de gaveta sem drawerLayerId nao pode herdar peca de carcaca.
+        if (
+          panelType === "front" &&
+          typeof node.name === "string" &&
+          node.name.startsWith("drawer-front-")
+        ) {
+          if (import.meta.env.DEV) {
+            // eslint-disable-next-line no-console
+            console.warn(
+              `[DRAWER-FRONT-MAT ${performance.now().toFixed(2)}ms] applyPanelIdsToBox.BLOCKED_carcass_front`,
+              { boxId, name: node.name, panelType, materialPresetId }
+            );
+          }
+          return;
+        }
+        const specificId = panelIdByType[panelType];
+        const pieceId = specificId && specificId.trim().length > 0 ? specificId : `${boxId}:${panelType}`;
+        node.userData.panelId = pieceId;
+        node.userData.pieceId = pieceId;
+        node.userData.isPieceMesh = true;
+        node.userData.materialPresetId = materialPresetId;
+        this.applyPanelDimensionMetadata(node, panelType);
         return;
       }
 

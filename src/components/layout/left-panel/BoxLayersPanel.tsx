@@ -474,6 +474,8 @@ export default function BoxLayersPanel({ embedded = false }: BoxLayersPanelProps
                       showHardware={showAllHardware || expandedDrawerIds[item.id]}
                       onUpdate={(partial) => actions.updateDrawerLayerItem(item.id, partial)}
                       onFrontMaterialChange={(materialId) => {
+                        // Persistir no projecto (material + materialId + metadata.frontMaterial)
+                        actions.setDrawerMaterial(selectedBox.id, item.id, materialId);
                         const nextItems = (selectedBox.drawersLayer ?? []).map((d) =>
                           d.id === item.id
                             ? {
