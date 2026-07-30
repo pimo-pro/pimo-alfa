@@ -1,6 +1,16 @@
 {
-  "updatedAt": "2026-07-30T14:32:59.795Z",
+  "updatedAt": "2026-07-30T14:56:08.480Z",
   "news": [
+    {
+      "version": "v-next-utf8-gavetas",
+      "title": "Novidades do Sistema — correção de encoding nas novas fichas de gavetas",
+      "description": "Novidades do Sistema — correção de encoding nas novas fichas de gavetas. Textos PT agora 100% UTF-8 sem BOM, sem símbolos estranhos.\n\n• Correção de encoding nas novas fichas de gavetas.\n• Ficheiro GavetasPopoverPanel.tsx convertido para UTF-8 sem BOM.\n• Remoção de símbolos estranhos (��) em textos PT.\n• Normalização de acentuação: configurações, corrediça, cartão, padrão, divisórios.\n• Verificação dos restantes ficheiros (todos OK).",
+      "publishedAt": "2026-07-30T14:56:08.478Z",
+      "type": "fix",
+      "author": "pimo-pro",
+      "icon": "fix",
+      "commit": "pending"
+    },
     {
       "version": "v6.0730.1532",
       "title": "Novidades do Sistema — estabilidade total das matérias da frente da gaveta e frente fixa. Sem fallback. Sem substitui...",

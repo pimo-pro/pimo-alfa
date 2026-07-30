@@ -2,7 +2,7 @@
  * Contrato de sincronização viewer ↔ material da frente da gaveta.
  *
  * Caminhos UI auditados (todos devem chegar a ViewerCore.updateDrawerMaterial):
- * 1. DrawerConfigPanel → onFrontMaterialChange → BoxLayersPanel → viewerApi.updateDrawerMaterial
+ * 1. DrawerConfigPanel → onFrontMaterialChange → GavetasPopoverPanel → viewerApi.updateDrawerMaterial
  * 2. SelecionarMaterialSection → setDrawerMaterial → syncDrawerFrontMaterialToViewer
  *    + onDrawerMaterialChange (HomeLeftPanelSelected / Workspace)
  * 3. ContextMenu (gaveta única) → onDrawerMaterialChange → setDrawerMaterial + updateDrawerMaterial
@@ -82,11 +82,23 @@ describe("drawer front material — caminhos UI e contrato viewer", () => {
       expect(src).toContain("metadata: { frontMaterial: materialId }");
     });
 
-    it("BoxLayersPanel liga onFrontMaterialChange a setDrawerMaterial e updateDrawerMaterial", () => {
-      const src = readSrc("components/layout/left-panel/BoxLayersPanel.tsx");
+    it("GavetasPopoverPanel liga onFrontMaterialChange a setDrawerMaterial e updateDrawerMaterial", () => {
+      const src = readSrc("components/layout/left-panel/GavetasPopoverPanel.tsx");
       expect(src).toContain("onFrontMaterialChange=");
       expect(src).toContain("actions.setDrawerMaterial");
       expect(src).toContain("updateDrawerMaterial");
+    });
+
+    it("HomeLeftPanelSelected embute GavetasPopoverPanel no botão Gavetas", () => {
+      const src = readSrc("components/layout/left-panel/HomeLeftPanelSelected.tsx");
+      expect(src).toContain("GavetasPopoverPanel");
+      expect(src).toContain("onCountChange={(v) => actions.setGavetas(v)}");
+    });
+
+    it("BoxLayersPanel (Opções do box) não contém configuração de gavetas", () => {
+      const src = readSrc("components/layout/left-panel/BoxLayersPanel.tsx");
+      expect(src).not.toContain("DrawerConfigPanel");
+      expect(src).not.toContain("setDrawerMaterial");
     });
 
     it("SelecionarMaterialSection chama setDrawerMaterial e onDrawerMaterialChange", () => {

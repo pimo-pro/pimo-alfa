@@ -7,6 +7,7 @@ import { NumericInput } from "../../ui/NumericInput";
 import BoxLayersPanel from "./BoxLayersPanel";
 import BoxPecasObservacoesSection from "../../settings/observacoes/BoxPecasObservacoesSection";
 import DivSepPanel from "./DivSepPanel";
+import GavetasPopoverPanel from "./GavetasPopoverPanel";
 import { useToast } from "../../../context/ToastContext";
 import { getMaterialByIdOrLabel } from "../../../core/materials";
 import type { UseMaterialsForPickerResult } from "./hooks/useMaterialsForPicker";
@@ -326,18 +327,26 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
               >
                 <DivSepPanel box={selectedBox} actions={actions} embedded section="sep" />
               </UnifiedPopover>
-              <StepperPopover
+              <UnifiedPopover
                 id={BOX_PANEL_IDS.gavetas}
-                label="Gavetas"
-                value={selectedGavetas}
-                onChange={(v) => actions.setGavetas(v)}
                 fullWidth
                 layout={panelPopoverLayout}
                 open={isPanelOpen(BOX_PANEL_IDS.gavetas)}
                 onOpenChange={(open) => setPanelOpen(BOX_PANEL_IDS.gavetas, open)}
                 triggerVariant="ghost"
-                triggerTitle="Quantidade de gavetas aplicadas ao módulo."
-              />
+                triggerTitle="Quantidade e configuração das gavetas do módulo."
+                trigger={
+                  <span>
+                    Gavetas — <strong>{selectedGavetas}</strong>
+                  </span>
+                }
+              >
+                <GavetasPopoverPanel
+                  box={selectedBox}
+                  value={selectedGavetas}
+                  onCountChange={(v) => actions.setGavetas(v)}
+                />
+              </UnifiedPopover>
               {selectedBox.drawerConfigError && (
                 <div
                   style={{
