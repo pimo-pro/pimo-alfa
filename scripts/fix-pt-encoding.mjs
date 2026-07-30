@@ -1,7 +1,7 @@
 /**
- * fix-pt-encoding.mjs — correção segura de U+FFFD / mojibake.
- * FROM/TO apenas com escapes \\u — o próprio ficheiro não contém acentos literais.
- * Não processa src/industrial/** nem este script.
+ * fix-pt-encoding.mjs ï¿½ correï¿½ï¿½o segura de U+FFFD / mojibake.
+ * FROM/TO apenas com escapes \\u ï¿½ o prï¿½prio ficheiro nï¿½o contï¿½m acentos literais.
+ * Nï¿½o processa src/industrial/** nem este script.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -19,7 +19,7 @@ function add(fromParts, to) {
   PAIRS.push([fromParts.join(""), to]);
 }
 
-// --- cão / ção (2x FFFD) ---
+// --- cï¿½o / ï¿½ï¿½o (2x FFFD) ---
 for (const [stem, fixed] of [
   ["documenta", "documenta\u00E7\u00E3o"],
   ["Documenta", "Documenta\u00E7\u00E3o"],
@@ -225,7 +225,7 @@ for (const row of WORDS) {
   add(fromParts, to);
 }
 
-// prefixes úteis / único / área (só se FFFD no início de palavra — cuidado)
+// prefixes ï¿½teis / ï¿½nico / ï¿½rea (sï¿½ se FFFD no inï¿½cio de palavra ï¿½ cuidado)
 add([F, "til"], "\u00FAtil");
 add([F, "teis"], "\u00FAteis");
 add([F, "nica"], "\u00FAnica");
@@ -236,7 +236,7 @@ add([F, "ngulo"], "\u00E2ngulo");
 add([F, "ltimo"], "\u00FAltimo");
 add([F, "ltima"], "\u00FAltima");
 
-// separador tipográfico
+// separador tipogrï¿½fico
 add([" ", F, " "], " \u2014 ");
 
 const MOJIBAKE = [

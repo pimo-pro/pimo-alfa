@@ -1,5 +1,5 @@
 /**
- * Diagnóstico geometria gav_frente — singleMaterial como portas (sem cap).
+ * Diagnï¿½stico geometria gav_frente ï¿½ singleMaterial como portas (sem cap).
  */
 import { describe, expect, it, vi } from "vitest";
 import * as THREE from "three";
@@ -21,7 +21,7 @@ import {
 
 const FACE_LABELS = ["+X", "-X", "+Y", "-Y", "+Z", "-Z"] as const;
 
-describe("diagnóstico geometria gav_frente", () => {
+describe("diagnï¿½stico geometria gav_frente", () => {
   it("normals +Z/?Z correctos; create singleMaterial; apply sem cap", () => {
     const factory = new PanelFactory({
       resolvePanelMaterialOptions: (options) => {

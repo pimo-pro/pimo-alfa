@@ -1,5 +1,5 @@
 /**
- * Diagnóstico Z da frente da gaveta no Viewer — valores reais do mesh.
+ * Diagnï¿½stico Z da frente da gaveta no Viewer ï¿½ valores reais do mesh.
  */
 import { describe, expect, it } from "vitest";
 import * as THREE from "three";
@@ -10,8 +10,8 @@ import { generateDrawerGroup, drawerGroupToLayerItems } from "../core/drawers";
 import { settingsDefaults } from "../core/settings/settingsSchema";
 import { DRAWER_FRONT_FACE_OVERHANG_MM } from "../core/drawers/drawerSlideDepth";
 
-describe("diagnóstico Z frente gaveta (Viewer)", () => {
-  it("imprime e valida Z reais: flush + mesh vs carcaça", () => {
+describe("diagnï¿½stico Z frente gaveta (Viewer)", () => {
+  it("imprime e valida Z reais: flush + mesh vs carcaï¿½a", () => {
     const P_ext = 560;
     const frontT = 19;
     const folga = settingsDefaults.gavetas.gavetaRecuoProfundidadeCorredicaMm;

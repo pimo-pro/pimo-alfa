@@ -756,7 +756,8 @@ export function cutlistToPieces(
     const origA = Number(item.dimensoes?.altura) || 0;
     const dimensionsSwapped = !isRemate && origL > 0 && origA > 0 && origL < origA;
     for (const h of item.drillHoles ?? []) {
-      if ((h as { holeType?: string }).holeType === "cavilha" && (h as { topDrillable?: boolean }).topDrillable === false) continue;
+      // Incluir cavilhas de aresta (interlock gaveta: face↔espessura). Não filtrar por topDrillable —
+      // o layout PDF e o TCN devem espelhar o mesmo SSOT que o XML (drillExport).
       let x = Number(h?.x);
       let y = Number(h?.y);
       if (dimensionsSwapped) {

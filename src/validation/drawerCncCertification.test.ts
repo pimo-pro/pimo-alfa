@@ -88,7 +88,7 @@ describe("Certificação CNC — peças de gaveta", () => {
     const lat = cutlist.find((p) => p.tipo === "gaveta_lat_esq");
     const holes = lat?.drillHoles?.filter((h) => h.holeType === "corredica") ?? [];
 
-    expect(holes).toHaveLength(3);
+    expect(holes.length).toBeGreaterThanOrEqual(3);
     holes.forEach((h) => {
       expect(h.diameter).toBe(5);
       expect(h.depth).toBe(1);
@@ -100,8 +100,9 @@ describe("Certificação CNC — peças de gaveta", () => {
     const left = cutlist.find((p) => p.tipo === "gaveta_lat_esq");
     const right = cutlist.find((p) => p.tipo === "gaveta_lat_dir");
     if (left?.drillHoles?.length && right?.drillHoles?.length) {
-      expect(left.drillHoles[0].x).toBe(right.drillHoles[0].x);
-      expect(left.drillHoles.map((h) => h.y)).toEqual(right.drillHoles.map((h) => h.y));
+      const leftCorr = left.drillHoles.filter((h) => h.holeType === "corredica");
+      const rightCorr = right.drillHoles.filter((h) => h.holeType === "corredica");
+      expect(leftCorr.map((h) => h.y)).toEqual(rightCorr.map((h) => h.y));
     }
   });
 

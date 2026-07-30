@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { payloadFromUnknownError } from "../../industrial/errors/industrialNotificationBridge";
 
-describe("payloadFromUnknownError — módulos PDF", () => {
+describe("payloadFromUnknownError ï¿½ mï¿½dulos PDF", () => {
   it("detecta falha de dynamic import / MIME HTML", () => {
     const err = new Error(
       "Failed to fetch dynamically imported module: https://pimo.pro/assets/cutLayoutPdf-BEJzUdjU.js"

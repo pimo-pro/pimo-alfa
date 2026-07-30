@@ -1,6 +1,6 @@
 /**
  * Freeagem: Parafuso 4x35, Parafuso 5x50, Puxa 8mm.
- * Apenas BOM / online / PDF ferragens_totais / custo — sem furos, CNC, Viewer, componentTypes.
+ * Apenas BOM / online / PDF ferragens_totais / custo ï¿½ sem furos, CNC, Viewer, componentTypes.
  * Literais PT usam escapes Unicode.
  */
 
@@ -222,7 +222,7 @@ export function quantidadeParafuso4x35JuntasTotal(
   return detectBoxJoints(poses).length * PARAFUSO_4X35_POR_JUNTA;
 }
 
-/** Regra D: remate — ceil(comprimento/700)*2. */
+/** Regra D: remate ï¿½ ceil(comprimento/700)*2. */
 export function quantidadeParafuso4x35PorRemate(remate: Pick<RematePiece, "width" | "visible">): number {
   if (remate.visible === false) return 0;
   const len = Number(remate.width) || 0;

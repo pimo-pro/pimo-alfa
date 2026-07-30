@@ -4,7 +4,7 @@ exports[`Certificação — regressão industrial (snapshots) > furação europe
 [
   {
     "face": "B",
-    "x": 38,
+    "x": 37,
     "y": 401.5,
   },
   {
@@ -14,7 +14,17 @@ exports[`Certificação — regressão industrial (snapshots) > furação europe
   },
   {
     "face": "B",
-    "x": 452,
+    "x": 165,
+    "y": 401.5,
+  },
+  {
+    "face": "B",
+    "x": 261,
+    "y": 401.5,
+  },
+  {
+    "face": "B",
+    "x": 413,
     "y": 401.5,
   },
 ]
@@ -33,7 +43,7 @@ exports[`Certificação — regressão industrial (snapshots) > gavetas normais 
   "posY": 5,
   "posZ": 271.5,
   "pullDistanceMm": 500,
-  "slideType": "Genérica",
+  "slideType": "Hettich ArciTech",
   "softClose": true,
   "width": 598,
 }
@@ -52,7 +62,7 @@ exports[`Certificação — regressão industrial (snapshots) > gavetas normais 
   "posY": -173.5,
   "posZ": 271.5,
   "pullDistanceMm": 500,
-  "slideType": "Genérica",
+  "slideType": "Hettich ArciTech",
   "softClose": true,
   "width": 598,
 }
@@ -71,7 +81,7 @@ exports[`Certificação — regressão industrial (snapshots) > gavetas normais 
   "posY": 183.5,
   "posZ": 271.5,
   "pullDistanceMm": 500,
-  "slideType": "Genérica",
+  "slideType": "Hettich ArciTech",
   "softClose": true,
   "width": 598,
 }
@@ -90,7 +100,7 @@ exports[`Certificação — regressão industrial (snapshots) > gavetas normais 
   "posY": -233,
   "posZ": 271.5,
   "pullDistanceMm": 500,
-  "slideType": "Genérica",
+  "slideType": "Hettich ArciTech",
   "softClose": true,
   "width": 598,
 }
@@ -109,7 +119,7 @@ exports[`Certificação — regressão industrial (snapshots) > gavetas normais 
   "posY": 5,
   "posZ": 271.5,
   "pullDistanceMm": 500,
-  "slideType": "Genérica",
+  "slideType": "Hettich ArciTech",
   "softClose": true,
   "width": 598,
 }
@@ -128,7 +138,7 @@ exports[`Certificação — regressão industrial (snapshots) > gavetas normais 
   "posY": 243,
   "posZ": 271.5,
   "pullDistanceMm": 500,
-  "slideType": "Genérica",
+  "slideType": "Hettich ArciTech",
   "softClose": true,
   "width": 598,
 }
@@ -147,7 +157,7 @@ exports[`Certificação — regressão industrial (snapshots) > gavetas normais 
   "posY": -262.75,
   "posZ": 271.5,
   "pullDistanceMm": 500,
-  "slideType": "Genérica",
+  "slideType": "Hettich ArciTech",
   "softClose": true,
   "width": 598,
 }
@@ -166,7 +176,7 @@ exports[`Certificação — regressão industrial (snapshots) > gavetas normais 
   "posY": -84.25,
   "posZ": 271.5,
   "pullDistanceMm": 500,
-  "slideType": "Genérica",
+  "slideType": "Hettich ArciTech",
   "softClose": true,
   "width": 598,
 }
@@ -185,7 +195,7 @@ exports[`Certificação — regressão industrial (snapshots) > gavetas normais 
   "posY": 94.25,
   "posZ": 271.5,
   "pullDistanceMm": 500,
-  "slideType": "Genérica",
+  "slideType": "Hettich ArciTech",
   "softClose": true,
   "width": 598,
 }
@@ -204,7 +214,7 @@ exports[`Certificação — regressão industrial (snapshots) > gavetas normais 
   "posY": 272.75,
   "posZ": 271.5,
   "pullDistanceMm": 500,
-  "slideType": "Genérica",
+  "slideType": "Hettich ArciTech",
   "softClose": true,
   "width": 598,
 }

@@ -503,6 +503,7 @@ function calcDrawerStructural(piece: PieceInput, out: TechnicalDrillHole[]) {
       altura: piece.altura,
       espessura: piece.espessura,
       side: piece.tipo === "gaveta_lat_esq" ? "esq" : "dir",
+      isLowestDrawer: piece.isLowestDrawer === true,
     });
     out.push(...holes);
   } else if (piece.tipo === "gaveta_traseira") {

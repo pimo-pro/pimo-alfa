@@ -1,5 +1,5 @@
 /**
- * Diagnóstico: paridade portas — sem cap exterior; matéria única na peça.
+ * Diagnï¿½stico: paridade portas ï¿½ sem cap exterior; matï¿½ria ï¿½nica na peï¿½a.
  */
 import { describe, expect, it, vi } from "vitest";
 import * as THREE from "three";
@@ -13,8 +13,8 @@ vi.mock("../3d/objects/BoxMaterialApplier", () => ({
   getMaterialForOfficialId: () => sharedFace,
 }));
 
-describe("diagnóstico matéria frente (sem cap — paridade portas)", () => {
-  it("apply não cria cap; remove caps legados; matéria única", async () => {
+describe("diagnï¿½stico matï¿½ria frente (sem cap ï¿½ paridade portas)", () => {
+  it("apply nï¿½o cria cap; remove caps legados; matï¿½ria ï¿½nica", async () => {
     const { applyDrawerFrontMaterialToMesh } = await import("../3d/objects/DrawerFactory");
 
     const geometry = new THREE.BoxGeometry(0.4, 0.2, 0.019);

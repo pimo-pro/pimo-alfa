@@ -1,5 +1,5 @@
 /**
- * Diagnóstico matéria da frente da gaveta — singleMaterial (paridade portas).
+ * Diagnï¿½stico matï¿½ria da frente da gaveta ï¿½ singleMaterial (paridade portas).
  */
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import * as THREE from "three";
@@ -15,12 +15,12 @@ vi.mock("../3d/objects/BoxMaterialApplier", () => ({
   getMaterialForOfficialId: () => sharedFace,
 }));
 
-describe("diagnóstico matéria frente gaveta", () => {
+describe("diagnï¿½stico matï¿½ria frente gaveta", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("imprime valores e confirma matéria única em toda a peça (sem cap)", async () => {
+  it("imprime valores e confirma matï¿½ria ï¿½nica em toda a peï¿½a (sem cap)", async () => {
     const { applyDrawerFrontMaterialToMesh } = await import("../3d/objects/DrawerFactory");
 
     const drawerItem = {

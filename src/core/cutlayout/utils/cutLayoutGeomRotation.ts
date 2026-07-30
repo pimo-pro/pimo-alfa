@@ -135,13 +135,13 @@ function isHoleInsidePlacementAndSheet(
   sheet?: SheetLike["sheet"]
 ): boolean {
   if (!Number.isFinite(h.x) || !Number.isFinite(h.y)) return false;
-  const r = Number.isFinite(h.diameter) && h.diameter > 0 ? h.diameter / 2 : 0;
   const off = holeFinalOffset(h, rotation, origW, origH);
-  if (!within(r, off.x, p.largura_mm - r) || !within(r, off.y, p.altura_mm - r)) return false;
+  // Permitir furos de aresta (centro em X=0/L ou Y=0/H) — interlock TypeNo=2 / cavilha SSOT.
+  if (!within(0, off.x, p.largura_mm) || !within(0, off.y, p.altura_mm)) return false;
   if (!sheet) return true;
   const absX = p.x_mm + off.x;
   const absY = p.y_mm + off.y;
-  return within(r, absX, sheet.largura_mm - r) && within(r, absY, sheet.altura_mm - r);
+  return within(0, absX, sheet.largura_mm) && within(0, absY, sheet.altura_mm);
 }
 
 function isContourInsidePlacementAndSheet(p: PlacementLike, rect: InnerContour, sheet?: SheetLike["sheet"]): boolean {

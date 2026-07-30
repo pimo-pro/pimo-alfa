@@ -75,7 +75,7 @@ function system32WithMark(nl: DrawerSlideLengthMm, midXs: number[]): SlideDrilli
   };
 }
 
-/** ArciTech / Actro — grelha System 32 por comprimento nominal. */
+/** ArciTech / Actro ï¿½ grelha System 32 por comprimento nominal. */
 const ARCITECH_LENGTHS: SlideDrillingLengthTable[] = [
   system32WithMark(350, [165]),
   system32WithMark(400, [165]),
@@ -86,7 +86,7 @@ const ARCITECH_LENGTHS: SlideDrillingLengthTable[] = [
 ];
 
 /**
- * Quadro V6 YOU M Silent System — distancia CC (b1) oficial Hettich
+ * Quadro V6 YOU M Silent System ï¿½ distancia CC (b1) oficial Hettich
  * (Silent System / Push to open; nao Push to open Silent).
  * Fonte: ficha Quadro V6 YOU (NL -> b1).
  */
@@ -107,7 +107,7 @@ export const QUADRO_V6_YOU_M_SECOND_HOLE_SETBACK_MM = 1;
 /**
  * Padrao Quadro V6 YOU M Silent System por NL:
  * X1 = 38; X2 = X1 + b1 - 1 (CC oficial = b1; recuo 1 mm no 2.o furo).
- * A ficha YOU lista apenas b1 (sem b2) para Silent System — 2 furos de montagem.
+ * A ficha YOU lista apenas b1 (sem b2) para Silent System ï¿½ 2 furos de montagem.
  */
 function quadroV6YouMSilentSystemLengths(): SlideDrillingLengthTable[] {
   return DRAWER_SLIDE_LENGTHS_MM.map((nl) => {
@@ -124,7 +124,7 @@ function quadroV6YouMSilentSystemLengths(): SlideDrillingLengthTable[] {
   });
 }
 
-/** Generica — 3 furos classicos (frente / marca / traseiro no NL). */
+/** Generica ï¿½ 3 furos classicos (frente / marca / traseiro no NL). */
 const GENERICA_LENGTHS: SlideDrillingLengthTable[] = DRAWER_SLIDE_LENGTHS_MM.map((nl) => ({
   comprimentoMm: nl,
   holes: holes([
@@ -134,7 +134,7 @@ const GENERICA_LENGTHS: SlideDrillingLengthTable[] = DRAWER_SLIDE_LENGTHS_MM.map
   ]),
 }));
 
-/** Blum Tandem / Movento — System 32 sem marca a 69 (so montagem). */
+/** Blum Tandem / Movento ï¿½ System 32 sem marca a 69 (so montagem). */
 function blumLengths(midFor: (nl: DrawerSlideLengthMm) => number[]): SlideDrillingLengthTable[] {
   return DRAWER_SLIDE_LENGTHS_MM.map((nl) => {
     const rear = Math.max(37, nl - 37);
@@ -162,7 +162,7 @@ const SLIDE_DRILLING_CATALOG: SlideDrillingSystemTable[] = [
     profundidadeMarkMm: 1,
     mirrorLeftRight: true,
     source:
-      "Hettich Quadro V6 YOU M Silent System — Bohrbild oficial (X1=38 mm, CC=b1 por NL, X2=X1+b1-1).",
+      "Hettich Quadro V6 YOU M Silent System ï¿½ Bohrbild oficial (X1=38 mm, CC=b1 por NL, X2=X1+b1-1).",
     byLength: quadroV6YouMSilentSystemLengths(),
   },
   {
@@ -183,17 +183,17 @@ const SLIDE_DRILLING_CATALOG: SlideDrillingSystemTable[] = [
     profundidadeMm: 1,
     profundidadeMarkMm: 1,
     mirrorLeftRight: true,
-    source: "Hettich InnoTech — mesmo padrao System 32 que ArciTech (familia Hettich).",
+    source: "Hettich InnoTech ï¿½ mesmo padrao System 32 que ArciTech (familia Hettich).",
     byLength: ARCITECH_LENGTHS,
   },
   {
-    slideType: "Genérica",
+    slideType: "Genï¿½rica",
     alturaRelativaFundoMm: SLIDE_AXIS_FROM_DRAWER_BOTTOM_MM,
     diametroMm: 5,
     profundidadeMm: 1,
     profundidadeMarkMm: 1,
     mirrorLeftRight: true,
-    source: "Padrao atelier legado (38/69/NL-38) — opcao secundaria.",
+    source: "Padrao atelier legado (38/69/NL-38) ï¿½ opcao secundaria.",
     byLength: GENERICA_LENGTHS,
   },
   {
@@ -225,7 +225,7 @@ const SLIDE_DRILLING_CATALOG: SlideDrillingSystemTable[] = [
     profundidadeMm: 1,
     profundidadeMarkMm: 1,
     mirrorLeftRight: true,
-    source: "Hafele Matrix — System 32 alinhado a Blum/Hettich.",
+    source: "Hafele Matrix ï¿½ System 32 alinhado a Blum/Hettich.",
     byLength: blumLengths((nl) => (nl >= 500 ? [165, 261] : [165])),
   },
 ];

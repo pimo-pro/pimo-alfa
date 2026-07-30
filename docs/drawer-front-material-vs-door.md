@@ -1,4 +1,4 @@
-# Matéria visual: Porta vs Frente da Gaveta
+# Matï¿½ria visual: Porta vs Frente da Gaveta
 
 ## Porta (funciona)
 
@@ -6,7 +6,7 @@
 |-------|------|
 | UI | `SelecionarMaterialSection` ? `setDoorMaterial` + `onDoorMaterialChange` |
 | Viewer directo | `HomeLeftPanelSelected` / `Workspace` ? `viewerApi.updateDoorMaterial` |
-| 3D | `ViewerCore.updateDoorMaterial` **reconstrói** o grupo `door-layer-*` com `createDoorObject` + material novo |
+| 3D | `ViewerCore.updateDoorMaterial` **reconstrï¿½i** o grupo `door-layer-*` com `createDoorObject` + material novo |
 
 O estado (`doorsLayer.material` / `materialId`) e o mesh ficam alinhados porque a UI **sempre** chama o Viewer.
 
@@ -14,20 +14,20 @@ O estado (`doorsLayer.material` / `materialId`) e o mesh ficam alinhados porque 
 
 | Etapa | Onde |
 |-------|------|
-| Resolução | `resolveDrawerFrontMaterialId` (`drawerFrontMaterial.ts`) — prioridade: `materialId` ? `metadata.frontMaterial` ? `material` ? corpo |
-| Persistência | `withDrawerMaterial` / `setDrawerMaterial` / `DrawerConfigPanel` |
-| UI “Selecionar Material” | `setDrawerMaterial` sincroniza via `syncDrawerFrontMaterialToViewer`, mas `HomeLeftPanelSelected.onDrawerMaterialChange` **só mostra toast** — **não** chama `viewerApi.updateDrawerMaterial` (ao contrário da porta) |
+| Resoluï¿½ï¿½o | `resolveDrawerFrontMaterialId` (`drawerFrontMaterial.ts`) ï¿½ prioridade: `materialId` ? `metadata.frontMaterial` ? `material` ? corpo |
+| Persistï¿½ncia | `withDrawerMaterial` / `setDrawerMaterial` / `DrawerConfigPanel` |
+| UI ï¿½Selecionar Materialï¿½ | `setDrawerMaterial` sincroniza via `syncDrawerFrontMaterialToViewer`, mas `HomeLeftPanelSelected.onDrawerMaterialChange` **sï¿½ mostra toast** ï¿½ **nï¿½o** chama `viewerApi.updateDrawerMaterial` (ao contrï¿½rio da porta) |
 | UI layers | `BoxLayersPanel` ? `updateDrawerMaterial` **sem** `drawerLayerItems` |
 | 3D | `updateDrawerMaterial`: com items ? `updateBox`; sem items ? `applyDrawerFrontMaterialToMesh` |
-| Sync pós-caixa | `syncDrawerFrontMaterialsForBox` + `discoverDrawerLayerItemsFromMesh` — se não houver items com matéria, inventa `{ id }` e `resolveDrawerFrontMaterialId` **cai no material do corpo (branco)** |
+| Sync pï¿½s-caixa | `syncDrawerFrontMaterialsForBox` + `discoverDrawerLayerItemsFromMesh` ï¿½ se nï¿½o houver items com matï¿½ria, inventa `{ id }` e `resolveDrawerFrontMaterialId` **cai no material do corpo (branco)** |
 
-## Diferença crítica
+## Diferenï¿½a crï¿½tica
 
 - **Porta:** UI ? `updateDoorMaterial` (rebuild dedicado).
-- **Gaveta:** label muda (estado OK); visual depende de sync/incremental e pode ser **reescrito com o branco do corpo** quando o discover não conhece a matéria da frente.
+- **Gaveta:** label muda (estado OK); visual depende de sync/incremental e pode ser **reescrito com o branco do corpo** quando o discover nï¿½o conhece a matï¿½ria da frente.
 
 ## Ponto exacto a corrigir
 
-1. `HomeLeftPanelSelected` — espelhar o fluxo da porta (`updateDrawerMaterial`).
-2. `ViewerCore.updateDrawerMaterial` — após qualquer `updateBox`, **reaplicar** o `materialName` explícito na face `drawerPart === "front"`.
-3. `discoverDrawerLayerItemsFromMesh` — preservar `drawerFrontMaterialId` do mesh para o sync não herdar o corpo.
+1. `HomeLeftPanelSelected` ï¿½ espelhar o fluxo da porta (`updateDrawerMaterial`).
+2. `ViewerCore.updateDrawerMaterial` ï¿½ apï¿½s qualquer `updateBox`, **reaplicar** o `materialName` explï¿½cito na face `drawerPart === "front"`.
+3. `discoverDrawerLayerItemsFromMesh` ï¿½ preservar `drawerFrontMaterialId` do mesh para o sync nï¿½o herdar o corpo.

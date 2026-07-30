@@ -16,7 +16,7 @@ function add(fromParts, to) {
   PAIRS.push([fromParts.join(""), to]);
 }
 
-// --- ùùo / ùùes (2x and 1x FFFD) ---
+// --- ÔøΩÔøΩo / ÔøΩÔøΩes (2x and 1x FFFD) ---
 for (const [stem, fixed] of [
   ["exporta", "exporta\u00E7\u00E3o"],
   ["Exporta", "Exporta\u00E7\u00E3o"],
@@ -198,7 +198,7 @@ const WORDS = [
   ["Diagn", F, "stico", "Diagn\u00F3stico"],
   ["pr", F, "", "pr\u00E9"],
   ["p", F, "s", "p\u00F3s"],
-  // mù / ù / nù
+  // mÔøΩ / ÔøΩ / nÔøΩ
   ["m", F, "", "m\u00B2"],
   ["N", F, "", "N\u00BA"],
   ["C", F, "", "C\u00E9"],
@@ -265,7 +265,7 @@ function walk(dir, out = []) {
 }
 
 function fixRanges(text) {
-  // digitùdigit ranges / products: 300ù600, 1ù20, 31ù0.95
+  // digitÔøΩdigit ranges / products: 300ÔøΩ600, 1ÔøΩ20, 31ÔøΩ0.95
   return text.replace(/(\d)\uFFFD(\d)/g, "$1\u2013$2");
 }
 

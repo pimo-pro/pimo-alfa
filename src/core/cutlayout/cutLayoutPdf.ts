@@ -70,17 +70,34 @@ function isHoleInsidePlacementAndSheet(
   if (!Number.isFinite(h.x) || !Number.isFinite(h.y)) return false;
   const r = Number.isFinite(h.diameter) && h.diameter > 0 ? h.diameter / 2 : 0;
   const off = pdfDisplayHoleOffset(pl, h);
-  if (off.sx < r || off.sy < r) return false;
-  if (off.sx > pl.largura_mm - r || off.sy > pl.altura_mm - r) return false;
+  // Permitir furos de aresta (X=0 / X=L, Y=0 / Y=H) — interlock TypeNo=2 no SSOT.
+  // Centro pode coincidir com o perímetro; o círculo é desenhado na borda.
+  const eps = 0.05;
+  if (off.sx < -eps || off.sy < -eps) return false;
+  if (off.sx > pl.largura_mm + eps || off.sy > pl.altura_mm + eps) return false;
 
   const absX = placementPhysicalLeft(pl, sheet.largura_mm, topRightOrigin) + off.sx;
   const absY = pl.y_mm + off.sy;
-  return absX >= r && absY >= r && absX <= sheet.largura_mm - r && absY <= sheet.altura_mm - r;
+  return (
+    absX >= -eps &&
+    absY >= -eps &&
+    absX <= sheet.largura_mm + eps &&
+    absY <= sheet.altura_mm + eps
+  );
 }
 
-function holesForPdf(pl: CutPlacement, sheet: SheetResult["sheet"], topRightOrigin: boolean): PdfHole[] {
-  const holes = pl.drillHoles ?? pl.holes ?? [];
-  return holes.filter((h) => isHoleInsidePlacementAndSheet(pl, h, sheet, topRightOrigin));
+/**
+ * Furos do placement para o layout PDF — mesma origem SSOT que o XML (drillHoles pós-cutlist).
+ * Preferir originalDrillHoles (coords pré-rotação nesting) quando existirem, para alinhar
+ * rótulos/posições com as coordenadas locais da peça (XML).
+ */
+export function holesForPdf(pl: CutPlacement, sheet: SheetResult["sheet"], topRightOrigin: boolean): PdfHole[] {
+  const raw =
+    (pl as CutPlacement & { originalDrillHoles?: PdfHole[] }).originalDrillHoles ??
+    pl.drillHoles ??
+    pl.holes ??
+    [];
+  return raw.filter((h) => isHoleInsidePlacementAndSheet(pl, h, sheet, topRightOrigin));
 }
 
 function formatDatePt(): string {

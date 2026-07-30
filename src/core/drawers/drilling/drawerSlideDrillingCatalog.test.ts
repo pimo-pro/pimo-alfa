@@ -19,7 +19,7 @@ import {
 const QUADRO = HETTICH_QUADRO_V6_YOU_M_SILENT_SYSTEM;
 
 describe("Catalogo industrial de furacao por slideType", () => {
-  it("Hettich ArciTech 500 mm — padrao System 32 com marca a 69", () => {
+  it("Hettich ArciTech 500 mm ï¿½ padrao System 32 com marca a 69", () => {
     const pattern = resolveSlideDrillingPattern({
       slideType: "Hettich ArciTech",
       panelDepthMm: 560,
@@ -33,7 +33,7 @@ describe("Catalogo industrial de furacao por slideType", () => {
     expect(xs[xs.length - 1]).toBe(500 - 37);
   });
 
-  it("Quadro V6 YOU M NL 350 — X1=38, X2=X1+b1-1", () => {
+  it("Quadro V6 YOU M NL 350 ï¿½ X1=38, X2=X1+b1-1", () => {
     const nl = 350 as const;
     const b1 = QUADRO_V6_YOU_M_B1_MM[nl];
     const pattern = resolveSlideDrillingPattern({
@@ -52,7 +52,7 @@ describe("Catalogo industrial de furacao por slideType", () => {
     expect(pattern.holes[1]!.xFromFrontMm).toBe(261); // 38+224-1
   });
 
-  it("Quadro V6 YOU M NL 500 — X1=38, X2=293", () => {
+  it("Quadro V6 YOU M NL 500 ï¿½ X1=38, X2=293", () => {
     const pattern = resolveSlideDrillingPattern({
       slideType: QUADRO,
       panelDepthMm: 560,
@@ -64,7 +64,7 @@ describe("Catalogo industrial de furacao por slideType", () => {
     expect(xs[1]).toBe(293);
   });
 
-  it("Quadro V6 — tabela completa NL 350-600 (b1 oficial)", () => {
+  it("Quadro V6 ï¿½ tabela completa NL 350-600 (b1 oficial)", () => {
     const expected: Record<number, number> = {
       350: 224,
       400: 224,
@@ -85,7 +85,7 @@ describe("Catalogo industrial de furacao por slideType", () => {
     }
   });
 
-  it("Quadro V6 — paridade L/R + Y>=41 + clamp", () => {
+  it("Quadro V6 ï¿½ paridade L/R + Y>=41 + clamp", () => {
     const rules = getDrawerSlideDrillingRules(QUADRO, "Nenhuma", {
       mode: "pi_module_lateral",
       panelDepthMm: 560,
@@ -125,7 +125,7 @@ describe("Catalogo industrial de furacao por slideType", () => {
     expect(right.map((h) => h.x).sort((a, b) => a - b)).toEqual([38, 293]);
   });
 
-  it("Quadro V6 — stack 3 gavetas: linhas sobem, Y_from_bottom >= 41", () => {
+  it("Quadro V6 ï¿½ stack 3 gavetas: linhas sobem, Y_from_bottom >= 41", () => {
     const panelH = 720;
     const internalH = 720 - 2 * 19;
     const heights = [150, 150, 150];
@@ -172,7 +172,7 @@ describe("Catalogo industrial de furacao por slideType", () => {
     }
   });
 
-  it("Quadro V6 — cutlist/Viewer/XML partilham o mesmo padrao SSOT", () => {
+  it("Quadro V6 ï¿½ cutlist/Viewer/XML partilham o mesmo padrao SSOT", () => {
     const pattern = resolveSlideDrillingPattern({
       slideType: "Quadro V6",
       panelDepthMm: 560,
@@ -199,7 +199,7 @@ describe("Catalogo industrial de furacao por slideType", () => {
     expect(xsBuilt).toEqual([38, 293]);
   });
 
-  it("paridade L/R — espelhamento completo do mark (ArciTech)", () => {
+  it("paridade L/R ï¿½ espelhamento completo do mark (ArciTech)", () => {
     const rules = getDrawerSlideDrillingRules("Hettich ArciTech", "Nenhuma", {
       mode: "pi_module_lateral",
       panelDepthMm: 560,
@@ -231,7 +231,7 @@ describe("Catalogo industrial de furacao por slideType", () => {
     }
   });
 
-  it("clamp — nenhum furo sai da peca", () => {
+  it("clamp ï¿½ nenhum furo sai da peca", () => {
     const c = clampHoleToPanel(-10, 9999, 400, 700, 5);
     expect(c.x).toBeGreaterThanOrEqual(3);
     expect(c.x).toBeLessThanOrEqual(400 - 3);
@@ -247,7 +247,7 @@ describe("Catalogo industrial de furacao por slideType", () => {
     expect(holes[0]!.y).not.toBe(200);
   });
 
-  it("buildEuropean — L/R espelhados e dentro do painel", () => {
+  it("buildEuropean ï¿½ L/R espelhados e dentro do painel", () => {
     const depth = 560;
     const height = 720;
     const common = {
@@ -278,7 +278,7 @@ describe("Catalogo industrial de furacao por slideType", () => {
     expect(mirrorSlideHoleXFromFront(69, 560, "left", true)).toBe(560 - 69);
   });
 
-  it("ArciTech 500 — linha inferior a 41 mm do bordo inferior (painel 560x720)", () => {
+  it("ArciTech 500 ï¿½ linha inferior a 41 mm do bordo inferior (painel 560x720)", () => {
     const panelH = 720;
     const panelD = 560;
     const internalH = 720 - 2 * 19;
@@ -313,7 +313,7 @@ describe("Catalogo industrial de furacao por slideType", () => {
     }
   });
 
-  it("gavetas superiores — linhas sobem e nunca Y_from_bottom < 41", () => {
+  it("gavetas superiores ï¿½ linhas sobem e nunca Y_from_bottom < 41", () => {
     const panelH = 720;
     const internalH = 720 - 2 * 19;
     const heights = [150, 150, 150];

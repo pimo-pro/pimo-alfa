@@ -17,7 +17,7 @@ import { getDefaultProfileForHandleType } from "./drawerHandleCatalog";
 /** Origem da config de ferragens na gaveta (prioridade individual vs global). */
 export type DrawerHardwareSource = "global" | "individual";
 
-/** Sistema de corredia inicial (padro)  Genrica permanece seleccionvel. */
+/** Sistema de corrediï¿½a inicial (padrï¿½o) ï¿½ Genï¿½rica permanece seleccionï¿½vel. */
 export const drawerHardware = {
   defaultSystem: "Hettich ArciTech" as DrawerSlideType,
 } as const;
@@ -132,7 +132,7 @@ export function draftFromDrawer(drawer: DrawerLayerItem): DrawerHardwareDraft {
 }
 
 /**
- * Constri o partial de layer a partir do draft global.
+ * Constrï¿½i o partial de layer a partir do draft global.
  * `hardwareSource: "global"` limpa a prioridade individual.
  */
 export function buildHardwarePartialFromDraft(

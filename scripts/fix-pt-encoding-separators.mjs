@@ -1,4 +1,4 @@
-/** Passo final: separadores tipográficos com U+FFFD restantes. */
+/** Passo final: separadores tipogrï¿½ficos com U+FFFD restantes. */
 import fs from "node:fs";
 import path from "node:path";
 
