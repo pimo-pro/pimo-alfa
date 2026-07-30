@@ -6,6 +6,7 @@ import type {
 } from "../settings/settingsSchema";
 
 export const DRAWER_SLIDE_TYPES: readonly DrawerSlideType[] = [
+  "Hettich Quadro V6 You M Silent System",
   "Hettich ArciTech",
   "Genérica",
   "Blum Tandem",
@@ -56,4 +57,5 @@ export const SOFT_CLOSE_COMPATIBLE_SLIDES = new Set<DrawerSlideType>([
   "Blum Movento",
   "Hettich InnoTech",
   "Hettich ArciTech",
+  "Hettich Quadro V6 You M Silent System",
 ]);

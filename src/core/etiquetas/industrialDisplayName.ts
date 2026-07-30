@@ -1,6 +1,6 @@
 import {
   buildBoxPrefixForCutLayoutPro,
-  buildCutLayoutProPartName,
+  buildIndustrialPieceName,
 } from "../cutlayout/cutLayoutProPieceNaming";
 
 /** Token para display — espaços→`_`, remove chars inválidos, colapsa `_`. */
@@ -63,7 +63,11 @@ type NomeIndustrialItemLike = {
   metadata?: Record<string, unknown>;
 };
 
-/** Nome industrial da peça — metadata.industrialLabel ou Layout de Corte PRO. */
+/**
+ * Nome industrial da peça para etiqueta de fabrico —
+ * metadata.industrialLabel ou Layout de Corte PRO com inversão L/R dos lados do módulo.
+ * (Viewer/cutlist/SSOT não passam por aqui.)
+ */
 export function resolveNomeIndustrialForEtiqueta(
   item: NomeIndustrialItemLike,
   projectName: string,
@@ -73,5 +77,5 @@ export function resolveNomeIndustrialForEtiqueta(
   if (typeof fromMeta === "string" && fromMeta.trim()) {
     return fromMeta.trim();
   }
-  return buildCutLayoutProPartName(item, boxNome, projectName);
+  return buildIndustrialPieceName(item, boxNome, projectName);
 }

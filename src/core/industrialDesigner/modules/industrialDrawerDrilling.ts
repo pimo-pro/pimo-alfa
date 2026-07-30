@@ -89,9 +89,6 @@ export function applyCabinetSlideHoles(
   box: IndustrialDesignBox,
   layout: IndustrialDrawerSingleLayout
 ): IndustrialDesignBox {
-  const rules = getDrawerSlideDrillingRules(undefined, undefined, { mode: "pi_module_lateral" });
-  if (!rules.enabled) return box;
-
   const runnerLines = resolvePiRunnerLinesYMm(layout.innerH, 1, [layout.frontExtH]);
   let current = box;
 
@@ -99,9 +96,17 @@ export function applyCabinetSlideHoles(
     const side = isLeftLateral(lateral) ? "left" : isRightLateral(lateral) ? "right" : null;
     if (!side) continue;
 
+    const rules = getDrawerSlideDrillingRules(undefined, undefined, {
+      mode: "pi_module_lateral",
+      panelDepthMm: lateral.widthMm,
+      panelHeightMm: lateral.heightMm,
+    });
+    if (!rules.enabled) continue;
+
     const specs = computePiModuleLateralCorredicaHoles({
       runnerLinesYMm: runnerLines,
       panelDepthMm: lateral.widthMm,
+      panelHeightMm: lateral.heightMm,
       side,
       rules,
       useLegacyPiOffsets: false,
@@ -126,7 +131,10 @@ export function applyDrawerBoxDrilling(
   box: IndustrialDesignBox,
   _layout: IndustrialDrawerSingleLayout
 ): IndustrialDesignBox {
-  const rules = getDrawerSlideDrillingRules(undefined, undefined, { mode: "drawer_piece" });
+  const rules = getDrawerSlideDrillingRules(undefined, undefined, {
+    mode: "drawer_piece",
+    panelDepthMm: 500,
+  });
   let current = box;
 
   for (const panel of box.panels) {
@@ -139,11 +147,16 @@ export function applyDrawerBoxDrilling(
       });
       current = applyTechnicalHolesToPanel(current, panel, structural);
 
+      const pieceRules = getDrawerSlideDrillingRules(undefined, undefined, {
+        mode: "drawer_piece",
+        panelDepthMm: panel.widthMm,
+        panelHeightMm: panel.heightMm,
+      });
       const corredica = computeDrawerPieceCorredicaHoles({
         pieceType: pieceTypeForPanel(panel),
         largura: panel.widthMm,
         altura: panel.heightMm,
-        rules,
+        rules: pieceRules,
       });
       for (const spec of corredica) {
         current = addDesignDrillHole(current, panel.id, {

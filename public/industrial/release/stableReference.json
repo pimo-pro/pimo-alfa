@@ -1,0 +1,17 @@
+{
+  "kind": "stable_industrial_reference",
+  "status": "active",
+  "tag": "v-ref-quadroV6-youM-0730",
+  "title": "Vers�o est�vel de refer�ncia � Quadro V6 YOU M Silent System",
+  "description": "Sistema Quadro V6 YOU M Silent System + correc��o de etiquetas industriais L/R. Usar para regress�o futura.",
+  "markedAt": "2026-07-30T17:35:15.003Z",
+  "checks": {
+    "quadroV6YouMCatalog": true,
+    "x1_38mm": true,
+    "x2_b1_minus_1": true,
+    "yMin_41mm": true,
+    "industrialLabelsLateralInverted": true,
+    "viewerCutlistLrCorrect": true
+  },
+  "commit": "143ac85"
+}

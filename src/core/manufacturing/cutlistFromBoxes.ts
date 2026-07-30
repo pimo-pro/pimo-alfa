@@ -31,6 +31,8 @@ import {
   buildEuropeanModuleLateralCorredicaDrilling,
   resolveEuropeanModuleRunnerLinesYMm,
 } from "../drawers/drilling/DrawerDrillingRules";
+import { resolveCorredicaOverlaps } from "../drawers/drilling/drawerSlideDrillingCatalog";
+import { resolveDrawerSlideLength } from "../drawers/drawerSlideDepth";
 import {
   resolveActiveDrawersLayer,
   resolveActiveGavetasCount,
@@ -415,7 +417,8 @@ export function cutlistComPrecoFromBox(
       const sortedDrawers = [...drawersLayer].sort(
         (a, b) => (Number(a.posY) || 0) - (Number(b.posY) || 0)
       );
-      const boxInternalHeightMm = Math.max(1, p.altura_mm - 2 * box.espessura);
+      /** Altura interna real do vão (não derivar de p.altura_mm — laterais podem já ser H−2T). */
+      const boxInternalHeightMm = Math.max(1, box.dimensoes.altura - 2 * box.espessura);
       const runnerLines = resolveEuropeanModuleRunnerLinesYMm({
         panelHeightMm: p.altura_mm,
         boxInternalHeightMm,
@@ -425,13 +428,16 @@ export function cutlistComPrecoFromBox(
         })),
       });
       const firstDrawer = sortedDrawers[0];
+      const slideLengthMm = resolveDrawerSlideLength(p.largura_mm);
       const corredicaHoles = buildEuropeanModuleLateralCorredicaDrilling({
         runnerLinesYMm: runnerLines,
         panelDepthMm: p.largura_mm,
+        panelHeightMm: p.altura_mm,
         side: p.tipo === "lateral_esquerda" ? "left" : "right",
         slideType: firstDrawer?.slideType,
         metalBoxType: firstDrawer?.metalBoxType,
         softClose: firstDrawer?.softClose,
+        slideLengthMm,
         corredicaConfig: effRules.furos.tecnicos.corredica,
       });
       drillHoles = mergeDrillHoles(drillHoles, corredicaHoles);
@@ -447,6 +453,21 @@ export function cutlistComPrecoFromBox(
       } else if (isDivisor) {
         drillHoles = mergeDrillHoles(drillHoles, divShelfDrilling.divisorio.get(panelIdForDivSep) ?? []);
       }
+    }
+
+    // Anti-overlap: corrediças vs DIV/SEP/prateleira — ajusta Y das corrediças.
+    if (
+      (p.tipo === "lateral_esquerda" || p.tipo === "lateral_direita") &&
+      drillHoles.some((h) => h.holeType === "corredica")
+    ) {
+      const others = drillHoles.filter((h) => h.holeType !== "corredica");
+      const corredica = drillHoles.filter((h) => h.holeType === "corredica");
+      const diam =
+        corredica[0]?.diameter ??
+        effRules.furos.tecnicos.corredica?.diametro ??
+        5;
+      const resolved = resolveCorredicaOverlaps(corredica, others, p.altura_mm, diam);
+      drillHoles = [...others, ...resolved.holes];
     }
 
     let industrialLabel: string | undefined;

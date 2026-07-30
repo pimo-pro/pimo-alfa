@@ -27,6 +27,7 @@ export type DrawerSlideType =
   | "Blum Movento"
   | "Hettich InnoTech"
   | "Hettich ArciTech"
+  | "Hettich Quadro V6 You M Silent System"
   | "Hafele Matrix"
   | "Genérica";
 

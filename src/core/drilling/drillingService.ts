@@ -320,6 +320,8 @@ function calcCorredica(piece: PieceInput, rules: RulesConfig, out: TechnicalDril
     mode: "drawer_piece",
     corredicaConfig: rules.furos.tecnicos.corredica,
     gavetasSettings: gavetas,
+    panelDepthMm: piece.largura,
+    panelHeightMm: piece.altura,
   });
   if (!slideRules.enabled) return;
 

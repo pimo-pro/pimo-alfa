@@ -20,6 +20,13 @@ import {
   normalizeDrawerMetalBoxType,
   resolveMetalBoxProfile,
 } from "../drawerMetalBoxCatalog";
+import {
+  clampHoleToPanel,
+  mirrorSlideHoleXFromFront,
+  resolveSlideDrillingPattern,
+  type ResolvedSlideDrillingPattern,
+  type SlideDrillingHoleDef,
+} from "./drawerSlideDrillingCatalog";
 import { DRAWER_VERTICAL_BASE_OFFSET_MM } from "../drawerVerticalPosition";
 
 export type DrawerDrillingMode = "drawer_piece" | "pi_module_lateral";
@@ -32,6 +39,12 @@ export type DrawerDrillingContext = {
   mode?: DrawerDrillingMode;
   corredicaConfig?: RulesConfig["furos"]["tecnicos"]["corredica"];
   gavetasSettings?: SettingsSchema["gavetas"];
+  /** Profundidade do painel lateral (mm) — resolve comprimento/padrão X. */
+  panelDepthMm?: number;
+  /** Comprimento de corrediça forçado (mm). */
+  slideLengthMm?: number;
+  /** Altura do painel (mm) — clamp Y. */
+  panelHeightMm?: number;
 };
 
 export type DrawerSlideDrillingRules = {
@@ -52,6 +65,11 @@ export type DrawerSlideDrillingRules = {
   profundidadeMm: number;
   profundidadeMarkMm: number;
   mirrorLeftRight: boolean;
+  /** Comprimento industrial resolvido. */
+  slideLengthMm: number;
+  /** Padrão X a partir da frente (catálogo por slideType). */
+  holePatternFromFront: SlideDrillingHoleDef[];
+  patternSource: string;
 };
 
 export type DrawerCorredicaHoleSpec = {
@@ -91,7 +109,7 @@ function resolveSlideType(
 }
 
 /**
- * API principal — regras industriais unificadas por tipo de corrediça / caixa metálica.
+ * API principal — regras industriais por tipo de corrediça (catálogo) + caixa metálica.
  */
 export function getDrawerSlideDrillingRules(
   slideType?: string,
@@ -106,17 +124,51 @@ export function getDrawerSlideDrillingRules(
   const metalEnabled = isMetalBoxEnabled(resolvedMetal);
   const metalProfile = metalEnabled ? resolveMetalBoxProfile(resolvedMetal) : null;
 
+  const panelDepthMm = clampMm(ctx.panelDepthMm ?? 500, 50);
+  const pattern: ResolvedSlideDrillingPattern = resolveSlideDrillingPattern({
+    slideType: resolvedSlide,
+    panelDepthMm,
+    preferredLengthMm: ctx.slideLengthMm,
+  });
+
   const offsetFrente =
-    metalProfile?.slideOffsetFrontMm ?? clampMm(cfg?.offsetFrente ?? 38, 5);
+    metalProfile?.slideOffsetFrontMm ??
+    pattern.holes.find((h) => h.role === "front")?.xFromFrontMm ??
+    clampMm(cfg?.offsetFrente ?? 38, 5);
+  const rearHole = [...pattern.holes].reverse().find((h) => h.role === "rear" || h.role === "mount");
   const offsetFundo =
-    metalProfile?.slideOffsetRearMm ?? clampMm(cfg?.offsetFundo ?? 38, 5);
-  const offsetMark = clampMm(cfg?.offsetMark ?? PI_LEGACY_MARK_X, 5);
-  const alturaRelativaFundo = clampMm(cfg?.alturaRelativaFundo ?? 41, 5);
+    metalProfile?.slideOffsetRearMm ??
+    (rearHole ? Math.max(5, pattern.comprimentoMm - rearHole.xFromFrontMm) : clampMm(cfg?.offsetFundo ?? 38, 5));
+  const offsetMark =
+    pattern.holes.find((h) => h.role === "mark")?.xFromFrontMm ??
+    clampMm(cfg?.offsetMark ?? PI_LEGACY_MARK_X, 5);
+
+  const alturaRelativaFundo = clampMm(
+    pattern.alturaRelativaFundoMm ?? cfg?.alturaRelativaFundo ?? 41,
+    5
+  );
   const offsetVerticalAdicional = clampMm(cfg?.offsetVerticalAdicional ?? 0, 0);
   const softCloseVerticalOffsetMm = softClose ? 2 : 0;
   const mode = ctx.mode ?? "drawer_piece";
-  const profundidadeMm = clampMm(cfg?.profundidade ?? 1, 0.1);
-  const profundidadeMarkMm = clampMm(cfg?.profundidadeMark ?? cfg?.profundidade ?? 1, 0.1);
+  const profundidadeMm = clampMm(cfg?.profundidade ?? pattern.profundidadeMm, 0.1);
+  const profundidadeMarkMm = clampMm(
+    cfg?.profundidadeMark ?? cfg?.profundidade ?? pattern.profundidadeMarkMm,
+    0.1
+  );
+
+  // Metal box: offsets frente/traseiro do perfil; manter padrão de furos do slideType.
+  let holePatternFromFront = pattern.holes;
+  if (metalProfile) {
+    const mid = pattern.holes.filter((h) => h.role === "mark" || h.role === "mount");
+    holePatternFromFront = [
+      { xFromFrontMm: offsetFrente, role: "front" as const },
+      ...mid,
+      {
+        xFromFrontMm: Math.max(offsetFrente + 10, pattern.comprimentoMm - offsetFundo),
+        role: "rear" as const,
+      },
+    ];
+  }
 
   return {
     enabled: cfg?.enabled !== false,
@@ -132,10 +184,13 @@ export function getDrawerSlideDrillingRules(
     alturaRelativaFundoMm: alturaRelativaFundo,
     offsetVerticalAdicionalMm: offsetVerticalAdicional,
     softCloseVerticalOffsetMm,
-    diametroMm: clampMm(cfg?.diametro ?? 5, 1),
+    diametroMm: clampMm(cfg?.diametro ?? pattern.diametroMm, 1),
     profundidadeMm,
     profundidadeMarkMm,
-    mirrorLeftRight: true,
+    mirrorLeftRight: pattern.mirrorLeftRight,
+    slideLengthMm: pattern.comprimentoMm,
+    holePatternFromFront,
+    patternSource: pattern.source,
   };
 }
 
@@ -179,12 +234,8 @@ function yFromBottomOffset(panelHeightMm: number, rules: DrawerSlideDrillingRule
   return clampMm(panelHeightMm - fromBottom, 1, panelHeightMm);
 }
 
-function resolvePiRearOffsetFromFront(panelDepthMm: number, offsetFundoMm: number): number {
-  return Math.min(PI_LEGACY_REAR_X, Math.max(offsetFundoMm, panelDepthMm - offsetFundoMm));
-}
-
 /**
- * Furos de corrediça numa peça de gaveta (1 linha Y, 3 furos X: frontal + marca + traseiro).
+ * Furos de corrediça numa peça de gaveta (1 linha Y, padrão X do catálogo).
  */
 export function computeDrawerPieceCorredicaHoles(params: {
   pieceType: PieceType;
@@ -197,34 +248,26 @@ export function computeDrawerPieceCorredicaHoles(params: {
 
   const face = getDrawerPieceCorredicaFace(pieceType);
   const y = yFromBottomOffset(altura, rules);
-  const xFront = rules.offsetFrenteMm;
-  const xMark = rules.offsetMarkMm;
-  const xRear = largura - rules.offsetFundoMm;
+  const pattern =
+    rules.holePatternFromFront?.length > 0
+      ? rules.holePatternFromFront
+      : [
+          { xFromFrontMm: rules.offsetFrenteMm, role: "front" as const },
+          { xFromFrontMm: rules.offsetMarkMm, role: "mark" as const, isMarkOnly: true },
+          { xFromFrontMm: Math.max(rules.offsetFrenteMm, largura - rules.offsetFundoMm), role: "rear" as const },
+        ];
 
-  return [
-    {
-      x: xFront,
-      y,
+  return pattern.map((hole) => {
+    const clamped = clampHoleToPanel(hole.xFromFrontMm, y, largura, altura, rules.diametroMm);
+    return {
+      x: clamped.x,
+      y: clamped.y,
       diametro: rules.diametroMm,
-      profundidade: rules.profundidadeMm,
+      profundidade: hole.isMarkOnly ? rules.profundidadeMarkMm : rules.profundidadeMm,
       face,
-    },
-    {
-      x: xMark,
-      y,
-      diametro: rules.diametroMm,
-      profundidade: rules.profundidadeMarkMm,
-      face,
-      isMarkOnly: true,
-    },
-    {
-      x: xRear,
-      y,
-      diametro: rules.diametroMm,
-      profundidade: rules.profundidadeMm,
-      face,
-    },
-  ];
+      isMarkOnly: hole.isMarkOnly === true,
+    };
+  });
 }
 
 const DRAWER_FRONT_BASE_HEIGHTS_MM = [122, 178, 350, 350] as const;
@@ -257,17 +300,24 @@ export function resolvePiRunnerLinesYMm(
 
   const roundToGrid = (value: number) => Math.round(value / GRID_STEP_MM) * GRID_STEP_MM;
 
-  return centers.map((centerY) =>
-    clampMm(roundToGrid(centerY), GRID_STEP_MM, Math.max(GRID_STEP_MM, panelHeightMm - GRID_STEP_MM))
-  );
+  return centers.map((centerY) => {
+    const snapped = clampMm(
+      roundToGrid(centerY),
+      GRID_STEP_MM,
+      Math.max(GRID_STEP_MM, panelHeightMm - GRID_STEP_MM)
+    );
+    return clampCorredicaYFromTop(snapped, panelHeightMm, DRAWER_SLIDE_OFFSET_FROM_BOTTOM_MM);
+  });
 }
 
 /**
- * Furos de corrediça nas laterais do módulo PI (3 furos X por linha Y).
+ * Furos de corrediça nas laterais do módulo (padrão industrial por slideType).
+ * Espelhamento L/R completo e simétrico; clamp à peça.
  */
 export function computePiModuleLateralCorredicaHoles(params: {
   runnerLinesYMm: number[];
   panelDepthMm: number;
+  panelHeightMm?: number;
   side: "left" | "right";
   rules: DrawerSlideDrillingRules;
   useLegacyPiOffsets: boolean;
@@ -281,11 +331,7 @@ export function computePiModuleLateralCorredicaHoles(params: {
   if (!params.rules.enabled) return [];
 
   const { runnerLinesYMm, panelDepthMm, side, rules, useLegacyPiOffsets } = params;
-  const frontOff = useLegacyPiOffsets ? PI_LEGACY_FRONT_X : rules.offsetFrenteMm;
-  const markOff = useLegacyPiOffsets ? PI_LEGACY_MARK_X : rules.offsetMarkMm;
-  const rearOff = useLegacyPiOffsets
-    ? PI_LEGACY_REAR_X
-    : resolvePiRearOffsetFromFront(panelDepthMm, rules.offsetFundoMm);
+  const panelHeightMm = params.panelHeightMm ?? Math.max(...runnerLinesYMm, 1) + 1;
 
   const holes: Array<{
     x: number;
@@ -295,37 +341,86 @@ export function computePiModuleLateralCorredicaHoles(params: {
     isMarkOnly?: boolean;
   }> = [];
 
-  for (const y of runnerLinesYMm) {
-    const xFront = side === "left" ? panelDepthMm - frontOff : frontOff;
-    const xMark = panelDepthMm - markOff;
-    const xRear = side === "left" ? panelDepthMm - rearOff : rearOff;
+  if (useLegacyPiOffsets) {
+    const frontOff = PI_LEGACY_FRONT_X;
+    const markOff = PI_LEGACY_MARK_X;
+    const rearOff = PI_LEGACY_REAR_X;
+    for (const y of runnerLinesYMm) {
+      const xs =
+        side === "left"
+          ? [panelDepthMm - frontOff, panelDepthMm - markOff, panelDepthMm - rearOff]
+          : [frontOff, markOff, rearOff];
+      const depths = [rules.profundidadeMm, rules.profundidadeMarkMm, rules.profundidadeMm];
+      const marks = [false, true, false];
+      xs.forEach((xRaw, i) => {
+        const clamped = clampHoleToPanel(xRaw, y, panelDepthMm, panelHeightMm, rules.diametroMm);
+        holes.push({
+          x: clamped.x,
+          y: clamped.y,
+          depth: depths[i]!,
+          holeType: "corredica",
+          isMarkOnly: marks[i],
+        });
+      });
+    }
+    return holes;
+  }
 
-    holes.push({
-      x: xFront,
-      y,
-      depth: rules.profundidadeMm,
-      holeType: "corredica",
-    });
-    holes.push({
-      x: xMark,
-      y,
-      depth: rules.profundidadeMarkMm,
-      holeType: "corredica",
-      isMarkOnly: true,
-    });
-    holes.push({
-      x: xRear,
-      y,
-      depth: rules.profundidadeMm,
-      holeType: "corredica",
-    });
+  const pattern =
+    rules.holePatternFromFront?.length > 0
+      ? rules.holePatternFromFront
+      : [
+          { xFromFrontMm: rules.offsetFrenteMm, role: "front" as const },
+          { xFromFrontMm: rules.offsetMarkMm, role: "mark" as const, isMarkOnly: true },
+          {
+            xFromFrontMm: Math.max(
+              rules.offsetFrenteMm,
+              (rules.slideLengthMm || panelDepthMm) - rules.offsetFundoMm
+            ),
+            role: "rear" as const,
+          },
+        ];
+
+  for (const y of runnerLinesYMm) {
+    for (const hole of pattern) {
+      const xRaw = mirrorSlideHoleXFromFront(
+        hole.xFromFrontMm,
+        panelDepthMm,
+        side,
+        rules.mirrorLeftRight
+      );
+      const ySafe = clampCorredicaYFromTop(
+        y,
+        panelHeightMm,
+        rules.alturaRelativaFundoMm || DRAWER_SLIDE_OFFSET_FROM_BOTTOM_MM
+      );
+      const clamped = clampHoleToPanel(xRaw, ySafe, panelDepthMm, panelHeightMm, rules.diametroMm);
+      // Re-aplicar piso de 41 mm após clamp geométrico (raio).
+      const yFinal = clampCorredicaYFromTop(
+        clamped.y,
+        panelHeightMm,
+        rules.alturaRelativaFundoMm || DRAWER_SLIDE_OFFSET_FROM_BOTTOM_MM
+      );
+      holes.push({
+        x: clamped.x,
+        y: yFinal,
+        depth: hole.isMarkOnly ? rules.profundidadeMarkMm : rules.profundidadeMm,
+        holeType: "corredica",
+        isMarkOnly: hole.isMarkOnly === true,
+      });
+    }
   }
 
   return holes;
 }
 
 /**
- * Linhas Y (topo=0) nas laterais do módulo europeu — 41 mm acima da base de cada gaveta.
+ * Linhas Y (topo=0) nas laterais do módulo europeu.
+ *
+ * Regra industrial:
+ * - eixo da corrediça = 41 mm acima da base de cada gaveta
+ * - nunca < 41 mm acima do bordo inferior do painel lateral
+ * - nunca < 41 mm abaixo do bordo superior
  */
 export function resolveEuropeanModuleRunnerLinesYMm(params: {
   panelHeightMm: number;
@@ -335,38 +430,77 @@ export function resolveEuropeanModuleRunnerLinesYMm(params: {
 }): number[] {
   const rules =
     params.rules ??
-    getDrawerSlideDrillingRules(undefined, undefined, { mode: "pi_module_lateral" });
-  const internalBottomCenterY = -params.boxInternalHeightMm / 2 + DRAWER_VERTICAL_BASE_OFFSET_MM;
+    getDrawerSlideDrillingRules(undefined, undefined, {
+      mode: "pi_module_lateral",
+      panelDepthMm: 500,
+    });
+  const axisFromDrawerBottomMm = Math.max(1, rules.alturaRelativaFundoMm); // 41
+  const minFromPanelBottomMm = axisFromDrawerBottomMm;
+  const panelH = Math.max(1, params.panelHeightMm);
+  const internalH = Math.max(1, params.boxInternalHeightMm);
+  const internalBottomCenterY = -internalH / 2;
   const sorted = [...params.drawers].sort((a, b) => a.posYMm - b.posYMm);
 
   return sorted.map((drawer) => {
-    const drawerBottomCenterY = drawer.posYMm - drawer.frontHeightMm / 2;
-    const slideFromModuleBaseMm =
-      drawerBottomCenterY - internalBottomCenterY + rules.alturaRelativaFundoMm;
-    return clampMm(params.panelHeightMm - slideFromModuleBaseMm, 1, params.panelHeightMm);
+    const frontH = Math.max(0, Number(drawer.frontHeightMm) || 0);
+    const drawerBottomCenterY = Number(drawer.posYMm) - frontH / 2;
+    /** mm acima do piso interno do vão. */
+    const drawerBottomFromFloorMm = drawerBottomCenterY - internalBottomCenterY;
+    /**
+     * O offset de stack (10 mm) não puxa a 1ª linha para a aresta:
+     * base de furação da gaveta inferior = piso útil → eixo a +41 mm do bordo do painel.
+     */
+    const drawerBottomDrillingMm = Math.max(
+      0,
+      drawerBottomFromFloorMm - DRAWER_VERTICAL_BASE_OFFSET_MM
+    );
+    let yFromPanelBottomMm = drawerBottomDrillingMm + axisFromDrawerBottomMm;
+    yFromPanelBottomMm = Math.max(minFromPanelBottomMm, yFromPanelBottomMm);
+    yFromPanelBottomMm = Math.min(panelH - minFromPanelBottomMm, yFromPanelBottomMm);
+    /** Coordenada de painel topo→baixo (Y=0 no topo). */
+    return panelH - yFromPanelBottomMm;
   });
+}
+
+/** Garante Y de corrediça com ≥ minFromBottom mm às arestas inferior/superior. */
+export function clampCorredicaYFromTop(
+  yFromTopMm: number,
+  panelHeightMm: number,
+  minFromBottomMm: number = DRAWER_SLIDE_OFFSET_FROM_BOTTOM_MM
+): number {
+  const panelH = Math.max(1, panelHeightMm);
+  const minB = Math.max(1, minFromBottomMm);
+  const yFromBottom = panelH - yFromTopMm;
+  const clampedBottom = Math.min(panelH - minB, Math.max(minB, yFromBottom));
+  return panelH - clampedBottom;
 }
 
 /** Furos de corrediça nas laterais do módulo (europeu) — paridade com cutlist / viewer / XML. */
 export function buildEuropeanModuleLateralCorredicaDrilling(input: {
   runnerLinesYMm: number[];
   panelDepthMm: number;
+  panelHeightMm?: number;
   side: "left" | "right";
   slideType?: string;
   metalBoxType?: string;
   softClose?: boolean;
+  slideLengthMm?: number;
   corredicaConfig?: RulesConfig["furos"]["tecnicos"]["corredica"];
 }): PanelDrillHole[] {
   const rules = getDrawerSlideDrillingRules(input.slideType, input.metalBoxType, {
     softClose: input.softClose === true,
     mode: "pi_module_lateral",
     corredicaConfig: input.corredicaConfig,
+    panelDepthMm: input.panelDepthMm,
+    slideLengthMm: input.slideLengthMm,
+    panelHeightMm: input.panelHeightMm,
   });
   if (!rules.enabled) return [];
 
   const specs = computePiModuleLateralCorredicaHoles({
     runnerLinesYMm: input.runnerLinesYMm,
     panelDepthMm: input.panelDepthMm,
+    panelHeightMm: input.panelHeightMm ?? Math.max(...input.runnerLinesYMm, 1) + 40,
     side: input.side,
     rules,
     useLegacyPiOffsets: false,

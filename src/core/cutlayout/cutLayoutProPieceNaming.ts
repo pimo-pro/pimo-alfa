@@ -120,7 +120,60 @@ export function buildCutLayoutProPartName(
 }
 
 /**
+ * Inversão só para etiquetas / REF industriais dos lados do módulo.
+ * SSOT, Viewer e cutlist mantêm `lateral_esquerda` / `lateral_direita` correctos;
+ * no output de fabrico (PDF etiqueta, TCN/XML REF) o nome é espelhado:
+ *   lateral_direita → lat_esq (ESQ)
+ *   lateral_esquerda → lat_dir (DIR)
+ */
+export function invertModuleLateralTipoForIndustrialLabel(
+  tipo?: string | null
+): string | undefined {
+  const t = String(tipo ?? "").trim();
+  if (t === "lateral_esquerda") return "lateral_direita";
+  if (t === "lateral_direita") return "lateral_esquerda";
+  return t || undefined;
+}
+
+/** Aplica a inversão de lado do módulo para naming industrial (não altera o item SSOT). */
+export function applyIndustrialLabelSideInversion<T extends { tipo?: string; nome?: string }>(
+  item: T
+): T {
+  const invertedTipo = invertModuleLateralTipoForIndustrialLabel(item.tipo);
+  if (invertedTipo && invertedTipo !== String(item.tipo ?? "").trim()) {
+    return { ...item, tipo: invertedTipo, nome: undefined };
+  }
+  const nomeKey = String(item.nome ?? "")
+    .trim()
+    .toLowerCase();
+  if (nomeKey === "lateral esquerda") {
+    return { ...item, tipo: "lateral_direita", nome: undefined };
+  }
+  if (nomeKey === "lateral direita") {
+    return { ...item, tipo: "lateral_esquerda", nome: undefined };
+  }
+  return item;
+}
+
+/**
+ * Nome industrial da peça para etiqueta / fabrico (com inversão L/R dos lados do módulo).
+ * Não usar para cutlist UI nem Viewer — aí o SSOT permanece sem inversão.
+ */
+export function buildIndustrialPieceName(
+  item: { nome?: string; tipo?: string },
+  boxNome: string | undefined,
+  projectName: string
+): string {
+  return buildCutLayoutProPartName(
+    applyIndustrialLabelSideInversion(item),
+    boxNome,
+    projectName
+  );
+}
+
+/**
  * REF PEÇA / nome industrial — mesma regra das etiquetas (metadata.industrialLabel ou PRO name).
+ * Laterais do módulo: ESQ/DIR invertidos face ao `tipo` SSOT (ver `buildIndustrialPieceName`).
  */
 export function resolveIndustrialPieceRef(
   item: { nome?: string; tipo?: string; metadata?: Record<string, unknown> },
@@ -131,7 +184,7 @@ export function resolveIndustrialPieceRef(
   if (typeof fromMeta === "string" && fromMeta.trim()) {
     return fromMeta.trim().toUpperCase();
   }
-  return buildCutLayoutProPartName(item, boxNome, projectName).toUpperCase();
+  return buildIndustrialPieceName(item, boxNome, projectName).toUpperCase();
 }
 
 export type BoxNomeLookup = ReadonlyMap<string, string> | Record<string, string>;

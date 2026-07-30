@@ -545,8 +545,6 @@ export function buildViewerDrillMarkersByPanelResult(
           tipo === "lateral_direita" &&
           (h.holeType === "dobradica_fixacao" || h.holeType === "dobradica" || h.holeType === "dobradica_parafuso_uniao")
             ? item.dimensoes.largura - h.x
-          : tipo === "lateral_esquerda" && h.holeType === "corredica"
-            ? item.dimensoes.largura - h.x
             : h.x;
         return {
           x: xForViewer,

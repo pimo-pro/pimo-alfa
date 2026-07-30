@@ -83,11 +83,12 @@ describe("drillExport — nomes XML alinhados ao sistema de etiquetas", () => {
     expect(filename).toBe("C1_LAT_DIR_03");
   });
 
-  it("sem etiqueta — nome completo PROJETO_CAIXA_PECA", () => {
+  it("sem etiqueta — nome completo PROJETO_CAIXA_PECA (lateral SSOT esq → REF industrial DIR)", () => {
     const item = lateralItem({ pieceNumber: undefined, shortCode: undefined });
     expect(pieceHasEtiquetaQr(item)).toBe(false);
-    expect(buildDrillXmlFallbackFileName(item, project)).toBe("ANTONIO_NOVO_5_CC1_C1_LAT_ESQ");
-    expect(panelFileNameFromPiece(item, project, new Map(), 0)).toBe("ANTONIO_NOVO_5_CC1_C1_LAT_ESQ");
+    // Etiqueta/XML industrial: lados do módulo invertidos face ao tipo SSOT.
+    expect(buildDrillXmlFallbackFileName(item, project)).toBe("ANTONIO_NOVO_5_CC1_C1_LAT_DIR");
+    expect(panelFileNameFromPiece(item, project, new Map(), 0)).toBe("ANTONIO_NOVO_5_CC1_C1_LAT_DIR");
   });
 
   it("buildDrillFilesForProject — filenameBase alinhado ao QR v5", () => {

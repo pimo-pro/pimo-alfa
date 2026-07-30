@@ -186,11 +186,13 @@ function addDrawerSlideHolesUnified(
     softClose: softClose === true,
     mode: "pi_module_lateral",
     gavetasSettings: gavetas,
+    panelDepthMm: profundidadeMm,
   });
 
   const specs = computePiModuleLateralCorredicaHoles({
     runnerLinesYMm,
     panelDepthMm: profundidadeMm,
+    panelHeightMm: Math.max(...runnerLinesYMm, 1) + 40,
     side,
     rules,
     useLegacyPiOffsets: false,
