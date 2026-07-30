@@ -1,6 +1,26 @@
 {
-  "updatedAt": "2026-07-30T17:35:14.928Z",
+  "updatedAt": "2026-07-30T17:47:37.426Z",
   "news": [
+    {
+      "version": "v6.0730.1847",
+      "title": "Versão de referência industrial — Quadro V6 YOU M Silent System + etiquetas L/R. Marcada como estável: v-ref-quadroV6...",
+      "description": "Versão de referência industrial — Quadro V6 YOU M Silent System + etiquetas L/R. Marcada como estável: v-ref-quadroV6-youM-0730.",
+      "publishedAt": "2026-07-30T17:47:37.331Z",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "update",
+      "commit": "9f91d16"
+    },
+    {
+      "version": "v6.0730.1844",
+      "title": "Versão de referência industrial — Quadro V6 YOU M Silent System + etiquetas L/R. Marcada como estável: v-ref-quadroV6...",
+      "description": "Versão de referência industrial — Quadro V6 YOU M Silent System + etiquetas L/R. Marcada como estável: v-ref-quadroV6-youM-0730.",
+      "publishedAt": "2026-07-30T17:44:06.606Z",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "update",
+      "commit": "9f91d16"
+    },
     {
       "version": "v-ref-quadroV6-youM-0730",
       "title": "Versão de referência — Quadro V6 YOU M Silent System",
@@ -9,8 +29,7 @@
       "type": "update",
       "author": "pimo-pro",
       "icon": "update",
-      "commit": "143ac85",
-      "stableReference": true
+      "commit": "9f91d16"
     },
     {
       "version": "v6.0730.1635",

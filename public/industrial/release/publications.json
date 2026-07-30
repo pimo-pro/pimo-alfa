@@ -2,6 +2,18 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-30T17:47:37.078Z",
+      "author": "pimo-pro",
+      "commitMessage": "Industrial — Quadro V6 YOU M Silent System integrado. X1=38 mm, X2=b1−1, Y=41 mm, espelhamento L/R correcto, etiquetas industriais invertidas conforme regra de fabrico.",
+      "version": "v6.0730.1847"
+    },
+    {
+      "publishedAt": "2026-07-30T17:44:06.395Z",
+      "author": "pimo-pro",
+      "commitMessage": "Industrial — Quadro V6 YOU M Silent System integrado. X1=38 mm, X2=b1−1, Y=41 mm, espelhamento L/R correcto, etiquetas industriais invertidas conforme regra de fabrico.",
+      "version": "v6.0730.1844"
+    },
+    {
       "publishedAt": "2026-07-30T15:35:18.933Z",
       "author": "pimo-pro",
       "commitMessage": "Gavetas — Ferragens global/individual + Hettich ArciTech como sistema padrão. Genérica mantida como opção secundária. Fingerprint e Viewer actualizados.",

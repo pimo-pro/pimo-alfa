@@ -11,6 +11,7 @@ import { normalizeFinanceiroAdminSettings } from "../financeiro/financeiroAdminR
 import { FINANCEIRO_IVA_DEFAULT_PCT } from "../financeiro/financeiroUnificadoTypes";
 
 const DRAWER_SLIDE_TYPES = [
+  "Hettich Quadro V6 You M Silent System",
   "Blum Tandem",
   "Blum Movento",
   "Hettich InnoTech",

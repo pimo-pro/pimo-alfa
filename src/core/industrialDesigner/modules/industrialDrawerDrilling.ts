@@ -131,10 +131,6 @@ export function applyDrawerBoxDrilling(
   box: IndustrialDesignBox,
   _layout: IndustrialDrawerSingleLayout
 ): IndustrialDesignBox {
-  const rules = getDrawerSlideDrillingRules(undefined, undefined, {
-    mode: "drawer_piece",
-    panelDepthMm: 500,
-  });
   let current = box;
 
   for (const panel of box.panels) {
