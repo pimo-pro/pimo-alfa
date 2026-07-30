@@ -68,7 +68,6 @@ function isHoleInsidePlacementAndSheet(
   topRightOrigin: boolean
 ): boolean {
   if (!Number.isFinite(h.x) || !Number.isFinite(h.y)) return false;
-  const r = Number.isFinite(h.diameter) && h.diameter > 0 ? h.diameter / 2 : 0;
   const off = pdfDisplayHoleOffset(pl, h);
   // Permitir furos de aresta (X=0 / X=L, Y=0 / Y=H) — interlock TypeNo=2 no SSOT.
   // Centro pode coincidir com o perímetro; o círculo é desenhado na borda.
