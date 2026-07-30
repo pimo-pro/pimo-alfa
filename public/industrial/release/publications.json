@@ -2,6 +2,18 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-30T14:32:59.502Z",
+      "author": "pimo-pro",
+      "commitMessage": "fix(build): TypeScript no ViewerCore/PanelVisibility + news.json UTF-8",
+      "version": "v6.0730.1532"
+    },
+    {
+      "publishedAt": "2026-07-30T14:24:59.883Z",
+      "author": "pimo-pro",
+      "commitMessage": "Correção completa do fluxo de matéria — gaveta + frente fixa (sem fallback, sem overwrite). Estabilidade garantida no load e no rebuild.",
+      "version": "v6.0730.1524"
+    },
+    {
       "publishedAt": "2026-07-29T20:48:51.980Z",
       "author": "pimo-pro",
       "commitMessage": "fix(drawers): frente +1mm + aviso curso real",
