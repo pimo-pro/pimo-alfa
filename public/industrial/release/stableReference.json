@@ -1,19 +1,23 @@
 {
   "kind": "stable_industrial_reference",
   "status": "active",
-  "tag": "v-ref-quadroV6-youM-0730",
-  "title": "Versao estavel de referencia — Quadro V6 YOU M Silent System",
-  "description": "Sistema Quadro V6 YOU M Silent System + correcao de etiquetas industriais L/R. Usar para regressao futura.",
-  "markedAt": "2026-07-30T17:50:41.791Z",
+  "tag": "v-ref-dowel-interlock-layout-0730",
+  "title": "Versao estavel de referencia — Cavilhas interlock + layout PDF SSOT",
+  "description": "Sistema de cavilhas com interlock (lateral↔frente↔costa), profundidades dinamicas face/espessura, Y parametrico 39/30, centro T/2, espelhamento L/R, XML e layout PDF alinhados ao drillHoles SSOT (cavilhas de aresta incluidas). Usar para regressao futura.",
+  "markedAt": "2026-07-30T19:45:00.000Z",
   "checks": {
-    "quadroV6YouMCatalog": true,
-    "x1_38mm": true,
-    "x2_b1_minus_1": true,
-    "yMin_41mm": true,
-    "industrialLabelsLateralInverted": true,
-    "viewerCutlistLrCorrect": true
+    "dowelInterlockSsot": true,
+    "edgeDepth_min30_Tminus2": true,
+    "faceDepth_13mm": true,
+    "rearY_39_Hminus39": true,
+    "frontY_30_Hminus30": true,
+    "thicknessCenter_T2": true,
+    "lrMirrorCorrect": true,
+    "xmlAlignedToDrillHoles": true,
+    "layoutPdfIncludesEdgeCavilhas": true,
+    "pdfXmlCutlistCoordsEqual": true
   },
-  "commit": "9f91d16",
-  "deployVersion": "v6.0730.1847",
-  "deployCommit": "0a5c69c"
+  "commit": "989b01e",
+  "deployVersion": "v6.0730.2042",
+  "deployCommit": "0b86671"
 }
