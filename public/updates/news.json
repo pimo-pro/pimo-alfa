@@ -1,6 +1,16 @@
 {
-  "updatedAt": "2026-07-30T15:31:53.930Z",
+  "updatedAt": "2026-07-30T15:35:19.296Z",
   "news": [
+    {
+      "version": "v6.0730.1635",
+      "title": "Novidades do Sistema — novo fluxo completo de gavetas com Ferragens global/individual e Hettich ArciTech como corredi...",
+      "description": "Novidades do Sistema — novo fluxo completo de gavetas com Ferragens global/individual e Hettich ArciTech como corrediça padrão.",
+      "publishedAt": "2026-07-30T15:35:19.205Z",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "update",
+      "commit": "5234acc"
+    },
     {
       "version": "v-next-gavetas-arciTech",
       "title": "Novidades do Sistema — Ferragens global/individual + Hettich ArciTech padrão",
@@ -9,7 +19,7 @@
       "type": "update",
       "author": "pimo-pro",
       "icon": "update",
-      "commit": "pending"
+      "commit": "5234acc"
     },
     {
       "version": "v6.0730.1559",
