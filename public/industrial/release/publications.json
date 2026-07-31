@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-31T19:21:18.855Z",
+      "author": "pimo-pro",
+      "commitMessage": "feat(industrial): SSOT cavilha 10x30↔10x13 + CAVILHA_10x40 (gavetas, módulos, cantos)",
+      "version": "v6.0731.2021"
+    },
+    {
       "publishedAt": "2026-07-31T13:41:20.372Z",
       "author": "pimo-pro",
       "commitMessage": "Gaveta — remoção total de furações indevidas (Ø5 mm) nas laterais e costa. `calcCorredica` descontinuado, `computeDrawerPieceCorredicaHoles` no-op, `shouldDrillCorredicaOnDrawerPieceType=false`. Pipeline limpo: apenas cavilhas + rasgo inferior. XML/CNC/PDF alinhados. 78/78 testes + 8 novos OK.",
