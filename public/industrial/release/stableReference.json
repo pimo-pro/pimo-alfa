@@ -1,22 +1,21 @@
 {
   "kind": "stable_industrial_reference",
   "status": "active",
-  "tag": "v-ref-slide-marking-0731",
-  "title": "Versao estavel de referencia — Marcacao corredicas laterais modulo",
-  "description": "Padrao de marcacao industrial das corredicas nos laterais do modulo: X1=38 mm, X_last=D-38 mm, 4/5 furos por NL, profundidade 1 mm (mark-only), simetria L/R, Quadro V6 com CC. Sem impacto no SSOT estrutural, interlock, cavilhas, XML ou PDF. Usar para regressao futura.",
-  "markedAt": "2026-07-31T11:55:00.000Z",
+  "tag": "v-ref-drawer-clean-0731",
+  "title": "Versao estavel de referencia — Gaveta sem furos indevidos Ø5",
+  "description": "Remocao total de furacoes indevidas (Ø5 mm / corredica) nas pecas da gaveta. calcCorredica descontinuado, computeDrawerPieceCorredicaHoles no-op. Laterais: apenas cavilhas + rasgo. Costa: apenas cavilhas + fixacao fundo. XML/CNC/PDF alinhados ao SSOT. Usar para regressao futura.",
+  "markedAt": "2026-07-31T13:45:00.000Z",
   "checks": {
-    "slideMarkingX1_38mm": true,
-    "slideMarkingXLast_Dminus38": true,
-    "nl350_4holes": true,
-    "nl500_5holes": true,
-    "markDepth_1mm": true,
-    "lrMirrorCorrect": true,
-    "quadroV6CcAnchored": true,
-    "noImpactStructuralSsot": true,
-    "noImpactDowelInterlock": true
+    "noFiveMmOnDrawerLaterals": true,
+    "noFiveMmOnDrawerCosta": true,
+    "noCorredicaOnDrawerPieces": true,
+    "calcCorredicaNoOp": true,
+    "lateralsCavilhasPlusGrooveOnly": true,
+    "costaCavilhasOnly": true,
+    "xmlNoDiameter5": true,
+    "pdfXmlViewerSsotAligned": true
   },
-  "commit": "7089470",
-  "deployVersion": "v6.0731.1253",
-  "deployCommit": "b0e09e4"
+  "commit": "f8bd7d8",
+  "deployVersion": "v6.0731.1441",
+  "deployCommit": "25de6f8"
 }
