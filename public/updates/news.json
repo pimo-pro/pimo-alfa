@@ -1,15 +1,35 @@
 {
-  "updatedAt": "2026-07-31T20:48:35.266Z",
+  "updatedAt": "2026-07-31T21:48:58.165Z",
   "news": [
+    {
+      "version": "v6.0731.2248",
+      "title": "Nova funcionalidade: Layout de Corte manual (PDF único com furos coloridos, cotas inteligentes e rasgos). Integração ...",
+      "description": "Nova funcionalidade: Layout de Corte manual (PDF único com furos coloridos, cotas inteligentes e rasgos). Integração na UI e no Gerar arquivo completo.",
+      "publishedAt": "2026-07-31T21:48:57.913Z",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "update",
+      "commit": "05c9ef9"
+    },
     {
       "version": "v6.0731.2148",
       "title": "Atualização: melhorias no Layout de Corte PRO (nome completo, miniatura landscape, ajuste de colunas, altura das linh...",
       "description": "Atualização: melhorias no Layout de Corte PRO (nome completo, miniatura landscape, ajuste de colunas, altura das linhas). Preparação para Layout de Corte manual.",
-      "publishedAt": "2026-07-31T20:48:35.168Z",
+      "publishedAt": "2026-07-31T21:51:00+01:00",
       "type": "update",
       "author": "pimo-pro",
       "icon": "update",
       "commit": "f0d3918"
+    },
+    {
+      "version": "v-ref-layout-corte-pro-0731",
+      "title": "Atualização: melhorias no Layout de Corte PRO (nome completo, miniatura landscape, ajuste de colunas, altura das linh...",
+      "description": "Atualização: melhorias no Layout de Corte PRO (nome completo, miniatura landscape, ajuste de colunas, altura das linhas). Preparação para Layout de Corte manual.",
+      "publishedAt": "2026-07-31T21:51:00+01:00",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "update",
+      "commit": "b5a9621"
     },
     {
       "version": "v6.0731.2021",

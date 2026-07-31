@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-31T21:48:55.526Z",
+      "author": "pimo-pro",
+      "commitMessage": "Nova funcionalidade: Layout de Corte manual (PDF único com furos coloridos, cotas inteligentes e rasgos). Integração na UI e no Gerar arquivo completo.",
+      "version": "v6.0731.2248"
+    },
+    {
       "publishedAt": "2026-07-31T20:48:34.338Z",
       "author": "pimo-pro",
       "commitMessage": "Atualização: melhorias no Layout de Corte PRO (nome completo, miniatura landscape, ajuste de colunas, altura das linhas). Preparação para Layout de Corte manual.",
