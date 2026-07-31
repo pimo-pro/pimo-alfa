@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-31T13:41:20.372Z",
+      "author": "pimo-pro",
+      "commitMessage": "Gaveta — remoção total de furações indevidas (Ø5 mm) nas laterais e costa. `calcCorredica` descontinuado, `computeDrawerPieceCorredicaHoles` no-op, `shouldDrillCorredicaOnDrawerPieceType=false`. Pipeline limpo: apenas cavilhas + rasgo inferior. XML/CNC/PDF alinhados. 78/78 testes + 8 novos OK.",
+      "version": "v6.0731.1441"
+    },
+    {
       "publishedAt": "2026-07-31T11:53:04.701Z",
       "author": "pimo-pro",
       "commitMessage": "Corrediças — padrão de marcação industrial actualizado. X1=38 mm, X_last=D−38 mm, distribuição proporcional 4/5 furos por NL, profundidade 1 mm (mark-only), simetria L/R, compatível com Quadro V6 (CC). Nenhum impacto no SSOT estrutural, interlock, cavilhas, XML ou PDF. 64/64 testes OK.",
