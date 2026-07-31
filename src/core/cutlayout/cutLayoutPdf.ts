@@ -7,6 +7,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { CutLayoutResult, CutPlacement, SheetResult } from "./cutLayoutTypes";
 import { holeLocalToSheetOffsetMm } from "./layoutCoordinateSystem";
+import { buildV5BottomStripIndustrialName } from "../etiquetas/industrialDisplayName";
 import { assertIndustrialOutputAuthorized } from "../industrial/industrialOutputGuard";
 import { drawLogoIndustrialInBox, loadLogoIndustrialDataUrl, LOGO_INDUSTRIAL_SIZE_MM } from "../pdf/logoIndustrialPublic";
 import { resolveAuthoritativeLabelNumber } from "../qrcode/panelLabelNumber";
@@ -28,7 +29,8 @@ const FONT_VALUE = 9;
 const LINE_STEP = 5.1;
 
 const TABLE_FONT_PT = 8;
-const TABLE_ROW_H_MM = 9;
+/** Altura de linha da lista — ~2× a anterior (~9–12 mm) para miniatura legível. */
+const TABLE_ROW_H_MM = 26;
 const TABLE_HEAD_H_MM = 7;
 /**
  * Reserva mínima no fim da 1.ª página para cabeçalho da tabela + ≥1 linha
@@ -40,10 +42,43 @@ export type CutLayoutPdfOptions = {
   projectName?: string;
   brandRight?: string;
   nestingTopRightOrigin?: boolean;
+  /** Nome do projeto alinhado à etiqueta (sem sufixo de espessura). */
+  industrialProjectName?: string;
+  /** Mapa caixa → nome de display (para Projeto_Caixa_Peça). */
+  boxNomeById?: Readonly<Record<string, string>> | ReadonlyMap<string, string>;
 };
 
 type EdgeBands = { top?: boolean; right?: boolean; bottom?: boolean; left?: boolean };
 type PdfHole = NonNullable<CutPlacement["drillHoles"]>[number];
+
+function resolveBoxNomeForDisplay(
+  boxId: string | undefined,
+  boxNomeById?: CutLayoutPdfOptions["boxNomeById"]
+): string {
+  const id = String(boxId ?? "").trim();
+  if (!id || !boxNomeById) return id || "—";
+  if (boxNomeById instanceof Map) return boxNomeById.get(id)?.trim() || id;
+  return String(boxNomeById[id] ?? "").trim() || id;
+}
+
+/** Nome exibido na tabela = mesmo formato da etiqueta (Projeto_Caixa_Peça). */
+function formatCutLayoutProPieceDisplayName(
+  pl: CutPlacement,
+  options: CutLayoutPdfOptions
+): string {
+  const project =
+    (options.industrialProjectName ?? options.projectName ?? "Projeto").trim() || "Projeto";
+
+  // Se o cabeçalho vier como "Projeto — 19mm", usar só a parte do projeto.
+  const projectClean = project.includes(" — ")
+    ? project.slice(0, project.indexOf(" — ")).trim() || project
+    : project;
+
+  const boxNome = resolveBoxNomeForDisplay(pl.boxId, options.boxNomeById);
+  const nomeIndustrial = String(pl.partName ?? "").trim() || "peca";
+
+  return buildV5BottomStripIndustrialName(projectClean, boxNome, nomeIndustrial);
+}
 
 function placementEdgeBands(pl: CutPlacement): EdgeBands | undefined {
   return (pl as CutPlacement & { fitaBordas?: EdgeBands }).fitaBordas;
@@ -333,7 +368,7 @@ export async function buildCutLayoutPdf(
     );
     const tableStartY = diagram.originY + diagram.drawH + GAP_DIAGRAM_TABLE;
 
-    drawPieceTablePaginated(doc, sheetResult, tableStartY, globalSheetIndex);
+    drawPieceTablePaginated(doc, sheetResult, tableStartY, globalSheetIndex, opts);
   }
 
   return doc;
@@ -343,13 +378,14 @@ function drawPieceTablePaginated(
   doc: jsPDF,
   sheetResult: SheetResult,
   firstTableStartY: number,
-  globalSheetIndex: number
+  globalSheetIndex: number,
+  options: CutLayoutPdfOptions
 ): void {
   const { placements, sheet } = sheetResult;
   const head = [["Nome da peça", "Dimensões", "Nº Peça", "Qtd na placa", "Imagem da peça"]];
 
   const bodyRows = placements.map((pl) => [
-    String(pl.partName ?? "—").slice(0, 42),
+    formatCutLayoutProPieceDisplayName(pl, options),
     `${Math.round(pl.largura_mm)}\u00d7${Math.round(pl.altura_mm)} mm`,
     String(resolveAuthoritativeLabelNumber(pl) ?? pl.shortCode ?? pl.pieceNumber ?? "—"),
     "1",
@@ -377,20 +413,23 @@ function drawPieceTablePaginated(
         cellPadding: 1,
         lineColor: [160, 160, 160],
         lineWidth: 0.12,
+        minCellHeight: TABLE_ROW_H_MM,
       },
       headStyles: {
         fillColor: [230, 230, 230],
         textColor: 20,
         fontStyle: "bold",
         fontSize: TABLE_FONT_PT,
+        minCellHeight: TABLE_HEAD_H_MM,
       },
-      bodyStyles: { minCellHeight: rowH - 1.2 },
+      bodyStyles: { minCellHeight: TABLE_ROW_H_MM },
+      // Soma = INNER_W (194 mm) — A4 retrato; col 4 maximizada (~90–110).
       columnStyles: {
-        0: { cellWidth: 48 },
-        1: { cellWidth: 34 },
-        2: { cellWidth: 16 },
-        3: { cellWidth: 18 },
-        4: { cellWidth: 34 },
+        0: { cellWidth: 50 }, // nome completo
+        1: { cellWidth: 22 }, // medidas
+        2: { cellWidth: 14 }, // Nº Peça
+        3: { cellWidth: 14 }, // Qtd na placa
+        4: { cellWidth: 94, minCellHeight: TABLE_ROW_H_MM }, // Imagem da peça
       },
       margin: { left: MARGIN, right: MARGIN },
       theme: "grid",
@@ -400,43 +439,53 @@ function drawPieceTablePaginated(
         const pl = slicePlacements[data.row.index];
         if (!pl) return;
         const cell = data.cell;
-        const pad = 0.8;
-        const cw = cell.width - pad * 2;
-        const ch = cell.height - pad * 2;
-        const tw = Math.max(3.5, cw * 0.94);
-        const th = Math.max(2.8, ch * 0.9);
-        const tx = cell.x + pad + (cw - tw) / 2;
-        const ty = cell.y + pad + (ch - th) / 2;
-        doc.setDrawColor(...BRAND_RED);
-        doc.setLineWidth(0.18);
-        doc.setFillColor(255, 255, 255);
-        doc.rect(tx, ty, tw, th, "FD");
-        const scaleThumb = Math.min(tw / pl.largura_mm, th / pl.altura_mm);
-        const rw = pl.largura_mm * scaleThumb;
-        const rh = pl.altura_mm * scaleThumb;
-        const rx = tx + (tw - rw) / 2;
-        const ry = ty + (th - rh) / 2;
-        doc.setDrawColor(...BRAND_RED);
-        doc.rect(rx, ry, rw, rh, "S");
+        const pad = 1;
+        const cw = cell.width - 2;
+        const ch = cell.height - 2;
+
+        // Landscape só na miniatura da lista — não altera nesting nem coords industriais.
+        const forceLandscape = pl.altura_mm > pl.largura_mm;
+        const geoW = forceLandscape ? pl.altura_mm : pl.largura_mm;
+        const geoH = forceLandscape ? pl.largura_mm : pl.altura_mm;
+        const scaleThumb = Math.min(cw / Math.max(geoW, 1), ch / Math.max(geoH, 1));
+        const rw = geoW * scaleThumb;
+        const rh = geoH * scaleThumb;
+        const rx = cell.x + pad + (cw - rw) / 2;
+        const ry = cell.y + pad + (ch - rh) / 2;
+
+        // Silhueta sem caixa envolvente nem contorno.
+        doc.setFillColor(248, 244, 244);
+        doc.rect(rx, ry, rw, rh, "F");
+
         const thumbHoles = holesForPdf(pl, sheet, false);
         if (thumbHoles.length > 0) {
           doc.setFillColor(25, 25, 25);
           for (const h of thumbHoles) {
             const off = pdfDisplayHoleOffset(pl, h);
-            const hx = rx + (off.sx / pl.largura_mm) * rw;
-            const hy = ry + (off.sy / pl.altura_mm) * rh;
-            const hr = Math.max(0.18, Math.min(0.5, (h.diameter / 2 / pl.largura_mm) * rw));
+            let hx: number;
+            let hy: number;
+            let hr: number;
+            if (forceLandscape) {
+              // 90° CW visual: (sx, sy) → (sy, largura - sx) no espaço landscape.
+              hx = rx + (off.sy / pl.altura_mm) * rw;
+              hy = ry + ((pl.largura_mm - off.sx) / pl.largura_mm) * rh;
+              hr = Math.max(0.18, Math.min(0.5, (h.diameter / 2 / pl.altura_mm) * rw));
+            } else {
+              hx = rx + (off.sx / pl.largura_mm) * rw;
+              hy = ry + (off.sy / pl.altura_mm) * rh;
+              hr = Math.max(0.18, Math.min(0.5, (h.diameter / 2 / pl.largura_mm) * rw));
+            }
             doc.circle(hx, hy, hr, "F");
           }
         }
         const authThumb = resolveAuthoritativeLabelNumber(pl);
         const numStr = String(authThumb ?? pl.shortCode ?? pl.pieceNumber ?? "—");
-        let nfs = Math.min(rh * 0.52, rw * 0.42, 9);
-        nfs = Math.max(3.5, nfs);
+        let nfs = Math.min(rh * 0.52, rw * 0.42, 16);
+        nfs = Math.max(5, nfs);
         doc.setFontSize(nfs);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(...BRAND_RED);
-        while (nfs > 3.5 && doc.getTextWidth(numStr) > rw - 0.6) {
+        while (nfs > 5 && doc.getTextWidth(numStr) > rw - 0.6) {
           nfs -= 0.5;
           doc.setFontSize(nfs);
         }

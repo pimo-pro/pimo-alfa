@@ -683,9 +683,12 @@ export function useGerarArquivoHandlers() {
       }
 
       const { buildCutLayoutPdf } = await loadCutLayoutPdfModule("Layout de corte");
+      const boxNomeById = Object.fromEntries(boxes.map((b) => [b.id, b.nome ?? ""]));
       for (const bundle of thicknessBundles) {
         const doc = await buildCutLayoutPdf(bundle.cncBundle.layoutResult, {
           projectName: project.projectName ?? "Projeto",
+          industrialProjectName: project.projectName ?? "Projeto",
+          boxNomeById,
         });
         doc.save(`${slug}_${industrialThicknessLayoutPdfFileName(bundle.bucket)}`);
       }
@@ -770,9 +773,12 @@ export function useGerarArquivoHandlers() {
 
       await yieldToMainThread();
       const { buildCutLayoutPdf } = await loadCutLayoutPdfModule("Layout de Corte PRO");
+      const boxNomeById = Object.fromEntries(boxes.map((b) => [b.id, b.nome ?? ""]));
       for (const bundle of thicknessBundles) {
         const doc = await buildCutLayoutPdf(bundle.cncBundle.layoutResult, {
           projectName: `${project.projectName ?? "Projeto"} — ${bundle.bucket}`,
+          industrialProjectName: project.projectName ?? "Projeto",
+          boxNomeById,
         });
         doc.save(`${slug}_${industrialThicknessLayoutPdfFileName(bundle.bucket)}`);
       }
@@ -1275,6 +1281,7 @@ export function useGerarArquivoHandlers() {
         const { buildCutLayoutPdf } = await loadCutLayoutPdfModule(
           "PDF Etiquetas / Layout PRO (arquivo completo)"
         );
+        const boxNomeById = Object.fromEntries(boxes.map((b) => [b.id, b.nome ?? ""]));
         for (const bundle of thicknessCncBundles) {
           const layoutResult = bundle.cncBundle.layoutResult;
           const nestingPlacements = layoutResult.sheets.flatMap((s) => s.placements);
@@ -1297,6 +1304,8 @@ export function useGerarArquivoHandlers() {
 
           const docLayout = await buildCutLayoutPdf(layoutResult, {
             projectName: `${project.projectName ?? "Projeto"} — ${bundle.bucket}`,
+            industrialProjectName: project.projectName ?? "Projeto",
+            boxNomeById,
           });
           const layoutPath = industrialThicknessLayoutPdfPath(bundle.bucket);
           if (!safeAddPdf(zip, layoutPath, docLayout)) {
