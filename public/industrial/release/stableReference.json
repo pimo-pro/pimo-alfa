@@ -1,23 +1,22 @@
 {
   "kind": "stable_industrial_reference",
   "status": "active",
-  "tag": "v-ref-dowel-interlock-layout-0730",
-  "title": "Versao estavel de referencia — Cavilhas interlock + layout PDF SSOT",
-  "description": "Sistema de cavilhas com interlock (lateral↔frente↔costa), profundidades dinamicas face/espessura, Y parametrico 39/30, centro T/2, espelhamento L/R, XML e layout PDF alinhados ao drillHoles SSOT (cavilhas de aresta incluidas). Usar para regressao futura.",
-  "markedAt": "2026-07-30T19:45:00.000Z",
+  "tag": "v-ref-slide-marking-0731",
+  "title": "Versao estavel de referencia — Marcacao corredicas laterais modulo",
+  "description": "Padrao de marcacao industrial das corredicas nos laterais do modulo: X1=38 mm, X_last=D-38 mm, 4/5 furos por NL, profundidade 1 mm (mark-only), simetria L/R, Quadro V6 com CC. Sem impacto no SSOT estrutural, interlock, cavilhas, XML ou PDF. Usar para regressao futura.",
+  "markedAt": "2026-07-31T11:55:00.000Z",
   "checks": {
-    "dowelInterlockSsot": true,
-    "edgeDepth_min30_Tminus2": true,
-    "faceDepth_13mm": true,
-    "rearY_39_Hminus39": true,
-    "frontY_30_Hminus30": true,
-    "thicknessCenter_T2": true,
+    "slideMarkingX1_38mm": true,
+    "slideMarkingXLast_Dminus38": true,
+    "nl350_4holes": true,
+    "nl500_5holes": true,
+    "markDepth_1mm": true,
     "lrMirrorCorrect": true,
-    "xmlAlignedToDrillHoles": true,
-    "layoutPdfIncludesEdgeCavilhas": true,
-    "pdfXmlCutlistCoordsEqual": true
+    "quadroV6CcAnchored": true,
+    "noImpactStructuralSsot": true,
+    "noImpactDowelInterlock": true
   },
-  "commit": "989b01e",
-  "deployVersion": "v6.0730.2042",
-  "deployCommit": "0b86671"
+  "commit": "7089470",
+  "deployVersion": "v6.0731.1253",
+  "deployCommit": "b0e09e4"
 }
