@@ -223,28 +223,18 @@ export function getDrawerSlideDrillingRules(
   };
 }
 
+/**
+ * Corrediças furam-se apenas nos laterais do MÓDULO (`pi_module_lateral`).
+ * Peças da gaveta (lat/costa/frente) — modelo industrial: apenas cavilhas + rasgo.
+ * Nunca injectar Ø5 / marcação de corrediça nestas peças.
+ *
+ * @deprecated Mantido por compatibilidade de API; retorna sempre `false`.
+ */
 export function shouldDrillCorredicaOnDrawerPieceType(
-  pieceType: PieceType,
-  rules: DrawerSlideDrillingRules
+  _pieceType: PieceType,
+  _rules: DrawerSlideDrillingRules
 ): boolean {
-  if (!rules.enabled) return false;
-  if (rules.skipCorredicaOnDrawerPieces) return false;
-
-  const isSide =
-    pieceType === "gaveta_lat_esq" || pieceType === "gaveta_lat_dir" || pieceType === "gaveta";
-  const isFrontOrBack =
-    pieceType === "gaveta_frente_int" ||
-    pieceType === "gaveta_frente" ||
-    pieceType === "gaveta_traseira";
-
-  if (
-    rules.skipLateralWoodPieces &&
-    (isSide || pieceType === "gaveta_fundo" || pieceType === "gaveta_traseira")
-  ) {
-    return false;
-  }
-
-  return isSide || isFrontOrBack;
+  return false;
 }
 
 export function getDrawerPieceCorredicaFace(pieceType: PieceType): DrillFace {
@@ -255,48 +245,17 @@ export function getDrawerPieceCorredicaFace(pieceType: PieceType): DrillFace {
   return "frente";
 }
 
-function yFromBottomOffset(panelHeightMm: number, rules: DrawerSlideDrillingRules): number {
-  const fromBottom =
-    rules.alturaRelativaFundoMm +
-    rules.offsetVerticalAdicionalMm +
-    rules.softCloseVerticalOffsetMm;
-  return clampMm(panelHeightMm - fromBottom, 1, panelHeightMm);
-}
-
 /**
- * Furos de corrediça numa peça de gaveta (1 linha Y, padrão X do catálogo).
+ * @deprecated Não usar no pipeline. Corrediças = laterais do módulo apenas.
+ * Peças da gaveta não recebem furos Ø5 — retorna sempre `[]`.
  */
-export function computeDrawerPieceCorredicaHoles(params: {
+export function computeDrawerPieceCorredicaHoles(_params: {
   pieceType: PieceType;
   largura: number;
   altura: number;
   rules: DrawerSlideDrillingRules;
 }): DrawerCorredicaHoleSpec[] {
-  const { pieceType, largura, altura, rules } = params;
-  if (!shouldDrillCorredicaOnDrawerPieceType(pieceType, rules)) return [];
-
-  const face = getDrawerPieceCorredicaFace(pieceType);
-  const y = yFromBottomOffset(altura, rules);
-  const pattern =
-    rules.holePatternFromFront?.length > 0
-      ? rules.holePatternFromFront
-      : [
-          { xFromFrontMm: rules.offsetFrenteMm, role: "front" as const },
-          { xFromFrontMm: rules.offsetMarkMm, role: "mark" as const, isMarkOnly: true },
-          { xFromFrontMm: Math.max(rules.offsetFrenteMm, largura - rules.offsetFundoMm), role: "rear" as const },
-        ];
-
-  return pattern.map((hole) => {
-    const clamped = clampHoleToPanel(hole.xFromFrontMm, y, largura, altura, rules.diametroMm);
-    return {
-      x: clamped.x,
-      y: clamped.y,
-      diametro: rules.diametroMm,
-      profundidade: hole.isMarkOnly ? rules.profundidadeMarkMm : rules.profundidadeMm,
-      face,
-      isMarkOnly: hole.isMarkOnly === true,
-    };
-  });
+  return [];
 }
 
 const DRAWER_FRONT_BASE_HEIGHTS_MM = [122, 178, 350, 350] as const;

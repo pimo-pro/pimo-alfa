@@ -113,13 +113,17 @@ describe("Furação estrutural de gaveta (TechnicalDrillHole) — interlock", ()
     const structuralLat = lat.filter((h) => h.tipo === "fixacao_estrutural" || h.tipo === "cavilha");
     expect(structuralLat.length).toBeGreaterThanOrEqual(5);
     expect(lat.some((h) => h.holeSubtype === "groove")).toBe(true);
-    expect(lat.filter((h) => h.tipo === "corredica").length).toBeGreaterThanOrEqual(3);
+    // Modelo industrial: sem Ø5 / corrediça nas peças da gaveta
+    expect(lat.filter((h) => h.tipo === "corredica")).toHaveLength(0);
+    expect(lat.every((h) => h.diametro !== 5)).toBe(true);
 
     const costa = calculateTechnicalDrillingsForPiece(
       { tipo: "gaveta_traseira", largura: COSTA.largura, altura: COSTA.altura, espessura: COSTA.espessura },
       defaultRulesConfig
     );
     expect(costa.filter((h) => h.tipo === "cavilha" || h.tipo === "fixacao_estrutural").length).toBeGreaterThanOrEqual(6);
+    expect(costa.filter((h) => h.tipo === "corredica")).toHaveLength(0);
+    expect(costa.every((h) => h.diametro !== 5)).toBe(true);
 
     const frente = calculateTechnicalDrillingsForPiece(
       { tipo: "gaveta_frente", largura: FRENTE.largura, altura: FRENTE.altura, espessura: FRENTE.espessura },

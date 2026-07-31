@@ -1,31 +1,26 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`Certificação — regressão industrial (snapshots) > furação europeia na lateral — snapshot offsets do rasgo 1`] = `
+exports[`Certificação — regressão industrial (snapshots) > furação europeia na lateral — apenas cavilhas + rasgo (sem Ø5) 1`] = `
 [
   {
-    "face": "B",
-    "x": 38,
-    "y": 401.5,
+    "face": "A",
+    "x": 490,
+    "y": 39,
   },
   {
-    "face": "B",
-    "x": 141.5,
-    "y": 401.5,
+    "face": "A",
+    "x": 490,
+    "y": 403.5,
   },
   {
-    "face": "B",
-    "x": 245,
-    "y": 401.5,
+    "face": "A",
+    "x": 0,
+    "y": 30,
   },
   {
-    "face": "B",
-    "x": 348.5,
-    "y": 401.5,
-  },
-  {
-    "face": "B",
-    "x": 452,
-    "y": 401.5,
+    "face": "A",
+    "x": 0,
+    "y": 412.5,
   },
 ]
 `;

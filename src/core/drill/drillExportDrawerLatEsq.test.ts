@@ -18,7 +18,9 @@ function buildLatEsqXml(): string {
     defaultRulesConfig
   );
   expect(drilling.success).toBe(true);
-  expect(drilling.data?.drillHoles.some((h) => h.holeType === "corredica")).toBe(true);
+  // Modelo industrial: gaveta sem Ø5 / corrediça
+  expect(drilling.data?.drillHoles.some((h) => h.holeType === "corredica")).toBe(false);
+  expect(drilling.data?.drillHoles.every((h) => h.diameter !== 5)).toBe(true);
 
   const item: CutListItemComPreco = {
     id: "lat-esq-test",
@@ -54,19 +56,20 @@ describe("drillExport — LAT_ESQ alinhado com XML industrial", () => {
     expect(xml).toContain("<PanelThickness>16.00</PanelThickness>");
   });
 
-  it("inclui corrediças e cavilhas interlock no XML", () => {
+  it("inclui apenas cavilhas interlock + rasgo no XML (sem Ø5)", () => {
     const xml = buildLatEsqXml();
     const cadCount = (xml.match(/<CAD>/g) ?? []).length;
-    expect(cadCount).toBeGreaterThanOrEqual(8);
-    expect(xml).toContain("<Diameter>5.00</Diameter>");
+    // 4 cavilhas TypeNo=2 + 1 rasgo TypeNo=3
+    expect(cadCount).toBe(5);
+    expect(xml).not.toContain("<Diameter>5.00</Diameter>");
     expect(xml).toContain("<Diameter>10.00</Diameter>");
     expect(xml).toContain("<Depth>14.00</Depth>");
   });
 
-  it("cavilhas são TypeNo=2 (aresta); corrediças presentes", () => {
+  it("cavilhas são TypeNo=2 (aresta); sem corrediças Ø5", () => {
     const xml = buildLatEsqXml();
-    expect((xml.match(/<TypeNo>2<\/TypeNo>/g) ?? []).length).toBeGreaterThanOrEqual(4);
-    expect(xml).toContain("<Diameter>5.00</Diameter>");
+    expect((xml.match(/<TypeNo>2<\/TypeNo>/g) ?? []).length).toBe(4);
+    expect(xml).not.toContain("<Diameter>5.00</Diameter>");
   });
 
   it("furos horizontais TypeNo=2 interlock (traseira Y=39/H-39; frente Y=30/H-30; Depth=14)", () => {

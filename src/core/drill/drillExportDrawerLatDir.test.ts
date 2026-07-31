@@ -53,10 +53,10 @@ describe("drillExport — LAT_DIR alinhado com XML industrial", () => {
     expect(xml).toContain("<PanelThickness>16.00</PanelThickness>");
   });
 
-  it("inclui corrediças e cavilhas interlock no XML", () => {
+  it("inclui apenas cavilhas interlock + rasgo no XML (sem Ø5)", () => {
     const xml = buildLatDirXml();
-    expect((xml.match(/<CAD>/g) ?? []).length).toBeGreaterThanOrEqual(8);
-    expect(xml).toContain("<Diameter>5.00</Diameter>");
+    expect((xml.match(/<CAD>/g) ?? []).length).toBe(5);
+    expect(xml).not.toContain("<Diameter>5.00</Diameter>");
     expect(xml).toContain("<Depth>14.00</Depth>");
   });
 

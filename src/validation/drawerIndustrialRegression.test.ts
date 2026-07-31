@@ -205,11 +205,12 @@ describe("Certificação — regressão industrial (snapshots)", () => {
     const lat = drawerPieces.find((p) => p.tipo === "gaveta_lat_esq");
     expect(lat?.drillHoles?.length).toBeGreaterThan(0);
     const corredicaHoles = lat?.drillHoles?.filter((h) => h.holeType === "corredica") ?? [];
-    expect(corredicaHoles.length).toBeGreaterThanOrEqual(3);
-    expect(corredicaHoles.every((h) => h.face === "B")).toBe(true);
+    expect(corredicaHoles).toHaveLength(0);
+    expect(lat?.drillHoles?.every((h) => h.diameter !== 5)).toBe(true);
+    expect(lat?.drillHoles?.some((h) => h.holeType === "cavilha")).toBe(true);
   });
 
-  it("furação europeia na lateral — snapshot offsets do rasgo", () => {
+  it("furação europeia na lateral — apenas cavilhas + rasgo (sem Ø5)", () => {
     const { layers } = buildDrawerScenario({
       boxWidth: 600,
       boxHeight: 600,
@@ -227,7 +228,15 @@ describe("Certificação — regressão industrial (snapshots)", () => {
       defaultRulesConfig
     );
     expect(result.success).toBe(true);
-    const holes = result.data?.drillHoles.filter((h) => h.holeType === "corredica") ?? [];
-    expect(holes.map((h) => ({ x: h.x, y: h.y, face: h.face }))).toMatchSnapshot();
+    const holes = result.data?.drillHoles ?? [];
+    expect(holes.filter((h) => h.holeType === "corredica")).toHaveLength(0);
+    expect(holes.every((h) => h.diameter !== 5)).toBe(true);
+    expect(holes.filter((h) => h.holeType === "cavilha").length).toBe(4);
+    expect(holes.some((h) => h.holeSubtype === "groove")).toBe(true);
+    expect(
+      holes
+        .filter((h) => h.holeType === "cavilha")
+        .map((h) => ({ x: h.x, y: h.y, face: h.face }))
+    ).toMatchSnapshot();
   });
 });

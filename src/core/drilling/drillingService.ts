@@ -11,18 +11,15 @@
  */
 
 import {
-  computeDrawerPieceCorredicaHoles,
   computeDrawerCostaStructuralHoles,
   computeDrawerFrenteIntStructuralHoles,
   computeDrawerLateralStructuralHoles,
-  getDrawerSlideDrillingRules,
 } from "../drawers/drilling/DrawerDrillingRules";
 import { computeDrawerHandleHoles } from "../drawers/drilling/DrawerHandleDrillingRules";
 import { computeDrawerMetalBoxFrontHoles } from "../drawers/drilling/DrawerMetalBoxFrontDrilling";
 import { isMetalBoxCatalogType } from "../drawers/drawerMetalBoxCatalog";
 import type { RulesConfig } from "../rules/rulesConfig";
 import { getNumDobradicas, getHingeYPositions } from "../rules/rulesConfig";
-import { getSettings } from "../settings/settingsService";
 import type { DrillFace, DrillType, PanelFace, TechnicalDrillHole } from "../types";
 
 export type PieceType =
@@ -310,40 +307,13 @@ function calcDobradica(piece: PieceInput, rules: RulesConfig, out: TechnicalDril
   }
 }
 
-/** Furos de corredica de gaveta: laterais, frente e traseira da gaveta europeia. */
-function calcCorredica(piece: PieceInput, rules: RulesConfig, out: TechnicalDrillHole[]) {
-  if (!rules?.furos?.tecnicos?.corredica) return;
-
-  const gavetas = getSettings().gavetas;
-  const slideRules = getDrawerSlideDrillingRules(piece.slideType, piece.metalBoxType, {
-    softClose: piece.softClose === true,
-    mode: "drawer_piece",
-    corredicaConfig: rules.furos.tecnicos.corredica,
-    gavetasSettings: gavetas,
-    panelDepthMm: piece.largura,
-    panelHeightMm: piece.altura,
-  });
-  if (!slideRules.enabled) return;
-
-  const specs = computeDrawerPieceCorredicaHoles({
-    pieceType: piece.tipo,
-    largura: piece.largura,
-    altura: piece.altura,
-    rules: slideRules,
-  });
-
-  for (const spec of specs) {
-    pushHole(
-      out,
-      piece,
-      spec.x,
-      spec.y,
-      spec.diametro,
-      spec.profundidade,
-      "corredica",
-      spec.face
-    );
-  }
+/**
+ * @deprecated No-op. Corrediças furam-se apenas nos laterais do módulo
+ * (`buildEuropeanModuleLateralCorredicaDrilling`). Peças da gaveta (lat/costa/frente)
+ * não recebem Ø5 — apenas cavilhas + rasgo via `calcDrawerStructural`.
+ */
+function calcCorredica(_piece: PieceInput, _rules: RulesConfig, _out: TechnicalDrillHole[]) {
+  return;
 }
 
 function calcHandle(piece: PieceInput, out: TechnicalDrillHole[]) {

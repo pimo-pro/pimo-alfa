@@ -88,21 +88,19 @@ describe("Certificação CNC — peças de gaveta", () => {
     const lat = cutlist.find((p) => p.tipo === "gaveta_lat_esq");
     const holes = lat?.drillHoles?.filter((h) => h.holeType === "corredica") ?? [];
 
-    expect(holes.length).toBeGreaterThanOrEqual(3);
-    holes.forEach((h) => {
-      expect(h.diameter).toBe(5);
-      expect(h.depth).toBe(1);
-      expect(h.face).toBe("B");
-      expect(h.x).toBeGreaterThan(0);
-      expect(h.y).toBeGreaterThan(0);
-    });
+    // Modelo industrial: corrediças só no módulo — peças da gaveta sem Ø5
+    expect(holes).toHaveLength(0);
+    const all = lat?.drillHoles ?? [];
+    expect(all.every((h) => h.diameter !== 5)).toBe(true);
+    expect(all.some((h) => h.holeType === "cavilha")).toBe(true);
+    expect(all.some((h) => h.holeSubtype === "groove")).toBe(true);
 
     const left = cutlist.find((p) => p.tipo === "gaveta_lat_esq");
     const right = cutlist.find((p) => p.tipo === "gaveta_lat_dir");
     if (left?.drillHoles?.length && right?.drillHoles?.length) {
-      const leftCorr = left.drillHoles.filter((h) => h.holeType === "corredica");
-      const rightCorr = right.drillHoles.filter((h) => h.holeType === "corredica");
-      expect(leftCorr.map((h) => h.y)).toEqual(rightCorr.map((h) => h.y));
+      const leftCav = left.drillHoles.filter((h) => h.holeType === "cavilha");
+      const rightCav = right.drillHoles.filter((h) => h.holeType === "cavilha");
+      expect(leftCav.map((h) => h.y).sort()).toEqual(rightCav.map((h) => h.y).sort());
     }
   });
 
