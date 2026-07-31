@@ -12,6 +12,10 @@ import {
 } from "../observacoes/ObservacoesService";
 import { sanitizeIndustrialSegment } from "../etiquetas/industrialDisplayName";
 import { safeGetItem } from "../../utils/storage";
+import {
+  CAVILHA_10x40_FERRAGEM_ID,
+  countCavilha10x40FromEdgeHoles,
+} from "../drill/cavilha10x40Rule";
 
 const TIPO_TO_COMPONENT_ID: Record<string, string> = {
   cima: "cima",
@@ -205,6 +209,24 @@ export function buildIndustrialFerragensForProject(
       ferragemById,
       project.pieceObservacoes
     );
+
+    // CAVILHA_10x40 — 1 por cada furo 10×30 (par obrigatório com 10×13 na peça oposta)
+    const cavilha40 = countCavilha10x40FromEdgeHoles(item.drillHoles ?? []);
+    if (cavilha40 > 0) {
+      const peca = resolveIndustrialPieceRef(item, boxNome, projectName);
+      rows.push({
+        caixa: boxNome,
+        peca,
+        ferragem: ferragemLabel(CAVILHA_10x40_FERRAGEM_ID, ferragemById),
+        qtd: cavilha40 * Math.max(1, item.quantidade ?? 1),
+        material: String(item.material ?? item.materialId ?? "—").trim() || "—",
+        codigoIndustrial: peca,
+        shortCode: String(item.shortCode ?? "").trim() || "—",
+        observacoes: formatObservacoesForPdf(
+          resolveObservacoesForCutListItem(item, { pieceObservacoes: project.pieceObservacoes })
+        ),
+      });
+    }
   }
 
   // Complemento box-level (pes, calcos, div/sep). Nao repetir tipos ja cobertos por peca.

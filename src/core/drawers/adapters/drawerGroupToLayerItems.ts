@@ -127,6 +127,7 @@ export function drawerToLayerItem(drawer: Drawer, profundidadeUtilMm?: number): 
       metalBoxHeightMm: specs.metalBox.height,
       softClose: specs.slide.softClose,
       drawerType: type,
+      sideBaseElevationMm: specs.sideBaseElevationMm,
       profundidadeUtilMm:
         Number.isFinite(profundidadeUtilMm) && (profundidadeUtilMm ?? 0) > 0
           ? profundidadeUtilMm

@@ -217,6 +217,8 @@ export function resolveDrawerViewerWoodSideLayoutMm(input: {
   sideThicknessMm: number;
   /** Comprimento nominal da corrediça (mm). */
   slideLengthMm: number;
+  /** Elevação da base das laterais vs frente (mm). Default 17; gaveta inferior = 18.5. */
+  baseElevationMm?: number;
 }): DrawerViewerWoodSideLayoutMm {
   const sideHeightMm = resolveDrawerViewerSideHeightMm(input.frontHeightMm);
   const internalWidthMm = resolveDrawerViewerInternalWidthMm(input.bodyWidthMm);
@@ -227,7 +229,8 @@ export function resolveDrawerViewerWoodSideLayoutMm(input: {
     sidePosYMm: resolveDrawerViewerSidePosYMm(
       input.frontPosYMm,
       input.frontHeightMm,
-      sideHeightMm
+      sideHeightMm,
+      input.baseElevationMm
     ),
     leftPosXMm: resolveDrawerViewerSidePosXMm(
       internalWidthMm,
@@ -432,9 +435,14 @@ export function buildDrawerWoodViewerPieceBoxes(input: {
   bottomThicknessMm: number;
   backThicknessMm: number;
   backWidthMm: number;
+  baseElevationMm?: number;
 }): DrawerViewerPieceBox[] {
   const woodH = input.woodBodyHeightMm;
-  const offsetY = resolveDrawerBodyCenterOffsetYMm(input.frontHeightMm, woodH);
+  const offsetY = resolveDrawerBodyCenterOffsetYMm(
+    input.frontHeightMm,
+    woodH,
+    input.baseElevationMm
+  );
   const combinedFront = input.frontThicknessMm;
   const sideDepth = resolveDrawerSideDepthMm(input.slideLengthMm);
   const bodyZ = resolveDrawerBodyCenterZMm(combinedFront, sideDepth);

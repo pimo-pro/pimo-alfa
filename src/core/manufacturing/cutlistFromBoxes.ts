@@ -22,7 +22,7 @@ import { isCornerFixedFrontModel, getCornerFixedFrontHingeSide, isCornerDireitaI
 import { mirrorDoorHingeHolesX } from "../cornerCabinet/doorHingeBuilder";
 import { buildPiUniversalLateralDrilling } from "../../data/moveisUnificados/pi/drilling";
 import { isWardrobeModel } from "../wardrobe/wardrobeRules";
-import { calcLateralDowelHoles } from "../drill/lateralDowels";
+import { buildModuleLateralEdgeCavilhaHoles } from "../drill/moduleClassicCavilha";
 import { getSettings } from "../settings/settingsService";
 import { getProfundidadeInternaUtilMm } from "../box/boxDepthHelpers";
 import { calcularPrecoCutList } from "../pricing/pricing";
@@ -31,6 +31,7 @@ import {
   buildEuropeanModuleLateralCorredicaDrilling,
   resolveEuropeanModuleRunnerLinesYMm,
 } from "../drawers/drilling/DrawerDrillingRules";
+import { DRAWER_LOWEST_BODY_ABOVE_MODULE_BASE_MM } from "../drawers/drawerGeometryConstants";
 import { resolveCorredicaOverlaps } from "../drawers/drilling/drawerSlideDrillingCatalog";
 import { resolveDrawerSlideLength } from "../drawers/drawerSlideDepth";
 import {
@@ -553,10 +554,12 @@ export function cutlistComPrecoFromBox(
   }
 
   if (drawersLayer.length > 0) {
-    const lowestDrawerIndex1Based =
-      drawersLayer
-        .map((layer, index) => ({ drawerIndex1: index + 1, posY: Number(layer.posY) || 0 }))
-        .sort((a, b) => a.posY - b.posY)[0]?.drawerIndex1 ?? 1;
+    const rankedByPosY = drawersLayer
+      .map((layer, index) => ({ drawerIndex1: index + 1, posY: Number(layer.posY) || 0 }))
+      .sort((a, b) => a.posY - b.posY);
+    const lowestDrawerIndex1Based = rankedByPosY[0]?.drawerIndex1 ?? 1;
+    const highestDrawerIndex1Based =
+      rankedByPosY[rankedByPosY.length - 1]?.drawerIndex1 ?? lowestDrawerIndex1Based;
     const drawerCutlist = extractDrawerCutlistFromLayerItems(drawersLayer, bodyMaterialKey, box.nome);
     const drawerItems = calcularPrecoCutList(drawerCutlist).map((item) => {
       const drawerRules = item.metadata?.drawerRules as
@@ -574,10 +577,25 @@ export function cutlistComPrecoFromBox(
             handleOffsetXMm?: number;
             handleOffsetYMm?: number;
             handleOffsetMm?: number;
+            sideHeightMm?: number;
+            bodyWidthMm?: number;
+            sideThicknessMm?: number;
+            bottomThicknessMm?: number;
+            stackRole?: string;
           }
         | undefined;
       const drawerIndex1Based = Number(item.metadata?.drawerIndex) || 1;
       const isLowestDrawer = drawerIndex1Based === lowestDrawerIndex1Based;
+      const isHighestDrawer = drawerIndex1Based === highestDrawerIndex1Based;
+      const stackRole =
+        drawerRules?.stackRole ??
+        (isLowestDrawer && isHighestDrawer
+          ? "single"
+          : isLowestDrawer
+            ? "lowest"
+            : isHighestDrawer
+              ? "highest"
+              : "middle");
       const drillingResult = buildPanelDrillingResult(
         {
           tipo: item.tipo,
@@ -599,9 +617,27 @@ export function cutlistComPrecoFromBox(
           handleOffsetXMm: drawerRules?.handleOffsetXMm,
           handleOffsetYMm: drawerRules?.handleOffsetYMm,
           handleOffsetMm: drawerRules?.handleOffsetMm,
+          drawerSideHeightMm: drawerRules?.sideHeightMm,
+          drawerBodyWidthMm: drawerRules?.bodyWidthMm,
+          drawerSideThicknessMm: drawerRules?.sideThicknessMm,
+          drawerBottomThicknessMm: drawerRules?.bottomThicknessMm,
+          drawerSideBaseElevationMm:
+            stackRole === "lowest" || stackRole === "single"
+              ? DRAWER_LOWEST_BODY_ABOVE_MODULE_BASE_MM
+              : undefined,
+          drawerStackRole: stackRole,
           isLowestDrawer:
             isLowestDrawer &&
-            (item.tipo === "gaveta_frente_int" || item.tipo === "gaveta_frente"),
+            (item.tipo === "gaveta_frente_int" ||
+              item.tipo === "gaveta_frente" ||
+              item.tipo === "gaveta_frente_ext" ||
+              item.tipo === "gaveta_lat_esq" ||
+              item.tipo === "gaveta_lat_dir"),
+          isHighestDrawer:
+            isHighestDrawer &&
+            (item.tipo === "gaveta_frente_int" ||
+              item.tipo === "gaveta_frente" ||
+              item.tipo === "gaveta_frente_ext"),
         },
         effRules
       );
@@ -630,17 +666,13 @@ export function cutlistComPrecoFromBox(
     const panelHeightMm = item.dimensoes?.altura ?? 0;
     if (panelDepthMm <= 0 || panelHeightMm <= 0) continue;
 
-    const dowelHoles = calcLateralDowelHoles(panelDepthMm);
-
-    const newHoles: PanelDrillHole[] = dowelHoles.map((h) => ({
-      x: h.x,
-      y: h.edge === "top" ? panelHeightMm : 0,
-      diameter: h.diameter,
-      depth: h.depth,
-      holeType: "cavilha" as const,
-      topDrillable: false,
-      face: "B" as const,
-    }));
+    const thicknessMm = item.espessura ?? item.dimensoes?.profundidade ?? 19;
+    const newHoles = buildModuleLateralEdgeCavilhaHoles({
+      panelDepthMm,
+      panelHeightMm,
+      thicknessMm,
+      side: item.tipo,
+    });
 
     item.drillHoles = [...(item.drillHoles ?? []), ...newHoles];
   }

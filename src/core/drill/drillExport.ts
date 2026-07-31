@@ -11,10 +11,23 @@ import { isLateralPanel } from "./lateralDowels";
 import { getDrillBackDistance, getDrillFrontDistance } from "./drillConfig";
 import { isDrawerPieceTipo } from "../../services/drawerCutlistAdapter";
 import { assertIndustrialOutputAuthorized } from "../industrial/industrialOutputGuard";
+import {
+  resolveXmlMachineTarget,
+  type XmlMachineTarget,
+} from "./xmlMachineRouting";
+import { DRAWER_LAT_GROOVE_OVERCUT_MM } from "../drawers/drawerGeometryConstants";
+
+export type { XmlMachineTarget } from "./xmlMachineRouting";
+export {
+  resolveXmlMachineTarget,
+  pieceShouldHaveDrillLabel,
+  isDrillStationXmlPiece,
+  isCncStationXmlPiece,
+} from "./xmlMachineRouting";
 
 const fmt = (n: number) => (Number.isFinite(n) ? n.toFixed(2) : "0.00");
 
-/** Sangria de ferramenta nos rasgos — alinhado com KDT industrial (BeginX=L+10, EndX=-10). */
+/** Sangria default (frente inset / legado); laterais usam DRAWER_LAT_GROOVE_OVERCUT_MM. */
 const GROOVE_OVERCUT_MM = 10;
 const PANEL_EDGE_EPS_MM = 0.5;
 
@@ -181,19 +194,64 @@ function buildXmlFromDrillHoles(
     // TypeNo=3 — Vertical Line (rasgo de encaixe, schema KDT industrial)
     if (hole.holeSubtype === "groove") {
       const beginY = hole.y;
-      const beginX = panelLength + GROOVE_OVERCUT_MM;
-      const endX = -GROOVE_OVERCUT_MM;
+      if (!Number.isFinite(beginY) || beginY < -PANEL_EDGE_EPS_MM || beginY > panelWidth + PANEL_EDGE_EPS_MM) {
+        continue;
+      }
+      const grooveLen = hole.grooveLength;
+      const startX = hole.x;
+      /** Laterais gaveta: sempre BeginX=L+10 … EndX=−10 (LAT_ESQ.xml). */
+      const fullOvercut = hole.grooveFullPanelOvercut === true;
+      const overcutMm = fullOvercut ? DRAWER_LAT_GROOVE_OVERCUT_MM : GROOVE_OVERCUT_MM;
+      const useInset =
+        !fullOvercut &&
+        Number.isFinite(startX) &&
+        startX >= 0 &&
+        grooveLen != null &&
+        Number.isFinite(grooveLen) &&
+        grooveLen > 0 &&
+        startX + grooveLen <= panelLength + PANEL_EDGE_EPS_MM &&
+        (startX > PANEL_EDGE_EPS_MM || startX + grooveLen < panelLength - PANEL_EDGE_EPS_MM);
+      const beginX = useInset ? startX : panelLength + overcutMm;
+      const endX = useInset ? startX + (grooveLen as number) : -overcutMm;
+      const correction =
+        hole.grooveCorrection != null && Number.isFinite(hole.grooveCorrection)
+          ? Math.round(hole.grooveCorrection)
+          : 0;
       lines.push(" <CAD>");
       lines.push("  <TypeNo>3</TypeNo>");
       lines.push("  <TypeName>Vertical Line</TypeName>");
+      if (hole.grooveToolName) {
+        lines.push(`  <ToolName>${hole.grooveToolName}</ToolName>`);
+      }
       lines.push(`  <BeginX>${fmt(beginX)}</BeginX>`);
       lines.push(`  <BeginY>${fmt(beginY)}</BeginY>`);
       lines.push(`  <EndX>${fmt(endX)}</EndX>`);
       lines.push(`  <EndY>${fmt(beginY)}</EndY>`);
       lines.push(`  <Width>${fmt(hole.grooveWidth ?? 0)}</Width>`);
+      lines.push(`  <Correction>${correction}</Correction>`);
+      lines.push("  <CorrectionExtra>0</CorrectionExtra>");
+      lines.push("  <Z>0.00</Z>");
       lines.push(`  <Depth>${fmt(hole.depth)}</Depth>`);
+      lines.push("  <EntryZ>0</EntryZ>");
+      lines.push("  <EntryL>0</EntryL>");
       lines.push("  <Enable>1</Enable>");
+      lines.push("  <UseSaw>0</UseSaw>");
+      lines.push("  <UseDZ>0</UseDZ>");
+      lines.push("  <BeginZ>0.00</BeginZ>");
+      lines.push("  <EndZ>0.00</EndZ>");
       lines.push(" </CAD>");
+      continue;
+    }
+
+    // Rejeitar furos fora da placa (evita fantasma vs painel da máquina).
+    if (
+      !Number.isFinite(hole.x) ||
+      !Number.isFinite(hole.y) ||
+      hole.x < -PANEL_EDGE_EPS_MM ||
+      hole.x > panelLength + PANEL_EDGE_EPS_MM ||
+      hole.y < -PANEL_EDGE_EPS_MM ||
+      hole.y > panelWidth + PANEL_EDGE_EPS_MM
+    ) {
       continue;
     }
 
@@ -247,6 +305,30 @@ function resolveDrawerPanelDimensions(item: CutListItemComPreco): {
   return { panelLength: largura, panelWidth: altura };
 }
 
+/**
+ * gav_lat_esq / gav_lat_dir — painel e furos no referencial SSOT, sem swap X↔Y.
+ * PanelLength = largura (profundidade), PanelWidth = altura.
+ * X_final = drillHole.x, Y_final = drillHole.y.
+ */
+function resolveGavetaLateralXmlHoles(item: CutListItemComPreco): {
+  panelLength: number;
+  panelWidth: number;
+  holes: PanelDrillHole[];
+} | null {
+  const dims = resolveDrawerPanelDimensions(item);
+  if (!dims || !item.drillHoles?.length) return null;
+  const holes = item.drillHoles.map((h) => ({
+    ...h,
+    x: h.x,
+    y: h.y,
+  }));
+  return { ...dims, holes };
+}
+
+function isGavetaLateralTipo(tipo: string): boolean {
+  return tipo === "gaveta_lat_esq" || tipo === "gaveta_lat_dir";
+}
+
 function resolveFlatPanelDimensions(item: CutListItemComPreco): {
   panelLength: number;
   panelWidth: number;
@@ -262,18 +344,24 @@ function isFixedFrontPanel(item: CutListItemComPreco): boolean {
   return item.tipo === "frente_fixa";
 }
 
-/** Painéis planos com furação manual (design workspace, prateleiras, portas, costa). */
-function isFlatDrillExportPanel(item: CutListItemComPreco): boolean {
+/** Painéis planos CNC (cima/fundo/frentes/portas/costa de módulo/prateleira). */
+function isFlatCncExportPanel(item: CutListItemComPreco): boolean {
   return (
     isTopBottomPanel(item) ||
     isFixedFrontPanel(item) ||
     item.tipo === "prateleira" ||
-    item.tipo === "divisorio" ||
-    item.tipo === "separador" ||
     item.tipo === "porta" ||
     item.tipo === "porta_simples" ||
-    item.tipo === "COSTA"
+    item.tipo === "porta_dupla" ||
+    item.tipo === "porta_correr" ||
+    item.tipo === "COSTA" ||
+    item.tipo === "costa"
   );
+}
+
+/** Painéis planos DRILL (sep/div). */
+function isFlatDrillStationPanel(item: CutListItemComPreco): boolean {
+  return item.tipo === "divisorio" || item.tipo === "separador";
 }
 
 export type DrillExportFile = {
@@ -281,6 +369,10 @@ export type DrillExportFile = {
   partName: string;
   thicknessMm: number;
   xml: string;
+  /** Estação industrial do ficheiro. */
+  machineTarget: XmlMachineTarget;
+  /** Caminho relativo no ZIP (ex.: cnc/XML/… ou drill/XML/…). */
+  zipPath: string;
 };
 
 type ProjectContext = {
@@ -289,14 +381,175 @@ type ProjectContext = {
   rules: RulesConfig;
 };
 
+function appendDrillSuffix(filenameBase: string): string {
+  if (/_DRILL$/i.test(filenameBase)) return filenameBase;
+  return `${filenameBase}_DRILL`;
+}
+
+function appendCompletoSuffix(filenameBase: string): string {
+  if (/_COMPLETO$/i.test(filenameBase)) return filenameBase;
+  return `${filenameBase}_COMPLETO`;
+}
+
+/** Metadata PIMO no XML (comentário — ignorado pela KDT). Inclui stackRole da gaveta. */
+function appendDrawerStackRoleMeta(xml: string, item: CutListItemComPreco): string {
+  const rules = item.metadata?.drawerRules as { stackRole?: string } | undefined;
+  const stackRole = rules?.stackRole;
+  if (!stackRole) return xml;
+  const meta = ` <!-- pimo:stackRole=${stackRole} -->`;
+  if (xml.includes("</PANEL>")) {
+    return xml.replace("</PANEL>", `</PANEL>\n${meta}`);
+  }
+  return `${xml}\n${meta}`;
+}
+
 /**
- * Gera um ficheiro XML por cada peça lateral, cima/fundo/frente fixa com furação, e gavetas com furos.
+ * Constrói o XML KDT da peça (geometria SSOT).
+ * Independente do destino CNC/DRILL — a decisão de pasta/sufixo é feita no export.
+ */
+function buildXmlForItem(
+  item: CutListItemComPreco,
+  frontDist: number,
+  backDist: number
+): { panelLength: number; panelWidth: number; xml: string } | null {
+  const panelThickness = Number(item.espessura) || 19;
+
+  if (isLateralPanel(item)) {
+    const dims = resolveDrawerPanelDimensions(item);
+    if (!dims) return null;
+    const { panelLength, panelWidth } = dims;
+    const xml = item.drillHoles?.length
+      ? buildXmlFromDrillHoles(panelLength, panelWidth, panelThickness, item.drillHoles)
+      : buildXmlForLateral(panelLength, panelWidth, panelThickness, frontDist, backDist);
+    return { panelLength, panelWidth, xml };
+  }
+
+  if (isGavetaLateralTipo(item.tipo) && (item.drillHoles?.length ?? 0) > 0) {
+    const mapped = resolveGavetaLateralXmlHoles(item);
+    if (!mapped) return null;
+    return {
+      panelLength: mapped.panelLength,
+      panelWidth: mapped.panelWidth,
+      xml: appendDrawerStackRoleMeta(
+        buildXmlFromDrillHoles(
+          mapped.panelLength,
+          mapped.panelWidth,
+          panelThickness,
+          mapped.holes
+        ),
+        item
+      ),
+    };
+  }
+
+  if (
+    isDrawerPieceTipo(item.tipo) &&
+    (item.tipo === "gaveta_frente" ||
+      item.tipo === "gaveta_frente_int" ||
+      item.tipo === "gaveta_frente_ext" ||
+      item.tipo === "gaveta_traseira") &&
+    (item.drillHoles?.length ?? 0) > 0
+  ) {
+    const dims = resolveDrawerPanelDimensions(item);
+    if (!dims) return null;
+    return {
+      ...dims,
+      xml: appendDrawerStackRoleMeta(
+        buildXmlFromDrillHoles(dims.panelLength, dims.panelWidth, panelThickness, item.drillHoles!),
+        item
+      ),
+    };
+  }
+
+  if (isDrawerPieceTipo(item.tipo) && (item.drillHoles?.length ?? 0) > 0) {
+    const dims = resolveDrawerPanelDimensions(item);
+    if (!dims) return null;
+    return {
+      ...dims,
+      xml: appendDrawerStackRoleMeta(
+        buildXmlFromDrillHoles(dims.panelLength, dims.panelWidth, panelThickness, item.drillHoles!),
+        item
+      ),
+    };
+  }
+
+  if (isFlatDrillStationPanel(item) && (item.drillHoles?.length ?? 0) > 0) {
+    const dims = resolveFlatPanelDimensions(item);
+    if (!dims) return null;
+    return {
+      ...dims,
+      xml: buildXmlFromDrillHoles(dims.panelLength, dims.panelWidth, panelThickness, item.drillHoles!),
+    };
+  }
+
+  if (isFlatCncExportPanel(item) && (item.drillHoles?.length ?? 0) > 0) {
+    const dims = resolveFlatPanelDimensions(item);
+    if (!dims) return null;
+    return {
+      ...dims,
+      xml: buildXmlFromDrillHoles(dims.panelLength, dims.panelWidth, panelThickness, item.drillHoles!),
+    };
+  }
+
+  return null;
+}
+
+function pushExportFile(
+  out: DrillExportFile[],
+  usedNames: Set<string>,
+  args: {
+    code: string;
+    suffix: "none" | "drill" | "completo";
+    partName: string;
+    thicknessMm: number;
+    xml: string;
+    machineTarget: XmlMachineTarget;
+    folder: "cnc/XML" | "drill/XML";
+  }
+): void {
+  let filenameBase =
+    args.suffix === "drill"
+      ? appendDrillSuffix(args.code)
+      : args.suffix === "completo"
+        ? appendCompletoSuffix(args.code)
+        : args.code;
+  let dedupe = 2;
+  while (usedNames.has(filenameBase)) {
+    const stamped =
+      args.suffix === "drill"
+        ? `${args.code}_${dedupe}_DRILL`
+        : args.suffix === "completo"
+          ? `${args.code}_${dedupe}_COMPLETO`
+          : `${args.code}_${dedupe}`;
+    filenameBase = sanitizeFilename(stamped);
+    dedupe += 1;
+  }
+  usedNames.add(filenameBase);
+  out.push({
+    filenameBase,
+    partName: args.partName,
+    thicknessMm: args.thicknessMm,
+    xml: args.xml,
+    machineTarget: args.machineTarget,
+    zipPath: `${args.folder}/${filenameBase}.xml`,
+  });
+}
+
+/**
+ * Gera ficheiros XML por peça:
+ * - CNC → `cnc/XML/{qr}.xml` (peças da estação CNC)
+ * - DRILL → `drill/XML/{qr}_DRILL.xml` (apenas peças da máquina DRILL)
+ * - COMPLETO → `drill/XML/{qr}_COMPLETO.xml` (auditoria: todas as peças com XML)
+ *
+ * Etiquetas: só `_DRILL` activa etiqueta DRILL; `_COMPLETO` não altera etiquetas.
  */
 export function buildDrillFilesForProject(
   items: CutListItemComPreco[],
-  project: ProjectContext
+  project: ProjectContext,
+  options?: { machineTarget?: XmlMachineTarget | "all" }
 ): DrillExportFile[] {
   assertIndustrialOutputAuthorized("txml");
+  const filter = options?.machineTarget ?? "all";
   const out: DrillExportFile[] = [];
   const frontDist = getDrillFrontDistance();
   const backDist = getDrillBackDistance();
@@ -304,64 +557,79 @@ export function buildDrillFilesForProject(
   const piecesPerSheet = buildIndustrialListPiecesPerSheet(items);
 
   for (let idx = 0; idx < items.length; idx++) {
-    const item = items[idx];
-    const panelThickness = Number(item.espessura) || 19;
+    const item = items[idx]!;
+    const target = resolveXmlMachineTarget(item);
+    if (!target) continue;
 
-    let panelLength = 0;
-    let panelWidth = 0;
-    let xml: string | null = null;
-
-    if (isLateralPanel(item)) {
-      panelLength = item.dimensoes?.altura ?? 0;
-      panelWidth = item.dimensoes?.largura ?? 0;
-      if (panelLength <= 0 || panelWidth <= 0) continue;
-      if (item.drillHoles?.length) {
-        xml = buildXmlFromDrillHoles(panelLength, panelWidth, panelThickness, item.drillHoles);
-      } else {
-        xml = buildXmlForLateral(panelLength, panelWidth, panelThickness, frontDist, backDist);
-      }
-    } else if (isDrawerPieceTipo(item.tipo) && (item.drillHoles?.length ?? 0) > 0) {
-      const dims = resolveDrawerPanelDimensions(item);
-      if (!dims) continue;
-      panelLength = dims.panelLength;
-      panelWidth = dims.panelWidth;
-      xml = buildXmlFromDrillHoles(
-        panelLength,
-        panelWidth,
-        panelThickness,
-        item.drillHoles!
-      );
-    } else if (isFlatDrillExportPanel(item) && (item.drillHoles?.length ?? 0) > 0) {
-      const dims = resolveFlatPanelDimensions(item);
-      if (!dims) continue;
-      panelLength = dims.panelLength;
-      panelWidth = dims.panelWidth;
-      xml = buildXmlFromDrillHoles(
-        panelLength,
-        panelWidth,
-        panelThickness,
-        item.drillHoles!
-      );
-    } else {
-      continue;
-    }
+    const built = buildXmlForItem(item, frontDist, backDist);
+    if (!built) continue;
 
     const code = panelFileNameFromPiece(item, project, piecesPerSheet, idx);
-    let filenameBase = code;
-    let dedupe = 2;
-    while (usedNames.has(filenameBase)) {
-      filenameBase = sanitizeFilename(`${code}_${dedupe}`);
-      dedupe += 1;
-    }
-    usedNames.add(filenameBase);
+    const thicknessMm = Number(item.espessura) || 19;
 
-    out.push({
-      filenameBase,
-      partName: item.nome,
-      thicknessMm: panelThickness,
-      xml,
-    });
+    // Auditoria: todas as peças com XML → drill/XML/{qr}_COMPLETO.xml
+    if (filter === "all" || filter === "completo") {
+      pushExportFile(out, usedNames, {
+        code,
+        suffix: "completo",
+        partName: item.nome,
+        thicknessMm,
+        xml: built.xml,
+        machineTarget: "completo",
+        folder: "drill/XML",
+      });
+    }
+
+    // Máquina DRILL
+    if (target === "drill" && (filter === "all" || filter === "drill")) {
+      pushExportFile(out, usedNames, {
+        code,
+        suffix: "drill",
+        partName: item.nome,
+        thicknessMm,
+        xml: built.xml,
+        machineTarget: "drill",
+        folder: "drill/XML",
+      });
+    }
+
+    // Máquina CNC
+    if (target === "cnc" && (filter === "all" || filter === "cnc")) {
+      pushExportFile(out, usedNames, {
+        code,
+        suffix: "none",
+        partName: item.nome,
+        thicknessMm,
+        xml: built.xml,
+        machineTarget: "cnc",
+        folder: "cnc/XML",
+      });
+    }
   }
 
   return out;
+}
+
+/** Apenas XML da estação CNC. */
+export function buildCncXmlFilesForProject(
+  items: CutListItemComPreco[],
+  project: ProjectContext
+): DrillExportFile[] {
+  return buildDrillFilesForProject(items, project, { machineTarget: "cnc" });
+}
+
+/** Apenas XML da estação DRILL (`*_DRILL.xml`). */
+export function buildDrillStationXmlFilesForProject(
+  items: CutListItemComPreco[],
+  project: ProjectContext
+): DrillExportFile[] {
+  return buildDrillFilesForProject(items, project, { machineTarget: "drill" });
+}
+
+/** Apenas XML de auditoria (`*_COMPLETO.xml` em drill/XML). */
+export function buildDrillCompletoXmlFilesForProject(
+  items: CutListItemComPreco[],
+  project: ProjectContext
+): DrillExportFile[] {
+  return buildDrillFilesForProject(items, project, { machineTarget: "completo" });
 }

@@ -101,10 +101,23 @@ export {
 } from "./DrawerGroup";
 export {
   DRAWER_VERTICAL_BASE_OFFSET_MM,
+  DRAWER_VERTICAL_GAP_MM,
   getDrawerUsableInternalHeightMm,
   resolveDrawerVerticalPosition,
   resolveDrawerVerticalPositions,
 } from "./drawerVerticalPosition";
+export {
+  resolveDrawerStackRole,
+  resolveDrawerFrontStackGeometry,
+  resolveLowestDrawerBodyElevationFromFrontMm,
+  resolveDrawerBodyBottomFromModuleBaseMm,
+  type DrawerStackRole,
+  type DrawerFrontStackGeometry,
+} from "./drawerStackPosition";
+export {
+  DRAWER_LOWEST_BODY_ABOVE_MODULE_BASE_MM,
+  DRAWER_LOWEST_FRONT_BOTTOM_FROM_MODULE_BASE_MM,
+} from "./drawerGeometryConstants";
 
 // Generation Service
 export {

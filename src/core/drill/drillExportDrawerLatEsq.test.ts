@@ -3,97 +3,89 @@ import { buildDrillFilesForProject } from "./drillExport";
 import { buildPanelDrillingResult } from "../../modules/drilling/drillingAdapter";
 import { defaultRulesConfig } from "../rules/rulesConfig";
 import type { CutListItemComPreco } from "../types";
+import { withIndustrialOutputAuthorization } from "../industrial/industrialOutputGuard";
 
-/** Dimensões do XML industrial LAT_ESQ.xml (L=500, W=200, T=16). */
-const LAT_ESQ_DIMS = { largura: 500, altura: 200, espessura: 16 } as const;
+/** Dimensões golden XML_COMPLITO LAT_ESQ. */
+const LAT_ESQ_DIMS = { largura: 540, altura: 195.5, espessura: 16 } as const;
 
 function buildLatEsqXml(): string {
-  const drilling = buildPanelDrillingResult(
-    {
+  return withIndustrialOutputAuthorization("all", () => {
+    const drilling = buildPanelDrillingResult(
+      {
+        tipo: "gaveta_lat_esq",
+        larguraMm: LAT_ESQ_DIMS.largura,
+        alturaMm: LAT_ESQ_DIMS.altura,
+        espessuraMm: LAT_ESQ_DIMS.espessura,
+      },
+      defaultRulesConfig
+    );
+    expect(drilling.success).toBe(true);
+    expect(drilling.data?.drillHoles.some((h) => h.holeType === "corredica")).toBe(false);
+    expect(drilling.data?.drillHoles.every((h) => h.diameter !== 5)).toBe(true);
+
+    const item: CutListItemComPreco = {
+      id: "lat-esq-test",
+      nome: "LAT_ESQ",
       tipo: "gaveta_lat_esq",
-      larguraMm: LAT_ESQ_DIMS.largura,
-      alturaMm: LAT_ESQ_DIMS.altura,
-      espessuraMm: LAT_ESQ_DIMS.espessura,
-    },
-    defaultRulesConfig
-  );
-  expect(drilling.success).toBe(true);
-  // Modelo industrial: gaveta sem Ø5 / corrediça
-  expect(drilling.data?.drillHoles.some((h) => h.holeType === "corredica")).toBe(false);
-  expect(drilling.data?.drillHoles.every((h) => h.diameter !== 5)).toBe(true);
+      quantidade: 1,
+      dimensoes: {
+        largura: LAT_ESQ_DIMS.largura,
+        altura: LAT_ESQ_DIMS.altura,
+        profundidade: LAT_ESQ_DIMS.espessura,
+      },
+      espessura: LAT_ESQ_DIMS.espessura,
+      material: "mdf_branco",
+      drillHoles: drilling.data!.drillHoles,
+      precoUnitario: 0,
+      precoTotal: 0,
+    };
 
-  const item: CutListItemComPreco = {
-    id: "lat-esq-test",
-    nome: "LAT_ESQ",
-    tipo: "gaveta_lat_esq",
-    quantidade: 1,
-    dimensoes: {
-      largura: LAT_ESQ_DIMS.largura,
-      altura: LAT_ESQ_DIMS.altura,
-      profundidade: LAT_ESQ_DIMS.espessura,
-    },
-    espessura: LAT_ESQ_DIMS.espessura,
-    material: "mdf_branco",
-    drillHoles: drilling.data!.drillHoles,
-    precoUnitario: 0,
-    precoTotal: 0,
-  };
-
-  const files = buildDrillFilesForProject([item], {
-    projectName: "Teste",
-    boxes: [],
-    rules: defaultRulesConfig,
+    const files = buildDrillFilesForProject([item], {
+      projectName: "Teste",
+      boxes: [],
+      rules: defaultRulesConfig,
+    });
+    expect(files.length).toBeGreaterThanOrEqual(1);
+    const drill = files.find((f) => f.machineTarget === "drill") ?? files[0]!;
+    return drill.xml;
   });
-  expect(files).toHaveLength(1);
-  return files[0].xml;
 }
 
-describe("drillExport — LAT_ESQ alinhado com XML industrial", () => {
-  it("painel KDT: PanelLength=L, PanelWidth=W", () => {
+describe("drillExport — LAT_ESQ alinhado com XML_COMPLITO", () => {
+  it("painel KDT", () => {
     const xml = buildLatEsqXml();
-    expect(xml).toContain("<PanelLength>500.00</PanelLength>");
-    expect(xml).toContain("<PanelWidth>200.00</PanelWidth>");
-    expect(xml).toContain("<PanelThickness>16.00</PanelThickness>");
+    expect(xml).toContain("<PanelLength>540.00</PanelLength>");
+    expect(xml).toContain("<PanelWidth>195.50</PanelWidth>");
   });
 
-  it("inclui apenas cavilhas interlock + rasgo no XML (sem Ø5)", () => {
+  it("6 CAD: face+aresta+2 rasgos (sem Ø5)", () => {
     const xml = buildLatEsqXml();
-    const cadCount = (xml.match(/<CAD>/g) ?? []).length;
-    // 4 cavilhas TypeNo=2 + 1 rasgo TypeNo=3
-    expect(cadCount).toBe(5);
+    expect((xml.match(/<CAD>/g) ?? []).length).toBe(6);
     expect(xml).not.toContain("<Diameter>5.00</Diameter>");
-    expect(xml).toContain("<Diameter>10.00</Diameter>");
-    expect(xml).toContain("<Depth>14.00</Depth>");
+    expect(xml).toContain("<Depth>30.00</Depth>");
   });
 
-  it("cavilhas são TypeNo=2 (aresta); sem corrediças Ø5", () => {
+  it("face X=T/2 TypeNo=1; aresta X=L TypeNo=2 Q1", () => {
     const xml = buildLatEsqXml();
-    expect((xml.match(/<TypeNo>2<\/TypeNo>/g) ?? []).length).toBe(4);
-    expect(xml).not.toContain("<Diameter>5.00</Diameter>");
-  });
-
-  it("furos horizontais TypeNo=2 interlock (traseira Y=39/H-39; frente Y=30/H-30; Depth=14)", () => {
-    const xml = buildLatEsqXml();
-    expect(xml).toContain("<X1>500.00</X1>");
-    expect(xml).toContain("<X1>0.00</X1>");
-    expect(xml).toContain("<Y1>39.00</Y1>");
-    expect(xml).toContain("<Y1>161.00</Y1>");
-    expect(xml).toContain("<Y1>30.00</Y1>");
-    expect(xml).toContain("<Y1>170.00</Y1>");
-    expect(xml).toContain("<Z1>8.00</Z1>");
+    expect(xml).toContain("<TypeNo>1</TypeNo>");
+    expect(xml).toContain("<X1>8.00</X1>");
+    expect(xml).toContain("<X1>540.00</X1>");
+    expect(xml).toContain("<Y1>15.00</Y1>");
     expect(xml).toContain("<Quadrant>1</Quadrant>");
-    expect(xml).toContain("<Depth>14.00</Depth>");
   });
 
-  it("rasgo TypeNo=3 com BeginX/EndX industrial (L+10, -10)", () => {
+  it("rasgos W-13 e W-23 — overcut + Correction=2 + FRESA_DESBASTE_10MM", () => {
     const xml = buildLatEsqXml();
-    expect(xml).toContain("<TypeNo>3</TypeNo>");
-    expect(xml).toContain("<BeginX>510.00</BeginX>");
+    expect(xml).toContain("<ToolName>FRESA_DESBASTE_10MM</ToolName>");
+    expect(xml).toContain("<BeginX>550.00</BeginX>");
     expect(xml).toContain("<EndX>-10.00</EndX>");
-    expect(xml).toContain("<BeginY>187.00</BeginY>");
-    expect(xml).toContain("<EndY>187.00</EndY>");
+    expect(xml).toContain("<BeginY>182.50</BeginY>");
+    expect(xml).toContain("<BeginY>172.50</BeginY>");
     expect(xml).toContain("<Width>13.00</Width>");
+    expect(xml).toContain("<Width>11.00</Width>");
     expect(xml).toContain("<Depth>3.00</Depth>");
-    expect(xml).not.toContain("<X2>");
+    expect(xml).toContain("<Depth>10.00</Depth>");
+    expect(xml).toContain("<Correction>2</Correction>");
+    expect((xml.match(/<Correction>2<\/Correction>/g) ?? []).length).toBe(2);
   });
 });

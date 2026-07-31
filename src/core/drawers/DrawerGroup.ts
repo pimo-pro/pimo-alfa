@@ -95,25 +95,25 @@ export function calculateDrawerHeights(
     return Array.from({ length: count }, () => each);
   }
 
-  // Modo progressivo (2 gavetas)
+  // Modo progressivo (2 gavetas) — índice 0 = inferior (maior), último = superior (menor)
   if (count === 2) {
-    const top = distributable * 0.4;
-    const bottom = distributable - top;
-    return [top, bottom];
+    const upper = distributable * 0.4;
+    const lower = distributable - upper;
+    return [lower, upper];
   }
 
-  // Modo progressivo (3+ gavetas)
-  const topWeight = 0.2;
-  const bottomWeight = 0.4;
-  const middleWeight = 1 - topWeight - bottomWeight;
+  // Modo progressivo (3+ gavetas) — índice 0 = inferior (peso maior)
+  const upperWeight = 0.2;
+  const lowerWeight = 0.4;
+  const middleWeight = 1 - upperWeight - lowerWeight;
   const middleCount = count - 2;
   const middleEach = middleWeight / middleCount;
-  const weights = [topWeight, ...Array.from({ length: middleCount }, () => middleEach), bottomWeight];
+  const weights = [lowerWeight, ...Array.from({ length: middleCount }, () => middleEach), upperWeight];
   const heights = weights.map((w) => w * distributable);
 
   const sum = heights.reduce((acc, value) => acc + value, 0);
   const diff = distributable - sum;
-  heights[heights.length - 1] += diff;
+  heights[0] += diff;
 
   return heights;
 }

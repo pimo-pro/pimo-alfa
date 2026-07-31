@@ -366,7 +366,7 @@ export const defaultRulesConfig: RulesConfig = {
           lateralDireita: true,
         },
         diametro: 10,
-        profundidade: 10,
+        profundidade: 13,
       },
       parafuso: {
         enabled: true,

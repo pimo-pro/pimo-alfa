@@ -3,9 +3,15 @@ import {
   assertDowelDoesNotThrough,
   clampDrawerEdgeDowelDepthMm,
   clampDrawerFaceDowelDepthMm,
-  DRAWER_REAR_DOWEL_Y_FROM_BOTTOM_MM,
+  DRAWER_DOWEL_EDGE_DEPTH_MM,
+  DRAWER_LAT_DOWEL_Y_FROM_BOTTOM_MM,
+  DRAWER_LAT_EDGE_DOWEL_Y_FROM_TOP_MM,
+  DRAWER_LAT_FACE_DOWEL_Y_FROM_TOP_MM,
   drawerThicknessCenterMm,
+  getDrawerCostaDowelYPositionsMm,
   getDrawerFrontDowelYPositionsMm,
+  getDrawerLateralEdgeDowelYPositionsMm,
+  getDrawerLateralFaceDowelYPositionsMm,
   getDrawerRearDowelYPositionsMm,
 } from "./drawerDowelInterlock";
 import {
@@ -24,11 +30,12 @@ import {
 import { cutlistComPrecoFromBox } from "../../manufacturing/cutlistFromBoxes";
 import { isDrawerPieceTipo } from "../../../services/drawerCutlistAdapter";
 
-describe("drawerDowelInterlock  profundidade e centro", () => {
-  it("clamp aresta: 16?14, 19?17, 32?30", () => {
+describe("drawerDowelInterlock — profundidade e centro (golden)", () => {
+  it("clamp aresta legado: 16?14, 19?17 (export usa Depth 30 fixed)", () => {
     expect(clampDrawerEdgeDowelDepthMm(16)).toBe(14);
     expect(clampDrawerEdgeDowelDepthMm(19)).toBe(17);
     expect(clampDrawerEdgeDowelDepthMm(32)).toBe(30);
+    expect(DRAWER_DOWEL_EDGE_DEPTH_MM).toBe(30);
   });
 
   it("face 13 mm sem atravessar", () => {
@@ -36,8 +43,7 @@ describe("drawerDowelInterlock  profundidade e centro", () => {
     expect(clampDrawerFaceDowelDepthMm(19)).toBe(13);
     expect(clampDrawerFaceDowelDepthMm(10)).toBe(9);
     expect(assertDowelDoesNotThrough(13, 16)).toBe(true);
-    expect(assertDowelDoesNotThrough(14, 16)).toBe(true);
-    expect(assertDowelDoesNotThrough(16, 16)).toBe(false);
+    expect(assertDowelDoesNotThrough(30, 16)).toBe(false); // aresta vai ao longo do painel, não T
   });
 
   it("centro espessura = T/2", () => {
@@ -45,89 +51,88 @@ describe("drawerDowelInterlock  profundidade e centro", () => {
     expect(drawerThicknessCenterMm(19)).toBe(9.5);
   });
 
-  it("Y traseiro = 39 e H-39", () => {
-    expect(getDrawerRearDowelYPositionsMm(150)).toEqual([39, 111]);
-    expect(DRAWER_REAR_DOWEL_Y_FROM_BOTTOM_MM).toBe(39);
+  it("Y face laterais = 15 e H?38", () => {
+    expect(getDrawerLateralFaceDowelYPositionsMm(150)).toEqual([15, 112]);
+    expect(getDrawerRearDowelYPositionsMm(150)).toEqual([15, 112]);
+    expect(DRAWER_LAT_FACE_DOWEL_Y_FROM_TOP_MM).toBe(38);
+    expect(DRAWER_LAT_DOWEL_Y_FROM_BOTTOM_MM).toBe(15);
   });
 
-  it("Y frontal SSOT", () => {
-    expect(getDrawerFrontDowelYPositionsMm(178)).toEqual([30, 148]);
-    expect(getDrawerFrontDowelYPositionsMm(178, true)).toEqual([30, 137]);
+  it("Y aresta / frente = 15 e H?35", () => {
+    expect(getDrawerLateralEdgeDowelYPositionsMm(178)).toEqual([15, 143]);
+    expect(getDrawerFrontDowelYPositionsMm(178)).toEqual([15, 143]);
+    expect(getDrawerFrontDowelYPositionsMm(178, true)).toEqual([15, 143]);
+    expect(DRAWER_LAT_EDGE_DOWEL_Y_FROM_TOP_MM).toBe(35);
+  });
+
+  it("Y costa = 15 e H?15", () => {
+    expect(getDrawerCostaDowelYPositionsMm(172.5)).toEqual([15, 157.5]);
   });
 });
 
 describe.each([
-  { espessura: 16, edgeDepth: 14, center: 8 },
-  { espessura: 19, edgeDepth: 17, center: 9.5 },
-] as const)("interlock gaveta T=$espessura", ({ espessura, edgeDepth, center }) => {
+  { espessura: 16, center: 8 },
+  { espessura: 19, center: 9.5 },
+] as const)("interlock gaveta T=$espessura (golden)", ({ espessura, center }) => {
   const LAT = { largura: 500, altura: 150, espessura };
-  const COSTA = { largura: 468, altura: 150, espessura };
+  const COSTA = { largura: 468, altura: 127, espessura }; // lat ? 23
   const FRENTE = { largura: 598, altura: 150, espessura };
 
-  it("lateral: 4 cavilhas aresta + rasgo; prof. clamp; Y sync", () => {
+  it("lateral: 2 face Depth13 + 2 aresta Depth30 + 2 rasgos", () => {
     const esq = computeDrawerLateralStructuralHoles({ ...LAT, side: "esq" });
-    const cavilhas = esq.filter((h) => h.tipo === "cavilha");
-    expect(cavilhas).toHaveLength(4);
-    expect(cavilhas.every((h) => h.profundidade === edgeDepth)).toBe(true);
-    expect(cavilhas.every((h) => h.diametro === 10)).toBe(true);
-    expect(cavilhas.every((h) => assertDowelDoesNotThrough(h.profundidade, espessura))).toBe(true);
+    const face = esq.filter((h) => h.tipo === "cavilha" && h.topDrillable);
+    const edge = esq.filter((h) => h.tipo === "cavilha" && !h.topDrillable);
+    expect(face).toHaveLength(2);
+    expect(edge).toHaveLength(2);
+    expect(face.every((h) => h.profundidade === 13)).toBe(true);
+    expect(edge.every((h) => h.profundidade === 30)).toBe(true);
+    expect([...face, ...edge].every((h) => h.diametro === 10)).toBe(true);
+    expect(face.every((h) => assertDowelDoesNotThrough(h.profundidade, espessura))).toBe(true);
 
-    const rearYs = cavilhas.filter((h) => h.face === "tras").map((h) => h.y).sort((a, b) => a - b);
-    expect(rearYs).toEqual([39, 111]);
-    expect(cavilhas.filter((h) => h.face === "tras").every((h) => h.x === LAT.largura)).toBe(true);
-
-    const frontYs = cavilhas.filter((h) => h.face === "frente").map((h) => h.y).sort((a, b) => a - b);
-    expect(frontYs).toEqual([30, 120]);
+    expect(face.map((h) => h.y).sort((a, b) => a - b)).toEqual([15, 112]);
+    expect(edge.map((h) => h.y).sort((a, b) => a - b)).toEqual([15, 115]);
+    expect(edge.every((h) => h.x === LAT.largura)).toBe(true);
   });
 
   it("espelho L/R: Y iguais, X invertidos", () => {
     const esq = computeDrawerLateralStructuralHoles({ ...LAT, side: "esq" });
     const dir = computeDrawerLateralStructuralHoles({ ...LAT, side: "dir" });
     expect(esq.map((h) => h.y)).toEqual(dir.map((h) => h.y));
-    const esqRear = esq.filter((h) => h.tipo === "cavilha" && h.face === "tras");
-    const dirRear = dir.filter((h) => h.tipo === "cavilha" && h.face === "frente");
-    expect(esqRear.every((h) => h.x === LAT.largura)).toBe(true);
-    expect(dirRear.every((h) => h.x === 0)).toBe(true);
+    const esqEdge = esq.filter((h) => h.tipo === "cavilha" && !h.topDrillable);
+    const dirEdge = dir.filter((h) => h.tipo === "cavilha" && !h.topDrillable);
+    expect(esqEdge.every((h) => h.x === LAT.largura)).toBe(true);
+    expect(dirEdge.every((h) => h.x === 0)).toBe(true);
   });
 
-  it("costa ? lateral: mesmos Y; costa prof. 13", () => {
-    const lat = computeDrawerLateralStructuralHoles({ ...LAT, side: "esq" });
+  it("costa: Y=15/H-15 Depth 30", () => {
     const costa = computeDrawerCostaStructuralHoles(COSTA);
-    const latRearY = lat
-      .filter((h) => h.tipo === "cavilha" && h.face === "tras")
-      .map((h) => h.y)
-      .sort((a, b) => a - b);
-    const costaY = costa
-      .filter((h) => h.tipo === "cavilha")
-      .map((h) => h.y)
-      .filter((y, i, a) => a.indexOf(y) === i)
-      .sort((a, b) => a - b);
-    expect(costaY).toEqual(latRearY);
-    expect(costa.filter((h) => h.tipo === "cavilha").every((h) => h.profundidade === 13)).toBe(true);
-    expect(costa.filter((h) => h.tipo === "cavilha").every((h) => assertDowelDoesNotThrough(h.profundidade, espessura))).toBe(
+    const costaY = [
+      ...new Set(costa.filter((h) => h.tipo === "cavilha").map((h) => h.y)),
+    ].sort((a, b) => a - b);
+    expect(costaY).toEqual([15, 112]);
+    expect(costa.filter((h) => h.tipo === "cavilha").every((h) => h.profundidade === 30)).toBe(
       true
     );
     void center;
   });
 
-  it("frente ? lateral: mesmos Y; frente prof. 13", () => {
+  it("frente ? lateral aresta: mesmos Y; frente prof. 13", () => {
     const lat = computeDrawerLateralStructuralHoles({ ...LAT, side: "esq" });
     const frente = computeDrawerFrenteIntStructuralHoles(FRENTE);
-    const latFrontY = lat
-      .filter((h) => h.tipo === "cavilha" && h.face === "frente")
+    const latEdgeY = lat
+      .filter((h) => h.tipo === "cavilha" && !h.topDrillable)
       .map((h) => h.y)
       .sort((a, b) => a - b);
-    const frenteY = frente
-      .map((h) => h.y)
-      .filter((y, i, a) => a.indexOf(y) === i)
-      .sort((a, b) => a - b);
-    expect(frenteY).toEqual(latFrontY);
+    const frenteY = [
+      ...new Set(frente.map((h) => h.y)),
+    ].sort((a, b) => a - b);
+    expect(frenteY).toEqual(latEdgeY);
     expect(frente.every((h) => h.profundidade === 13 && h.tipo === "cavilha")).toBe(true);
   });
 });
 
-describe("stack 3 gavetas  Y frontais lowest", () => {
-  it("gaveta mais baixa usa H-41 no pino inferior", () => {
+describe("stack — Y frontais golden (isLowest ignorado)", () => {
+  it("mesma tabela 15 / H?35 com ou sem isLowestDrawer", () => {
     const holes = computeDrawerFrenteIntStructuralHoles({
       largura: 600,
       altura: 178,
@@ -135,11 +140,11 @@ describe("stack 3 gavetas  Y frontais lowest", () => {
       isLowestDrawer: true,
     });
     const ys = [...new Set(holes.map((h) => h.y))].sort((a, b) => a - b);
-    expect(ys).toEqual([30, 137]);
+    expect(ys).toEqual([15, 143]);
   });
 });
 
-describe("XML / CNC alinhado com coordenadas SSOT", () => {
+describe("XML / DRILL alinhado com coordenadas golden", () => {
   function xmlFor(tipo: string, dims: { largura: number; altura: number; espessura: number }) {
     const drilling = buildPanelDrillingResult(
       {
@@ -174,29 +179,30 @@ describe("XML / CNC alinhado com coordenadas SSOT", () => {
     })[0]!.xml;
   }
 
-  it("LAT_ESQ T16: Y=39/111 traseiro, Z=T/2, Depth=14", () => {
+  it("LAT_ESQ T16: Y face 15/112, Y aresta 15/115, Depth 13+30", () => {
     const xml = xmlFor("gaveta_lat_esq", { largura: 500, altura: 150, espessura: 16 });
-    expect(xml).toContain("<Y1>39.00</Y1>");
-    expect(xml).toContain("<Y1>111.00</Y1>");
-    expect(xml).toContain("<Z1>8.00</Z1>");
-    expect(xml).toContain("<Depth>14.00</Depth>");
+    expect(xml).toContain("<Y1>15.00</Y1>");
+    expect(xml).toContain("<Y1>112.00</Y1>");
+    expect(xml).toContain("<Y1>115.00</Y1>");
+    expect(xml).toContain("<Depth>13.00</Depth>");
+    expect(xml).toContain("<Depth>30.00</Depth>");
     expect(xml).toContain("<X1>500.00</X1>");
   });
 
-  it("LAT_ESQ T19: Depth=17, Z=9.5", () => {
+  it("LAT_ESQ T19: Depth aresta 30, face 13", () => {
     const xml = xmlFor("gaveta_lat_esq", { largura: 500, altura: 150, espessura: 19 });
-    expect(xml).toContain("<Z1>9.50</Z1>");
-    expect(xml).toContain("<Depth>17.00</Depth>");
-  });
-
-  it("COSTA: mesmos Y, Depth=13", () => {
-    const xml = xmlFor("gaveta_traseira", { largura: 468, altura: 150, espessura: 16 });
-    expect(xml).toContain("<Y1>39.00</Y1>");
-    expect(xml).toContain("<Y1>111.00</Y1>");
+    expect(xml).toContain("<Depth>30.00</Depth>");
     expect(xml).toContain("<Depth>13.00</Depth>");
   });
 
-  it("pipeline stack 3 — laterais/costa/frente com profundidade segura", () => {
+  it("COSTA H=127: Y=15/112, Depth=30", () => {
+    const xml = xmlFor("gaveta_traseira", { largura: 468, altura: 127, espessura: 16 });
+    expect(xml).toContain("<Y1>15.00</Y1>");
+    expect(xml).toContain("<Y1>112.00</Y1>");
+    expect(xml).toContain("<Depth>30.00</Depth>");
+  });
+
+  it("pipeline stack 3 — laterais/costa/frente com furos", () => {
     const { layers } = buildDrawerScenario({
       boxWidth: 600,
       boxHeight: 720,
@@ -209,7 +215,13 @@ describe("XML / CNC alinhado com coordenadas SSOT", () => {
     );
     expect(cutlist.length).toBeGreaterThanOrEqual(9);
 
-    const structuralTipos = ["gaveta_lat_esq", "gaveta_lat_dir", "gaveta_traseira", "gaveta_frente", "gaveta_frente_int"];
+    const structuralTipos = [
+      "gaveta_lat_esq",
+      "gaveta_lat_dir",
+      "gaveta_traseira",
+      "gaveta_frente",
+      "gaveta_frente_int",
+    ];
     for (const tipo of structuralTipos) {
       const sample = cutlist.find((p) => p.tipo === tipo) ?? {
         tipo,
@@ -230,7 +242,12 @@ describe("XML / CNC alinhado com coordenadas SSOT", () => {
       const t = sample.espessura ?? 16;
       for (const h of rebuilt.data?.drillHoles ?? []) {
         if (h.holeSubtype === "groove") continue;
-        expect(h.depth).toBeLessThan(t);
+        // Face: depth < T; aresta TypeNo=2 Depth 30 é ao longo do painel (não through-T)
+        if (h.depth >= t) {
+          expect(h.depth).toBe(30);
+        } else {
+          expect(h.depth).toBeLessThan(t);
+        }
       }
     }
   });

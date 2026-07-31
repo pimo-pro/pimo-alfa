@@ -15,6 +15,7 @@ import {
   resolveDrawerInternalFrontHeightMm,
   resolveDrawerPieceIndustrialLabel,
 } from "../core/drawers/drawerLayerCustomization";
+import { resolveDrawerStackRole } from "../core/drawers/drawerStackPosition";
 import { resolveIndustrialGrainCode } from "../core/materials/grainDirection";
 import { buildCutlistRotationMetadata } from "../core/manufacturing/cutlistRotationMetadata";
 import type { DrawerLayerItem } from "../models/BoxLayers";
@@ -195,10 +196,13 @@ export function drawerLayerItemToCutList(
   item: DrawerLayerItem,
   drawerIndex: number,
   bodyMaterialIdOrLegacyLabel?: string,
-  boxName?: string
+  boxName?: string,
+  drawerCount?: number
 ): CutListItem[] {
   const materialContext = normalizeDrawerMaterialContext(bodyMaterialIdOrLegacyLabel);
   const drawerIndex1Based = drawerIndex + 1;
+  const stackCount = Math.max(1, Number(drawerCount) || drawerIndex1Based);
+  const stackRole = resolveDrawerStackRole(drawerIndex, stackCount);
   const safeBoxName = boxName?.trim() || resolveIndustrialBoxId({ id: item.parentBoxId, nome: undefined });
   const boxId = safeBoxName;
   const boxRef = { id: item.parentBoxId, nome: safeBoxName };
@@ -292,6 +296,13 @@ export function drawerLayerItemToCutList(
     metalBoxType: item.metalBoxType ?? "Nenhuma",
     metalBoxProfileId: item.metadata?.metalBoxProfileId,
     metalBoxHeightMm: item.metadata?.metalBoxHeightMm,
+    sideHeightMm: item.leftSideHeight ?? item.rightSideHeight ?? item.bodyHeight,
+    bodyWidthMm: item.bodyWidth,
+    sideThicknessMm: sideThickness,
+    bottomThicknessMm: bottomMaterial.thicknessMm,
+    stackRole,
+    drawerCount: stackCount,
+    frontHeightMm: externalFrontHeightMm,
   };
 
   const decorativeDrawerRules = {
@@ -306,6 +317,13 @@ export function drawerLayerItemToCutList(
     slideType: item.slideType ?? "Hettich ArciTech",
     softClose: Boolean(item.softClose),
     metalBoxType: item.metalBoxType ?? "Nenhuma",
+    sideHeightMm: item.leftSideHeight ?? item.rightSideHeight ?? item.bodyHeight,
+    bodyWidthMm: item.bodyWidth,
+    sideThicknessMm: sideThickness,
+    bottomThicknessMm: bottomMaterial.thicknessMm,
+    stackRole,
+    drawerCount: stackCount,
+    frontHeightMm: externalFrontHeightMm,
   };
 
   const externalFrontPiece = withDrawerIndustrialMeta(
@@ -397,6 +415,7 @@ export function drawerLayerItemToCutList(
           boxId: item.parentBoxId,
           materialId: sideMaterial.materialId,
           grainDirection: resolveIndustrialGrainCode({ tipo: "gaveta_lat_esq" }),
+          metadata: { drawerRules: structuralDrawerRules },
         },
         item,
         safeBoxName,
@@ -425,6 +444,7 @@ export function drawerLayerItemToCutList(
           boxId: item.parentBoxId,
           materialId: sideMaterial.materialId,
           grainDirection: resolveIndustrialGrainCode({ tipo: "gaveta_lat_dir" }),
+          metadata: { drawerRules: structuralDrawerRules },
         },
         item,
         safeBoxName,
@@ -481,6 +501,7 @@ export function drawerLayerItemToCutList(
           boxId: item.parentBoxId,
           materialId: sideMaterial.materialId,
           grainDirection: resolveIndustrialGrainCode({ tipo: "gaveta_traseira" }),
+          metadata: { drawerRules: structuralDrawerRules },
         },
         item,
         safeBoxName,
@@ -501,10 +522,17 @@ export function extractDrawerCutlistFromLayerItems(
   boxName?: string
 ): CutListItem[] {
   const allPieces: CutListItem[] = [];
+  const count = layerItems.length;
 
   for (let i = 0; i < layerItems.length; i++) {
     const item = layerItems[i];
-    const pieces = drawerLayerItemToCutList(item, i, bodyMaterialIdOrLegacyLabel, boxName);
+    const pieces = drawerLayerItemToCutList(
+      item,
+      i,
+      bodyMaterialIdOrLegacyLabel,
+      boxName,
+      count
+    );
     allPieces.push(...pieces);
   }
 

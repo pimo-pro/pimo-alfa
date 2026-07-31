@@ -12,12 +12,14 @@
 
 import {
   computeDrawerCostaStructuralHoles,
+  computeDrawerFrenteExtStructuralHoles,
   computeDrawerFrenteIntStructuralHoles,
   computeDrawerLateralStructuralHoles,
 } from "../drawers/drilling/DrawerDrillingRules";
 import { computeDrawerHandleHoles } from "../drawers/drilling/DrawerHandleDrillingRules";
 import { computeDrawerMetalBoxFrontHoles } from "../drawers/drilling/DrawerMetalBoxFrontDrilling";
 import { isMetalBoxCatalogType } from "../drawers/drawerMetalBoxCatalog";
+import { buildModuleTopBottomFaceCavilhaHoles } from "../drill/moduleClassicCavilha";
 import type { RulesConfig } from "../rules/rulesConfig";
 import { getNumDobradicas, getHingeYPositions } from "../rules/rulesConfig";
 import type { DrillFace, DrillType, PanelFace, TechnicalDrillHole } from "../types";
@@ -62,6 +64,20 @@ type PieceInput = {
   softClose?: boolean;
   /** Gaveta mais baixa do módulo (índice 0 = inferior). */
   isLowestDrawer?: boolean;
+  /** Gaveta mais alta do módulo (flush à CIMA). */
+  isHighestDrawer?: boolean;
+  /** Papel no stack vertical (`lowest` → furação fixa na frente). */
+  drawerStackRole?: string;
+  /** Altura das laterais da gaveta (mm) — sync Y frente/costa. */
+  drawerSideHeightMm?: number;
+  /** Largura do corpo da gaveta (mm) — inset X na frente overlay. */
+  drawerBodyWidthMm?: number;
+  /** Espessura das laterais (mm). */
+  drawerSideThicknessMm?: number;
+  /** Espessura do fundo (mm) — profundidade do rasgo = T+1. */
+  drawerBottomThicknessMm?: number;
+  /** Elevação da base das laterais vs frente (mm). */
+  drawerSideBaseElevationMm?: number;
   /** Se false, desativa explicitamente os furos de prateleira para a peça. */
   shelfHolesEnabled?: boolean;
   /** Modo explícito de prateleira: standard = motor lateral, div = motor DIV/SEP. */
@@ -179,29 +195,26 @@ export function getInternalFace(pieceType: PieceType): DrillFace {
   return "frente";
 }
 
-/** Furos de cavilha (dowel). Cima/fundo: eixo a 60 mm dos bordos frente/fundo; centro a sideOffset (opcional nas regras) ou espessura/2. */
+/** Furos de cavilha — regra global 10×13 na face de CIMA/FUNDO (par das laterais 10×30). */
 function calcCavilha(piece: PieceInput, rules: RulesConfig, out: TechnicalDrillHole[]) {
   if (!rules?.furos?.tecnicos?.cavilha) return;
   const cfg = rules.furos.tecnicos.cavilha;
   if (!cfg.enabled) return;
-  const diametro = Number(cfg.diametro) > 0 ? Number(cfg.diametro) : 8;
-  const profundidade = Number(cfg.profundidade) > 0 ? Number(cfg.profundidade) : Math.min(13, piece.espessura);
-  const face = getInternalFace(piece.tipo);
-  const insetLateral = lateralInsetTopBottomMm(cfg.sideOffset, piece.espessura);
-
-  if ((piece.tipo === "cima" || piece.tipo === "fundo") && (cfg.aplicarEm.cima || cfg.aplicarEm.fundo)) {
-    const xLeft = insetLateral;
-    const xRight = piece.largura - insetLateral;
-    const distFrente = Number(cfg.distanciaFrente) > 0 ? Number(cfg.distanciaFrente) : 60;
-    const distFundo = Number(cfg.distanciaFundo) > 0 ? Number(cfg.distanciaFundo) : 60;
-    const yFront = distFrente;
-    const yBack = piece.altura - distFundo;
-    pushHole(out, piece, xLeft, yFront, diametro, profundidade, "cavilha", face);
-    pushHole(out, piece, xLeft, yBack, diametro, profundidade, "cavilha", face);
-    pushHole(out, piece, xRight, yFront, diametro, profundidade, "cavilha", face);
-    pushHole(out, piece, xRight, yBack, diametro, profundidade, "cavilha", face);
+  if (piece.tipo !== "cima" && piece.tipo !== "fundo") return;
+  if ((piece.tipo === "cima" && !cfg.aplicarEm.cima) || (piece.tipo === "fundo" && !cfg.aplicarEm.fundo)) {
+    return;
   }
-  /* Laterais: apenas furos de prateleira e fixação de dobradiça (calcPrateleira32mm e calcDobradicaFixacao). Sem cavilha nas laterais. */
+
+  const face = getInternalFace(piece.tipo);
+  const holes = buildModuleTopBottomFaceCavilhaHoles({
+    tipo: piece.tipo,
+    larguraMm: piece.largura,
+    profundidadeMm: piece.altura,
+    thicknessMm: piece.espessura,
+    face,
+  });
+  out.push(...holes);
+  /* Laterais: 10×30 injectados em cutlistFromBoxes via buildModuleLateralEdgeCavilhaHoles. */
 }
 
 /** Furos de parafuso (confirmat). União topo/base: mesma linha lateral que cavilha (offset = regra ou espessura/2), eixo conforme distâncias frente/fundo. */
@@ -464,7 +477,7 @@ function calcDobradicaFixacao(piece: PieceInput, rules: RulesConfig, out: Techni
 function calcDrawerStructural(piece: PieceInput, out: TechnicalDrillHole[]) {
   const drawerPieceTypes = [
     "gaveta_lat_esq", "gaveta_lat_dir",
-    "gaveta_traseira", "gaveta_frente", "gaveta_frente_int",
+    "gaveta_traseira", "gaveta_frente", "gaveta_frente_int", "gaveta_frente_ext",
   ];
   if (!drawerPieceTypes.includes(piece.tipo)) return;
   if (piece.tipo === "gaveta_lat_esq" || piece.tipo === "gaveta_lat_dir") {
@@ -481,6 +494,26 @@ function calcDrawerStructural(piece: PieceInput, out: TechnicalDrillHole[]) {
       largura: piece.largura,
       altura: piece.altura,
       espessura: piece.espessura,
+      lateralAlturaMm: piece.drawerSideHeightMm,
+    });
+    out.push(...holes);
+  } else if (piece.tipo === "gaveta_frente_ext") {
+    if (isMetalBoxCatalogType(piece.metalBoxType)) return;
+    const sideH = piece.drawerSideHeightMm ?? piece.altura;
+    const bodyW = piece.drawerBodyWidthMm ?? piece.largura;
+    const sideT = piece.drawerSideThicknessMm ?? 16;
+    const bottomT = piece.drawerBottomThicknessMm ?? 10;
+    const holes = computeDrawerFrenteExtStructuralHoles({
+      largura: piece.largura,
+      altura: piece.altura,
+      espessura: piece.espessura,
+      isLowestDrawer: piece.isLowestDrawer === true,
+      stackRole: piece.drawerStackRole,
+      sideHeightMm: sideH,
+      bodyWidthMm: bodyW,
+      sideThicknessMm: sideT,
+      bottomThicknessMm: bottomT,
+      sideBaseElevationMm: piece.drawerSideBaseElevationMm,
     });
     out.push(...holes);
   } else if (piece.tipo === "gaveta_frente_int" || piece.tipo === "gaveta_frente") {
@@ -501,6 +534,9 @@ function calcDrawerStructural(piece: PieceInput, out: TechnicalDrillHole[]) {
         altura: piece.altura,
         espessura: piece.espessura,
         isLowestDrawer: piece.isLowestDrawer === true,
+        bottomThicknessMm: piece.drawerBottomThicknessMm,
+        sideHeightMm: piece.drawerSideHeightMm,
+        sideBaseElevationMm: piece.drawerSideBaseElevationMm,
       });
       out.push(...holes);
     }

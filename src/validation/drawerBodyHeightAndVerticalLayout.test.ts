@@ -44,7 +44,8 @@ describe("altura do corpo da gaveta (frente × 75%)", () => {
     );
     expect(specs.frontExt.height).toBe(200);
     expect(specs.body.height).toBe(150);
-    expect(specs.back.height).toBe(150);
+    expect(specs.back.height).toBe(150 - 23);
+    expect(specs.leftSide.height).toBe(150);
   });
 
   it("bounding boxes madeira — frente mais alta que laterais, bases alinhadas", () => {
@@ -96,9 +97,9 @@ describe("altura do corpo da gaveta (frente × 75%)", () => {
 describe("posição vertical — ordem do utilizador preservada", () => {
   const boxH = 720;
 
-  it("modo progressivo: índice 0 = topo (peso menor), último = fundo", () => {
+  it("modo progressivo: índice 0 = inferior (maior), último = superior (menor)", () => {
     const heights = calculateDrawerHeights(3, boxH, "top_small_mid_medium_bottom_large");
-    expect(heights[0]).toBeLessThan(heights[2]!);
+    expect(heights[0]).toBeGreaterThan(heights[2]!);
     const positions = calculateDrawerPositions(heights, boxH);
     expect(positions[0]).toBeLessThan(positions[2]!);
   });

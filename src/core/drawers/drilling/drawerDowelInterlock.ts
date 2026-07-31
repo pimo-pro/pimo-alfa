@@ -1,25 +1,38 @@
 /**
- * SSOT — cavilhas de gaveta com interlock face ? espessura.
+ * SSOT — cavilhas / rasgos de gaveta (golden XML_COMPLITO).
  *
- * Face (frente / costa): Ø10 × 13 mm (nunca atravessa).
- * Espessura (laterais): Ø10 × 30 mm com clamp (espessura ? 2 mm).
- * Centro na espessura: X/Z = espessura / 2.
- * Traseira: Y = 39 mm e Y = altura ? 39 mm (par simétrico).
- * Frente: Y da tabela industrial (30 / altura?30, ou altura?41 se lowest).
+ * Laterais (LAT_DIR / LAT_ESQ):
+ *   Face (TypeNo=1): Y = 15 e W?38; X = T/2 (esq) ou L?T/2 (dir); Depth 13
+ *   Aresta (TypeNo=2): Y = 15 e W?35; X = 0 (dir) ou L (esq); Depth 30
+ *   Rasgos: W?13 (Ø/largura 13, prof. 3) e W?23 (largura 11, prof. 10)
+ *
+ * Costa: Y = 15 e W?15; Depth 30; topo X=8 / L?8 Depth 10
+ * Frente inferior: Y = W?56.5 (rasgo), W?73.5 (cavilha); X = 33
  */
 
-/** Distância industrial da base ao eixo da corrediça / pino inferior (mm). */
+/** Distância industrial da base ao eixo da corrediça no módulo (mm) — inalterado. */
 export const DRAWER_SLIDE_OFFSET_FROM_BOTTOM_MM = 41;
 
 export const DRAWER_DOWEL_DIAMETER_MM = 10;
 export const DRAWER_DOWEL_FACE_DEPTH_MM = 13;
+/** Profundidade na aresta (ao longo do painel, não atravessa T). */
 export const DRAWER_DOWEL_EDGE_DEPTH_MM = 30;
-/** Folga minima para nao atravessar a espessura no furo de aresta. */
+/** Folga mínima legado (face through-thickness). */
 export const DRAWER_DOWEL_EDGE_CLEARANCE_MM = 2;
-/** Y do par traseiro medido a partir do bordo inferior. */
-export const DRAWER_REAR_DOWEL_Y_FROM_BOTTOM_MM = 39;
-/** Y superior da tabela frontal industrial (desde o bordo inferior). */
-export const DRAWER_FRONT_DOWEL_Y_FROM_BOTTOM_MM = 30;
+
+/** Y inferior golden (desde a base). */
+export const DRAWER_LAT_DOWEL_Y_FROM_BOTTOM_MM = 15;
+/** Face superior: W?38. */
+export const DRAWER_LAT_FACE_DOWEL_Y_FROM_TOP_MM = 38;
+/** Aresta superior (interlock frente): W?35. */
+export const DRAWER_LAT_EDGE_DOWEL_Y_FROM_TOP_MM = 35;
+/** Costa: simétrico 15 mm de cada bordo. */
+export const DRAWER_COSTA_DOWEL_Y_FROM_EDGE_MM = 15;
+
+/** @deprecated Prefer DRAWER_LAT_DOWEL_Y_FROM_BOTTOM_MM — alias legado. */
+export const DRAWER_REAR_DOWEL_Y_FROM_BOTTOM_MM = DRAWER_LAT_FACE_DOWEL_Y_FROM_TOP_MM;
+/** @deprecated Prefer DRAWER_LAT_DOWEL_Y_FROM_BOTTOM_MM. */
+export const DRAWER_FRONT_DOWEL_Y_FROM_BOTTOM_MM = DRAWER_LAT_DOWEL_Y_FROM_BOTTOM_MM;
 
 /** Centro do furo na espessura (X ou Z KDT). */
 export function drawerThicknessCenterMm(espessuraMm: number): number {
@@ -28,8 +41,8 @@ export function drawerThicknessCenterMm(espessuraMm: number): number {
 }
 
 /**
- * Profundidade do furo na espessura: min(30, espessura ? 2).
- * Ex.: 16 ? 14; 19 ? 17; ?32 ? 30.
+ * Profundidade legado through-thickness: min(30, espessura ? 2).
+ * Preferir DRAWER_DOWEL_EDGE_DEPTH_MM (30) para arestas golden.
  */
 export function clampDrawerEdgeDowelDepthMm(espessuraMm: number): number {
   const t = Math.max(0, Number(espessuraMm) || 0);
@@ -37,41 +50,61 @@ export function clampDrawerEdgeDowelDepthMm(espessuraMm: number): number {
   return Math.min(DRAWER_DOWEL_EDGE_DEPTH_MM, maxSafe);
 }
 
-/** Profundidade em face: 13 mm, nunca > espessura ? 1 (defesa). */
+/** Profundidade em face: 13 mm, nunca > espessura ? 1. */
 export function clampDrawerFaceDowelDepthMm(espessuraMm: number): number {
   const t = Math.max(0, Number(espessuraMm) || 0);
   if (t <= 0) return DRAWER_DOWEL_FACE_DEPTH_MM;
   return Math.min(DRAWER_DOWEL_FACE_DEPTH_MM, Math.max(1, t - 1));
 }
 
-/** Y traseiros sincronizados (lateral ? costa). */
-export function getDrawerRearDowelYPositionsMm(alturaMm: number): number[] {
+/** Y face laterais (TypeNo=1): 15 e H?38. */
+export function getDrawerLateralFaceDowelYPositionsMm(alturaMm: number): number[] {
   const h = Math.max(0, Number(alturaMm) || 0);
-  const y = DRAWER_REAR_DOWEL_Y_FROM_BOTTOM_MM;
+  const y0 = DRAWER_LAT_DOWEL_Y_FROM_BOTTOM_MM;
+  const y1 = h - DRAWER_LAT_FACE_DOWEL_Y_FROM_TOP_MM;
+  if (h <= 0) return [];
+  if (y1 <= y0 + 1) return [Math.min(y0, h / 2)];
+  return [y0, y1];
+}
+
+/** Y aresta laterais (TypeNo=2, interlock frente): 15 e H?35. */
+export function getDrawerLateralEdgeDowelYPositionsMm(alturaMm: number): number[] {
+  const h = Math.max(0, Number(alturaMm) || 0);
+  const y0 = DRAWER_LAT_DOWEL_Y_FROM_BOTTOM_MM;
+  const y1 = h - DRAWER_LAT_EDGE_DOWEL_Y_FROM_TOP_MM;
+  if (h <= 0) return [];
+  if (y1 <= y0 + 1) return [Math.min(y0, h / 2)];
+  return [y0, y1];
+}
+
+/** Y costa: 15 e H?15. */
+export function getDrawerCostaDowelYPositionsMm(alturaMm: number): number[] {
+  const h = Math.max(0, Number(alturaMm) || 0);
+  const y = DRAWER_COSTA_DOWEL_Y_FROM_EDGE_MM;
   if (h <= 0) return [];
   if (h < y * 2 + 1) return [Math.min(y, h / 2)];
   return [y, h - y];
 }
 
 /**
- * Y frontais sincronizados (lateral ? frente) — tabela industrial SSOT.
- * Superior: 30 mm; inferior: altura?30 (ou altura?41 se gaveta mais baixa).
+ * @deprecated Use getDrawerLateralFaceDowelYPositionsMm.
+ * Mantido para callers legados (costa sync antigo).
+ */
+export function getDrawerRearDowelYPositionsMm(alturaMm: number): number[] {
+  return getDrawerLateralFaceDowelYPositionsMm(alturaMm);
+}
+
+/**
+ * Y frontais sincronizados com aresta das laterais (15 / H?35).
+ * `isLowestDrawer` ignorado no modelo golden (mesma tabela).
  */
 export function getDrawerFrontDowelYPositionsMm(
   alturaMm: number,
-  isLowestDrawer?: boolean
+  _isLowestDrawer?: boolean
 ): number[] {
-  const h = Math.max(0, Number(alturaMm) || 0);
-  if (h <= 0) return [];
-  const upper = DRAWER_FRONT_DOWEL_Y_FROM_BOTTOM_MM;
-  const lower = isLowestDrawer
-    ? h - DRAWER_SLIDE_OFFSET_FROM_BOTTOM_MM
-    : h - DRAWER_FRONT_DOWEL_Y_FROM_BOTTOM_MM;
-  if (lower <= upper + 1) return [Math.min(upper, h / 2)];
-  return [upper, lower];
+  return getDrawerLateralEdgeDowelYPositionsMm(alturaMm);
 }
 
-/** Garante que profundidade nunca atravessa a peca. */
 export function assertDowelDoesNotThrough(
   profundidadeMm: number,
   espessuraMm: number

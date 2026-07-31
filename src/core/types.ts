@@ -70,12 +70,29 @@ export interface TechnicalDrillHole {
   profundidade: number;
   tipo: DrillType;
   face: DrillFace;
+  /** Força TypeNo=1 (Vertical Hole) no export KDT DRILL. */
+  topDrillable?: boolean;
   /** "groove" para rasgos de encaixe (fundo da gaveta); omitido = furo circular. */
   holeSubtype?: "groove";
   /** Largura do rasgo em mm (apenas quando holeSubtype="groove"). */
   grooveWidth?: number;
   /** Comprimento do rasgo em mm (apenas quando holeSubtype="groove"). */
   grooveLength?: number;
+  /**
+   * Rasgo de painel completo com sangria industrial (BeginX=L+overcut, EndX=−overcut).
+   * Usado nos laterais da gaveta — Y/Width/Depth não dependem de L.
+   */
+  grooveFullPanelOvercut?: boolean;
+  /** Correction KDT do rasgo (laterais = 2). */
+  grooveCorrection?: number;
+  /** ToolName KDT do rasgo (ex.: FRESA_DESBASTE_10MM). */
+  grooveToolName?: string;
+  /** Chave do par de cavilha 10×30↔10×13. */
+  pairedHoleKey?: string;
+  /** ID catálogo (cavilha_10x30 / cavilha_10x13). */
+  holeCatalogId?: string;
+  /** Ferragem CAVILHA_10x40. */
+  ferragemId?: string;
 }
 
 export interface ViewerDrillMarkersByPanel extends Record<DrillPanelKey, TechnicalDrillHole[]> {
@@ -120,6 +137,18 @@ export interface PanelDrillHole {
   grooveWidth?: number;
   /** Comprimento do rasgo em mm (apenas quando holeSubtype="groove"). */
   grooveLength?: number;
+  /** Rasgo full-span com sangria L+overcut → −overcut (laterais gaveta). */
+  grooveFullPanelOvercut?: boolean;
+  /** Correction KDT do rasgo. */
+  grooveCorrection?: number;
+  /** ToolName KDT do rasgo. */
+  grooveToolName?: string;
+  /** Chave partilhada com o furo de encaixe na peça oposta (par 10×30↔10×13). */
+  pairedHoleKey?: string;
+  /** ID do catálogo industrial (ex.: cavilha_10x30). */
+  holeCatalogId?: string;
+  /** Ferragem física associada (ex.: cavilha_10x40). */
+  ferragemId?: string;
 }
 
 export interface CutListItem {

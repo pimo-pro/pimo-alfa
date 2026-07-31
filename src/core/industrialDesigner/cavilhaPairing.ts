@@ -1,9 +1,11 @@
 /**
  * Propagação automática de cavilhas frente/verso entre painéis ligados por constraint.
+ * Regra global: 10×30 (espessura) ↔ 10×13 (face) + ferragem CAVILHA_10x40.
  */
 
 import type { HoleFaceKind, HoleTypeId } from "../drill/holeCatalog";
 import { getHoleTypeById, getPairedHoleTypeId } from "../drill/holeCatalog";
+import { CAVILHA_10x40_FERRAGEM_ID } from "../drill/cavilha10x40Rule";
 import { findDesignPanel, nextDesignId } from "./designModel";
 import {
   assertDesignOperationAllowed,
@@ -37,18 +39,43 @@ type PanelPairKind =
   | "horizontal_lateral"
   | "prateleira_lateral"
   | "lateral_prateleira"
+  | "horizontal_frente_fixa"
+  | "frente_fixa_horizontal"
+  | "lateral_frente_fixa"
+  | "frente_fixa_lateral"
   | "unknown";
+
+function isHorizontalPanel(tipo: DesignPanelTipo): boolean {
+  return tipo === "cima" || tipo === "fundo";
+}
 
 function resolvePanelPairKind(source: DesignPanelTipo, target: DesignPanelTipo): PanelPairKind {
   if (source === "lateral" && (target === "fundo" || target === "cima")) return "lateral_horizontal";
   if ((source === "fundo" || source === "cima") && target === "lateral") return "horizontal_lateral";
   if (source === "prateleira" && target === "lateral") return "prateleira_lateral";
   if (source === "lateral" && target === "prateleira") return "lateral_prateleira";
+  if (isHorizontalPanel(source) && target === "frente_fixa") return "horizontal_frente_fixa";
+  if (source === "frente_fixa" && isHorizontalPanel(target)) return "frente_fixa_horizontal";
+  if (source === "lateral" && target === "frente_fixa") return "lateral_frente_fixa";
+  if (source === "frente_fixa" && target === "lateral") return "frente_fixa_lateral";
   return "unknown";
 }
 
 function edgeOffsetMm(panel: DesignPanel): number {
   return Math.max(4, panel.thicknessMm / 2);
+}
+
+function getDrillFrontBandMm(): number {
+  return 60;
+}
+
+/** Mapeia X do painel largo (cima) para X local da frente fixa. */
+function mapXOntoFrenteFixa(sourceWidthMm: number, ffWidthMm: number, xMm: number): number {
+  if (ffWidthMm >= sourceWidthMm - 0.5) return clamp(xMm, 0, ffWidthMm);
+  if (xMm >= sourceWidthMm - ffWidthMm - 0.5) {
+    return clamp(xMm - (sourceWidthMm - ffWidthMm), 0, ffWidthMm);
+  }
+  return clamp(xMm, 0, ffWidthMm);
 }
 
 export function listCavilhaConstraintsForPanel(
@@ -82,14 +109,46 @@ export function resolveCavilhaConstraintTarget(
   if (candidates.length === 0) return null;
   if (candidates.length === 1) return candidates[0];
 
+  if (source.tipo === "cima" || source.tipo === "fundo") {
+    const frontBand = Math.max(80, getDrillFrontBandMm());
+    const nearFront = hole.yMm <= frontBand || hole.yMm >= source.heightMm - frontBand;
+    if (nearFront) {
+      const ff = candidates.find((c) => c.targetPanel.tipo === "frente_fixa");
+      if (ff) return ff;
+    }
+    const midX = source.widthMm / 2;
+    const wantLeft = hole.xMm < midX;
+    const match = candidates.find((c) => {
+      if (c.targetPanel.tipo !== "lateral") return false;
+      if (isInternalLateral(c.targetPanel)) return true;
+      return wantLeft ? isLeftLateral(c.targetPanel) : isRightLateral(c.targetPanel);
+    });
+    if (match) return match;
+  }
+
   if (source.tipo === "lateral") {
+    const ff = candidates.find((c) => c.targetPanel.tipo === "frente_fixa");
+    if (ff && hole.xMm <= Math.max(80, getDrillFrontBandMm())) return ff;
     const midY = source.heightMm / 2;
     const preferTipo = hole.yMm < midY ? "fundo" : "cima";
     const match = candidates.find((c) => c.targetPanel.tipo === preferTipo);
     if (match) return match;
   }
 
-  if (source.tipo === "fundo" || source.tipo === "cima" || source.tipo === "prateleira") {
+  if (source.tipo === "frente_fixa") {
+    const midY = source.heightMm / 2;
+    if (hole.yMm > midY) {
+      const cima = candidates.find((c) => c.targetPanel.tipo === "cima");
+      if (cima) return cima;
+    } else {
+      const fundo = candidates.find((c) => c.targetPanel.tipo === "fundo");
+      if (fundo) return fundo;
+    }
+    const lat = candidates.find((c) => c.targetPanel.tipo === "lateral");
+    if (lat) return lat;
+  }
+
+  if (source.tipo === "prateleira") {
     const midX = source.widthMm / 2;
     const wantLeft = hole.xMm < midX;
     const match = candidates.find((c) => {
@@ -104,7 +163,6 @@ export function resolveCavilhaConstraintTarget(
 
 /**
  * Projeta coordenadas de um furo de cavilha do painel fonte para o painel oposto.
- * Convenção alinhada com lateralDowels: eixo X da lateral = profundidade; Y = altura.
  */
 export function projectCavilhaHoleToTargetPanel(
   source: DesignPanel,
@@ -112,6 +170,7 @@ export function projectCavilhaHoleToTargetPanel(
   hole: { xMm: number; yMm: number; face: HoleFaceKind }
 ): { xMm: number; yMm: number } | null {
   const kind = resolvePanelPairKind(source.tipo, target.tipo);
+  const edge = edgeOffsetMm(target);
 
   switch (kind) {
     case "lateral_horizontal": {
@@ -149,6 +208,39 @@ export function projectCavilhaHoleToTargetPanel(
         yMm: clamp(hole.xMm, 0, target.heightMm),
       };
     }
+    case "horizontal_frente_fixa": {
+      const xOnFf = mapXOntoFrenteFixa(source.widthMm, target.widthMm, hole.xMm);
+      const yOnFf = source.tipo === "cima" ? target.heightMm - edge : edge;
+      return {
+        xMm: clamp(xOnFf, 0, target.widthMm),
+        yMm: clamp(yOnFf, 0, target.heightMm),
+      };
+    }
+    case "frente_fixa_horizontal": {
+      const yOnHorizontal = getDrillFrontBandMm();
+      const xOnHorizontal =
+        source.widthMm < target.widthMm - 0.5
+          ? hole.xMm + (target.widthMm - source.widthMm)
+          : hole.xMm;
+      return {
+        xMm: clamp(xOnHorizontal, 0, target.widthMm),
+        yMm: clamp(yOnHorizontal, 0, target.heightMm),
+      };
+    }
+    case "lateral_frente_fixa": {
+      const inset = Math.max(0, (target.heightMm - source.heightMm) / 2);
+      return {
+        xMm: clamp(edge, 0, target.widthMm),
+        yMm: clamp(inset + hole.yMm, 0, target.heightMm),
+      };
+    }
+    case "frente_fixa_lateral": {
+      const inset = Math.max(0, (source.heightMm - target.heightMm) / 2);
+      return {
+        xMm: clamp(getDrillFrontBandMm(), 0, target.widthMm),
+        yMm: clamp(hole.yMm - inset, 0, target.heightMm),
+      };
+    }
     default:
       return null;
   }
@@ -183,6 +275,10 @@ export function insertDesignHoleWithCavilhaPairing(
 
   const catalog = getHoleTypeById(holeTypeId);
   const primaryId = nextDesignId("hole");
+  const ferragemId =
+    catalog.uso === "cavilha"
+      ? catalog.ferragemId ?? CAVILHA_10x40_FERRAGEM_ID
+      : undefined;
 
   let pairedHole: DesignDrillHole | undefined;
   let pairedPanelId: string | undefined;
@@ -215,6 +311,7 @@ export function insertDesignHoleWithCavilhaPairing(
           yMm: projected.yMm,
           face: pairedCatalog.face,
           pairedHoleId: primaryId,
+          ferragemId,
         };
         pairedPanelId = target.targetPanel.id;
       }
@@ -228,6 +325,7 @@ export function insertDesignHoleWithCavilhaPairing(
     yMm,
     face,
     pairedHoleId: pairedHole?.id,
+    ferragemId: pairedHole ? ferragemId : undefined,
   };
 
   const panels = box.panels.map((panel) => {

@@ -5,7 +5,7 @@ import { buildDrawerSpecs, createDrawerObject } from "../3d/objects/DrawerFactor
 import {
   DRAWER_SIDE_BASE_ELEVATION_MAX_MM,
   DRAWER_SIDE_BASE_ELEVATION_MIN_MM,
-  DRAWER_SIDE_BASE_ELEVATION_MM,
+  DRAWER_LOWEST_BODY_ABOVE_MODULE_BASE_MM,
   DRAWER_SIDE_TOP_CLEARANCE_RATIO,
 } from "../core/drawers/drawerGeometryConstants";
 import { settingsDefaults } from "../core/settings/settingsSchema";
@@ -82,15 +82,16 @@ function buildDrawerMeshForHeight(frontHeightMm: number) {
 }
 
 describe("viewer 3D — bounding boxes reais das meshes", () => {
-  const elevation = DRAWER_SIDE_BASE_ELEVATION_MM;
+  const elevationLowest = DRAWER_LOWEST_BODY_ABOVE_MODULE_BASE_MM;
 
-  it("offset de elevação dentro do intervalo industrial 15–22 mm", () => {
-    expect(elevation).toBeGreaterThanOrEqual(DRAWER_SIDE_BASE_ELEVATION_MIN_MM);
-    expect(elevation).toBeLessThanOrEqual(DRAWER_SIDE_BASE_ELEVATION_MAX_MM);
+  it("offset de elevação inferior = 18.5 mm (dentro 15–22)", () => {
+    expect(elevationLowest).toBeGreaterThanOrEqual(DRAWER_SIDE_BASE_ELEVATION_MIN_MM);
+    expect(elevationLowest).toBeLessThanOrEqual(DRAWER_SIDE_BASE_ELEVATION_MAX_MM);
+    expect(elevationLowest).toBe(18.5);
   });
 
   it.each([234, 390])(
-    "frente %i mm — laterais elevadas, altura 75%%, frente em Y=0",
+    "frente %i mm — laterais a 18.5 (lowest), altura 75%%, frente em Y=0",
     (requestedHeightMm) => {
       const { drawerBody, actualFrontHeightMm: h } = buildDrawerMeshForHeight(requestedHeightMm);
       const front = findMesh(drawerBody, "drawer-front-ext")!;
@@ -108,7 +109,7 @@ describe("viewer 3D — bounding boxes reais das meshes", () => {
       expect(backB.heightMm).toBeCloseTo(sideB.heightMm - 12 - 10, 0);
 
       expect(frontB.centerY).toBeCloseTo(0, 1);
-      expect(sideB.minY).toBeCloseTo(frontB.minY + elevation, 1);
+      expect(sideB.minY).toBeCloseTo(frontB.minY + elevationLowest, 1);
       expect(sideB.maxY).toBeCloseTo(sideB.minY + expectedSideH, 1);
       expect(backB.minY).toBeGreaterThanOrEqual(sideB.minY - 1);
     }
@@ -128,7 +129,7 @@ describe("viewer 3D — bounding boxes reais das meshes", () => {
     expect(frontB.centerY).toBeCloseTo(0, 1);
     expect(frontB.minY).toBeCloseTo(-half, 1);
     expect(frontB.maxY).toBeCloseTo(half, 1);
-    expect(sideB.minY).toBeCloseTo(-half + elevation, 1);
+    expect(sideB.minY).toBeCloseTo(-half + elevationLowest, 1);
     expect(sideB.maxY).toBeCloseTo(sideB.minY + sideH, 1);
     expect(sideB.heightMm).toBeCloseTo(sideH, 1);
   });

@@ -45,8 +45,8 @@ describe("buildDrillFilesForProject — furos de bordo DIV/SEP", () => {
     expect(fundoHoles.some((h) => h.holeType === "parafuso" && h.topDrillable === false)).toBe(true);
 
     const files = buildDrillFilesForProject([makeFundoItem(box.id, fundoHoles)], project);
-    expect(files.length).toBe(1);
-    const xml = files[0]!.xml;
+    expect(files.length).toBeGreaterThanOrEqual(1);
+    const xml = (files.find((f) => f.machineTarget === "cnc") ?? files[0]!).xml;
     expect(xml).toContain("<TypeNo>2</TypeNo>");
     expect(xml).not.toMatch(/parafuso[\s\S]*<TypeNo>1<\/TypeNo>/);
     const parafusoBlocks = xml.match(/<TypeNo>2<\/TypeNo>[\s\S]*?<Diameter>5\.00<\/Diameter>/g) ?? [];
@@ -70,8 +70,13 @@ describe("buildDrillFilesForProject — furos de bordo DIV/SEP", () => {
     expect(fundoHoles.filter((h) => h.holeType === "parafuso").length).toBeGreaterThan(0);
 
     const files = buildDrillFilesForProject([makeFundoItem(box.id, fundoHoles)], project);
-    const xml = files[0]!.xml;
+    const xml = (files.find((f) => f.machineTarget === "cnc") ?? files[0]!).xml;
     expect(xml).toContain("<TypeName>Horizontal Hole</TypeName>");
-    expect(xml.match(/<TypeNo>1<\/TypeNo>/g)?.length ?? 0).toBe(0);
+    // Parafusos de bordo = TypeNo 2; cavilhas de face 10×13 = TypeNo 1 (pares do DIV)
+    const parafusoOk =
+      (xml.match(/<TypeNo>2<\/TypeNo>[\s\S]*?<Diameter>5\.00<\/Diameter>/g) ?? []).length > 0;
+    expect(parafusoOk).toBe(true);
+    expect(xml).toContain("<Diameter>10.00</Diameter>");
+    expect(xml).toContain("<Depth>13.00</Depth>");
   });
 });

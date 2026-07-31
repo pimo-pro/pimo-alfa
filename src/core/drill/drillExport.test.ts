@@ -91,13 +91,17 @@ describe("drillExport — nomes XML alinhados ao sistema de etiquetas", () => {
     expect(panelFileNameFromPiece(item, project, new Map(), 0)).toBe("ANTONIO_NOVO_5_CC1_C1_LAT_DIR");
   });
 
-  it("buildDrillFilesForProject — filenameBase alinhado ao QR v5", () => {
+  it("buildDrillFilesForProject — DRILL + COMPLETO alinhados ao QR v5", () => {
     const items = attachQrCodesToCutlist([lateralItem()], project);
     const piecesPerSheet = buildIndustrialListPiecesPerSheet(items);
     const files = buildDrillFilesForProject(items, project);
-    expect(files).toHaveLength(1);
-    expect(files[0]?.filenameBase).toBe(
-      resolveIndustrialListNqr(items[0]!, project, piecesPerSheet, 0)
-    );
+    const nqr = resolveIndustrialListNqr(items[0]!, project, piecesPerSheet, 0);
+    expect(files).toHaveLength(2);
+    const drill = files.find((f) => f.machineTarget === "drill")!;
+    const completo = files.find((f) => f.machineTarget === "completo")!;
+    expect(drill.filenameBase).toBe(`${nqr}_DRILL`);
+    expect(drill.zipPath).toBe(`drill/XML/${drill.filenameBase}.xml`);
+    expect(completo.filenameBase).toBe(`${nqr}_COMPLETO`);
+    expect(completo.zipPath).toBe(`drill/XML/${completo.filenameBase}.xml`);
   });
 });

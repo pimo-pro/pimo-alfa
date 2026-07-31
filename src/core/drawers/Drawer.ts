@@ -93,7 +93,6 @@ export function createDrawer(
   const bodyWidth = specs.body.width;
   const bodyHeight = specs.body.height;
   const bodyDepth = specs.body.depth;
-  const woodBackHeight = specs.back.height;
   const bodyCenterOffsetY = specs.bodyCenterOffsetY;
   const woodSideDepth = specs.leftSide.depth;
   const sideCenterZ =
@@ -164,7 +163,7 @@ export function createDrawer(
         height: bottomThickness,
         depth: specs.bottom.height,
         positionX: 0,
-        positionY: resolveDrawerBottomCenterYMm(woodBackHeight, bottomThickness, bodyCenterOffsetY),
+        positionY: resolveDrawerBottomCenterYMm(bodyHeight, bottomThickness, bodyCenterOffsetY),
         positionZ: specs.positioning.bodyOffsetZ,
       },
       

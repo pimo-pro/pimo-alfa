@@ -27,6 +27,12 @@ import {
   resolveDrawerWoodBodyHeightMm,
 } from "./drawerViewerLayout";
 import {
+  DRAWER_BOTTOM_FRONT_ENTRY_MM,
+  DRAWER_BOTTOM_SIDE_ENTRY_MM,
+  DRAWER_COSTA_HEIGHT_BELOW_LATERAL_MM,
+  DRAWER_SIDE_BASE_ELEVATION_MM,
+} from "./drawerGeometryConstants";
+import {
   DRAWER_SLIDE_LENGTHS_MM,
   isDrawerSlideLengthMm,
   resolveDrawerSideDepthMm,
@@ -87,6 +93,8 @@ export interface DrawerCalculatedSpecs {
   
   /** Deslocamento vertical do centro do corpo (laterais/costa) para alinhar fundo ao rasgo. */
   bodyCenterOffsetY: number;
+  /** Elevação da base do corpo vs base da frente (mm). Gaveta inferior = 18.5. */
+  sideBaseElevationMm: number;
   
   // Posicionamento
   positioning: {
@@ -150,6 +158,8 @@ export type DrawerParametricOverrides = {
   frontHeightMm?: number;
   metalBoxProfileId?: string;
   metalBoxHeightMm?: number;
+  /** Elevação do corpo vs base da frente (mm). Default 17; gaveta inferior = 18.5. */
+  sideBaseElevationMm?: number;
 };
 
 const MIN_BODY_DEPTH_MM = DRAWER_SLIDE_LENGTHS_MM[0];
@@ -349,7 +359,15 @@ export function calculateDrawerSpecs(
   const woodBodyHeight = resolveDrawerWoodBodyHeightMm(frontHeight);
   const bodyHeight =
     metalBoxEnabled && resolvedMetalHeight > 0 ? resolvedMetalHeight : woodBodyHeight;
-  const bodyCenterOffsetY = resolveDrawerBodyCenterOffsetYMm(frontHeight, woodBodyHeight);
+  const sideElev =
+    overrides?.sideBaseElevationMm != null && Number.isFinite(overrides.sideBaseElevationMm)
+      ? overrides.sideBaseElevationMm
+      : DRAWER_SIDE_BASE_ELEVATION_MM;
+  const bodyCenterOffsetY = resolveDrawerBodyCenterOffsetYMm(
+    frontHeight,
+    woodBodyHeight,
+    sideElev
+  );
   const bodyWidth = clampMm(boxInternalWidth - 2 * sideGap);
   const bodyDepth = clampMm(nominalDepth);
 
@@ -374,13 +392,25 @@ export function calculateDrawerSpecs(
   const rightSideDepth = woodSideDepth;
 
   // ===== TRASEIRA =====
+  // Largura = vão entre laterais; altura = laterais − 23 mm (assenta no fundo).
   const backWidth = clampMm(bodyWidth - 2 * sideThickness);
-  const backHeight = woodBodyHeight;
+  const backHeight = clampMm(
+    Math.max(1, woodBodyHeight - DRAWER_COSTA_HEIGHT_BELOW_LATERAL_MM)
+  );
 
   // ===== FUNDO =====
+  // Área interna (vão entre laterais × profundidade do corpo) + entradas industriais:
+  // largura  = interna + 10 (frente) + espessura_costa
+  // profundidade = interna + 10 + 10 (cada lateral)
   const effectiveBottomThickness = metalBoxEnabled ? sideThickness : bottomThickness;
-  const bottomWidth = backWidth;
-  const bottomDepth = bodyDepth;
+  const internalWidth = backWidth;
+  const internalDepth = bodyDepth;
+  const bottomWidth = clampMm(
+    internalWidth + DRAWER_BOTTOM_FRONT_ENTRY_MM + backThickness
+  );
+  const bottomDepth = clampMm(
+    internalDepth + DRAWER_BOTTOM_SIDE_ENTRY_MM + DRAWER_BOTTOM_SIDE_ENTRY_MM
+  );
 
   // ===== POSICIONAMENTO =====
   // Frente flush na face frontal do módulo; corpo recuado para trás da frente.
@@ -449,6 +479,7 @@ export function calculateDrawerSpecs(
       depth: bodyDepth,
     },
     bodyCenterOffsetY,
+    sideBaseElevationMm: sideElev,
     leftSide: {
       width: leftSideWidth,
       height: leftSideHeight,
@@ -504,9 +535,9 @@ export function calculateDrawerSpecs(
       frontGap,
       sideGap,
       bottomSlots: {
-        front: 0,
-        sides: 0,
-        back: 0,
+        front: DRAWER_BOTTOM_FRONT_ENTRY_MM,
+        sides: DRAWER_BOTTOM_SIDE_ENTRY_MM,
+        back: backThickness,
       },
     },
   };

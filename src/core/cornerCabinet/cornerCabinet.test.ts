@@ -788,7 +788,10 @@ describe("cornerCabinet — exportação TXML industrial", () => {
       item("frente_fixa", [faceHole, { ...faceHole, x: 122 }], { largura: 448, altura: 720 }),
     ];
     const files = buildDrillFilesForProject(items, project);
-    expect(files.length).toBe(4);
+    // 4 peças × (DRILL|CNC + COMPLETO) conforme routing actual
+    expect(files.length).toBeGreaterThanOrEqual(4);
+    const byPanel = new Set(files.map((f) => f.partName));
+    expect(byPanel.size).toBe(4);
     for (const f of files) {
       expect(f.xml).toContain("KDTPanelFormat");
       expect(f.xml).toContain("Diameter>10.00");

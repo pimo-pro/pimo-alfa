@@ -14,6 +14,7 @@ import {
   formatDesignHoleLabel,
   useIndustrialDesignWorkspace,
 } from "@/hooks/useIndustrialDesignWorkspace";
+import { IconCavilhaVinculada } from "@/components/icons/IconCavilhaVinculada";
 
 const USO_COLORS: Record<HoleUsageKind, string> = {
   cavilha: "#38bdf8",
@@ -32,7 +33,11 @@ const PANEL_TIPO_LABEL: Record<string, string> = {
   prateleira: "Prateleira",
   divisoria: "Divisória",
   frente: "Frente",
+  frente_fixa: "Frente fixa",
 };
+
+/** Ferramenta rápida — cavilha vinculada 10×40 (par 10×30↔10×13). */
+const CAVILHA_VINCULADA_TOOL_ID: HoleTypeId = "cavilha_10x30";
 
 /**
  * Painel lateral mínimo — Workspace Industrial de Design.
@@ -124,6 +129,39 @@ export default function IndustrialDesignPanel() {
         <p style={hintStyle}>Seleccione uma caixa no workspace para editar furos.</p>
       ) : (
         <>
+          <section style={sectionStyle}>
+            <div style={sectionTitleStyle}>Ferramenta vinculada</div>
+            <button
+              type="button"
+              title="Cavilha 10×40 — cria Ø10×30 na espessura e Ø10×13 na peça oposta"
+              onClick={() => {
+                setCatalogPickId(CAVILHA_VINCULADA_TOOL_ID);
+                ws.setSelectedHoleTypeId(CAVILHA_VINCULADA_TOOL_ID);
+                ws.setInsertOnClick(true);
+              }}
+              style={{
+                ...catalogItemStyle,
+                borderColor:
+                  ws.selectedHoleTypeId === CAVILHA_VINCULADA_TOOL_ID
+                    ? "#d2b48c"
+                    : "rgba(210, 180, 140, 0.35)",
+                background:
+                  ws.selectedHoleTypeId === CAVILHA_VINCULADA_TOOL_ID
+                    ? "rgba(210, 180, 140, 0.18)"
+                    : "rgba(15, 23, 42, 0.6)",
+                width: "100%",
+              }}
+            >
+              <IconCavilhaVinculada size={28} color="#d2b48c" />
+              <span style={{ textAlign: "left" }}>
+                <span style={{ display: "block", fontWeight: 600 }}>Cavilha vinculada 10×40</span>
+                <span style={{ fontSize: 10, opacity: 0.7 }}>
+                  Ø10×30 espessura → Ø10×13 face · bege
+                </span>
+              </span>
+            </button>
+          </section>
+
           <section style={sectionStyle}>
             <div style={sectionTitleStyle}>Catálogo de furos</div>
             <ul style={catalogListStyle}>

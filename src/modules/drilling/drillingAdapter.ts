@@ -75,6 +75,15 @@ export type PanelDrillingInput = {
   softClose?: boolean;
   /** Gaveta mais baixa do módulo — pino inferior a 41 mm da base da frente. */
   isLowestDrawer?: boolean;
+  /** Gaveta mais alta do módulo (flush à CIMA). */
+  isHighestDrawer?: boolean;
+  /** Papel no stack (`lowest` | `highest` | `middle` | `single`). */
+  drawerStackRole?: string;
+  drawerSideHeightMm?: number;
+  drawerBodyWidthMm?: number;
+  drawerSideThicknessMm?: number;
+  drawerBottomThicknessMm?: number;
+  drawerSideBaseElevationMm?: number;
 };
 
 export type PanelDrillingOutput = {
@@ -196,6 +205,7 @@ function toPanelDrillHoles(furacoesTecnicas: TechnicalDrillHole[], pieceType: Pi
     const topByFace = isTopDrillable(h.face);
     const topDrillable =
       topByFace ||
+      h.topDrillable === true ||
       holeType === "dobradica" ||
       holeType === "dobradica_fixacao" ||
       holeType === "dobradica_parafuso_uniao" ||
@@ -215,7 +225,13 @@ function toPanelDrillHoles(furacoesTecnicas: TechnicalDrillHole[], pieceType: Pi
       base.holeSubtype = "groove";
       if (h.grooveWidth != null) base.grooveWidth = h.grooveWidth;
       if (h.grooveLength != null) base.grooveLength = h.grooveLength;
+      if (h.grooveFullPanelOvercut === true) base.grooveFullPanelOvercut = true;
+      if (h.grooveCorrection != null) base.grooveCorrection = h.grooveCorrection;
+      if (h.grooveToolName) base.grooveToolName = h.grooveToolName;
     }
+    if (h.pairedHoleKey) base.pairedHoleKey = h.pairedHoleKey;
+    if (h.holeCatalogId) base.holeCatalogId = h.holeCatalogId;
+    if (h.ferragemId) base.ferragemId = h.ferragemId;
     return base;
   });
 }
@@ -446,6 +462,13 @@ export function buildPanelDrillingResult(
         metalBoxHeightMm: input.metalBoxHeightMm,
         softClose: input.softClose,
         isLowestDrawer: input.isLowestDrawer,
+        isHighestDrawer: input.isHighestDrawer,
+        drawerStackRole: input.drawerStackRole,
+        drawerSideHeightMm: input.drawerSideHeightMm,
+        drawerBodyWidthMm: input.drawerBodyWidthMm,
+        drawerSideThicknessMm: input.drawerSideThicknessMm,
+        drawerBottomThicknessMm: input.drawerBottomThicknessMm,
+        drawerSideBaseElevationMm: input.drawerSideBaseElevationMm,
         shelfHolesEnabled,
         shelfMode: input.shelfMode,
         hingeSide: input.hingeSide,

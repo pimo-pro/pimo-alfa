@@ -249,12 +249,16 @@ export function buildCornerRightIndustrialPanels(
   const fundo = panels.find((p) => p.id.endsWith(":fundo"))!;
   const lateralLd = panels.find((p) => p.id.endsWith(":lateral-ld"))!;
   const lateralInterna = panels.find((p) => p.id.endsWith(":lateral-interna"))!;
+  const frenteFixa = panels.find((p) => p.id.endsWith(":frente-fixa"))!;
 
   const constraints: PanelConstraint[] = [
     { id: nextDesignId("constraint"), panelAId: cima.id, panelBId: lateralLd.id, tipo: "encaixe_cavilha" },
     { id: nextDesignId("constraint"), panelAId: cima.id, panelBId: lateralInterna.id, tipo: "encaixe_cavilha" },
     { id: nextDesignId("constraint"), panelAId: fundo.id, panelBId: lateralLd.id, tipo: "encaixe_cavilha" },
     { id: nextDesignId("constraint"), panelAId: fundo.id, panelBId: lateralInterna.id, tipo: "encaixe_cavilha" },
+    { id: nextDesignId("constraint"), panelAId: cima.id, panelBId: frenteFixa.id, tipo: "encaixe_cavilha" },
+    { id: nextDesignId("constraint"), panelAId: fundo.id, panelBId: frenteFixa.id, tipo: "encaixe_cavilha" },
+    { id: nextDesignId("constraint"), panelAId: lateralInterna.id, panelBId: frenteFixa.id, tipo: "encaixe_cavilha" },
   ];
 
   return { panels, constraints };
@@ -356,12 +360,16 @@ export function buildCornerLeftIndustrialPanels(
   const fundo = panels.find((p) => p.id.endsWith(":fundo"))!;
   const lateralLe = panels.find((p) => p.id.endsWith(":lateral-le"))!;
   const lateralInterna = panels.find((p) => p.id.endsWith(":lateral-interna"))!;
+  const frenteFixa = panels.find((p) => p.id.endsWith(":frente-fixa"))!;
 
   const constraints: PanelConstraint[] = [
     { id: nextDesignId("constraint"), panelAId: cima.id, panelBId: lateralLe.id, tipo: "encaixe_cavilha" },
     { id: nextDesignId("constraint"), panelAId: cima.id, panelBId: lateralInterna.id, tipo: "encaixe_cavilha" },
     { id: nextDesignId("constraint"), panelAId: fundo.id, panelBId: lateralLe.id, tipo: "encaixe_cavilha" },
     { id: nextDesignId("constraint"), panelAId: fundo.id, panelBId: lateralInterna.id, tipo: "encaixe_cavilha" },
+    { id: nextDesignId("constraint"), panelAId: cima.id, panelBId: frenteFixa.id, tipo: "encaixe_cavilha" },
+    { id: nextDesignId("constraint"), panelAId: fundo.id, panelBId: frenteFixa.id, tipo: "encaixe_cavilha" },
+    { id: nextDesignId("constraint"), panelAId: lateralInterna.id, panelBId: frenteFixa.id, tipo: "encaixe_cavilha" },
   ];
 
   return { panels, constraints };

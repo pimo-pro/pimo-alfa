@@ -673,6 +673,9 @@ export function cutlistToPieces(
       tipoToken === "gaveta_lat_esq" ||
       tipoToken === "gaveta_lat_dir" ||
       tipoToken === "gaveta_traseira";
+    /** Laterais de gaveta: manter eixos SSOT (sem sort L/W nem remap de furos). */
+    const isGavetaLateral =
+      tipoToken === "gaveta_lat_esq" || tipoToken === "gaveta_lat_dir";
     const rawEsp = Number(item.espessura ?? item.dimensoes?.profundidade);
     const materialKey = item.materialId ?? item.material;
     const espIndustrialFallback =
@@ -752,9 +755,15 @@ export function cutlistToPieces(
     // Quando as dimensões são reordenadas (largura < altura → peça fica altura×largura no layout),
     // as coordenadas locais precisam acompanhar a mesma rotação do retângulo, não apenas trocar eixos.
     // A conversão preserva a origem industrial bottom-left: (x, y) → (y, larguraOriginal - x).
+    // EXCEPÇÃO gav_lat_*: orientamento SSOT correcto — NÃO fazer swap L↔W / X↔Y nos furos.
     const origL = Number(item.dimensoes?.largura) || 0;
     const origA = Number(item.dimensoes?.altura) || 0;
-    const dimensionsSwapped = !isRemate && origL > 0 && origA > 0 && origL < origA;
+    const dimensionsSwapped =
+      !isRemate &&
+      !isGavetaLateral &&
+      origL > 0 &&
+      origA > 0 &&
+      origL < origA;
     for (const h of item.drillHoles ?? []) {
       // Incluir cavilhas de aresta (interlock gaveta: face↔espessura). Não filtrar por topDrillable —
       // o layout PDF e o TCN devem espelhar o mesmo SSOT que o XML (drillExport).
@@ -763,6 +772,7 @@ export function cutlistToPieces(
       if (dimensionsSwapped) {
         [x, y] = [y, origL - x];
       }
+      // gav_lat_*: X_final = drillHole.x, Y_final = drillHole.y (sem transformação).
       const diameter = Number(h?.diameter);
       const depth = Number(h?.depth);
       if (Number.isFinite(x) && Number.isFinite(y) && diameter > 0 && depth > 0) {
@@ -792,9 +802,13 @@ export function cutlistToPieces(
       (industrialCode === "YY" ? industrialGrainToLayoutAxis("YY", item.tipo) : undefined);
     const largura = isRemate
       ? Math.round(Math.max(origL > 0 ? origL : dims[0] ?? 1, 1))
+      : isGavetaLateral
+        ? Math.round(Math.max(origL > 0 ? origL : dims[0] ?? 1, 1))
       : Math.round(Math.max(dims[0] ?? 1, 1));
     const altura = isRemate
       ? Math.round(Math.max(origA > 0 ? origA : dims[1] ?? 1, 1))
+      : isGavetaLateral
+        ? Math.round(Math.max(origA > 0 ? origA : dims[1] ?? 1, 1))
       : Math.round(Math.max(dims[1] ?? 1, 1));
     const pieces: CutPiece[] = [];
     const itemWithMeta = item as typeof item & { pieceNumber?: number; shortCode?: string };

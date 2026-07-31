@@ -24,6 +24,7 @@ import {
 import type { DrawerHeightMode } from "./drawerHeightModeTypes";
 import type { ErgonomicHeightRules, KitchenZoneProfile } from "./drawerErgonomicsHeights";
 import { DRAWER_VERTICAL_BASE_OFFSET_MM } from "./drawerVerticalPosition";
+import { resolveLowestDrawerBodyElevationFromFrontMm } from "./drawerStackPosition";
 import { resolveDrawerGroupPosZMm } from "./drawerViewerLayout";
 export interface DrawerGenerationConfig {
   // Box dimensions
@@ -138,7 +139,13 @@ export function generateDrawerGroup(config: DrawerGenerationConfig): DrawerGroup
   for (let i = 0; i < drawerCount; i++) {
     const drawerHeight = heights[i];
     const posY = positions[i];
-    const perDrawerOverrides = drawerOverrides?.[i];
+    const perDrawerOverrides = {
+      ...drawerOverrides?.[i],
+      // Gaveta inferior: corpo 18.5 mm acima da base do módulo (frente continua flush).
+      sideBaseElevationMm:
+        drawerOverrides?.[i]?.sideBaseElevationMm ??
+        (i === 0 ? resolveLowestDrawerBodyElevationFromFrontMm() : undefined),
+    };
     const effectiveDrawerType = perDrawerOverrides?.drawerType ?? drawerType;
 
     // Calcula specs da gaveta (com número total para cálculos proporcionais)

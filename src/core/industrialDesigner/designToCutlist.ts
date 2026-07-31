@@ -108,6 +108,9 @@ export function designDrillHoleToPanelDrillHole(
     holeType,
     face: drillFaceToPanelFace(technical.face, pieceType),
     topDrillable,
+    holeCatalogId: hole.holeTypeId,
+    ferragemId: hole.ferragemId,
+    pairedHoleKey: hole.pairedHoleId,
   };
 }
 

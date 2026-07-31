@@ -175,7 +175,9 @@ export function buildModuleSlideMarkingPattern(input: {
 }
 
 function lengthsForSystem(officialB1ByLength?: Partial<Record<DrawerSlideLengthMm, number>>): SlideDrillingLengthTable[] {
-  return DRAWER_SLIDE_LENGTHS_MM.map((nl) => ({
+  // Lazy: evita TDZ/ciclo de imports com drawerSlideDepth durante o boot do módulo.
+  const lengths = DRAWER_SLIDE_LENGTHS_MM ?? [];
+  return lengths.map((nl) => ({
     comprimentoMm: nl,
     // Tabela nominal: D = NL (referencia). resolveSlideDrillingPattern recalcula com panelDepth real.
     holes: buildModuleSlideMarkingPattern({
@@ -186,7 +188,8 @@ function lengthsForSystem(officialB1ByLength?: Partial<Record<DrawerSlideLengthM
   }));
 }
 
-const SLIDE_DRILLING_CATALOG: SlideDrillingSystemTable[] = [
+function buildSlideDrillingCatalog(): SlideDrillingSystemTable[] {
+  return [
   {
     slideType: HETTICH_QUADRO_V6_YOU_M_SILENT_SYSTEM,
     alturaRelativaFundoMm: SLIDE_AXIS_FROM_DRAWER_BOTTOM_MM,
@@ -260,9 +263,18 @@ const SLIDE_DRILLING_CATALOG: SlideDrillingSystemTable[] = [
     source: "Hafele Matrix — marcacao modulo (X1=38, X_last=D-38, prof. 1 mm).",
     byLength: lengthsForSystem(),
   },
-];
+  ];
+}
 
-const BY_TYPE = new Map(SLIDE_DRILLING_CATALOG.map((e) => [e.slideType, e]));
+let _slideDrillingCatalog: SlideDrillingSystemTable[] | null = null;
+function getSlideDrillingCatalog(): SlideDrillingSystemTable[] {
+  if (!_slideDrillingCatalog) _slideDrillingCatalog = buildSlideDrillingCatalog();
+  return _slideDrillingCatalog;
+}
+
+function getByTypeMap(): Map<string, SlideDrillingSystemTable> {
+  return new Map(getSlideDrillingCatalog().map((e) => [e.slideType, e]));
+}
 
 /** Aliases de UI / legado -> entrada canonica do catalogo. */
 const SLIDE_TYPE_ALIASES: Record<string, string> = {
@@ -275,12 +287,13 @@ const SLIDE_TYPE_ALIASES: Record<string, string> = {
 };
 
 export function listSlideDrillingCatalog(): readonly SlideDrillingSystemTable[] {
-  return SLIDE_DRILLING_CATALOG;
+  return getSlideDrillingCatalog();
 }
 
 export function getSlideDrillingSystemTable(
   slideType?: string | null
 ): SlideDrillingSystemTable {
+  const BY_TYPE = getByTypeMap();
   if (slideType) {
     const canonical = SLIDE_TYPE_ALIASES[slideType] ?? slideType;
     if (BY_TYPE.has(canonical)) return BY_TYPE.get(canonical)!;

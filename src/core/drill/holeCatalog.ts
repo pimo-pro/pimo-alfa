@@ -10,6 +10,7 @@ import {
   CORNER_FF_FACE_DOWEL_DEPTH_MM,
 } from "../cornerCabinet/cornerFixedFrontDowels";
 import { DRILL_DOWEL_DIAMETER_MM } from "./drillConfig";
+import { CAVILHA_10x40_FERRAGEM_ID } from "./cavilha10x40Rule";
 
 /** Face de perfuração relativa à peça. */
 export type HoleFaceKind = "espessura" | "face";
@@ -44,6 +45,8 @@ export interface HoleType {
    * Ex.: cavilha_10x30 (espessura) ↔ cavilha_10x13 (face).
    */
   pairedHoleTypeId?: HoleTypeId;
+  /** Ferragem física gerada por cada par (CAVILHA_10x40). */
+  ferragemId?: string;
 }
 
 const t = defaultRulesConfig.furos.tecnicos;
@@ -52,23 +55,25 @@ const t = defaultRulesConfig.furos.tecnicos;
 export const HOLE_CATALOG: readonly HoleType[] = [
   {
     id: "cavilha_10x30",
-    nome: "Cavilha Ø10 × 30 mm (espessura)",
+    nome: "Cavilha vinculada Ø10 × 30 mm (espessura)",
     diametroMm: DRILL_DOWEL_DIAMETER_MM,
     profundidadeMm: CORNER_FF_EDGE_DOWEL_DEPTH_MM,
     face: "espessura",
     uso: "cavilha",
     drillType: "cavilha",
     pairedHoleTypeId: "cavilha_10x13",
+    ferragemId: CAVILHA_10x40_FERRAGEM_ID,
   },
   {
     id: "cavilha_10x13",
-    nome: "Cavilha Ø10 × 13 mm (face)",
+    nome: "Cavilha vinculada Ø10 × 13 mm (face)",
     diametroMm: DRILL_DOWEL_DIAMETER_MM,
     profundidadeMm: CORNER_FF_FACE_DOWEL_DEPTH_MM,
     face: "face",
     uso: "cavilha",
     drillType: "cavilha",
     pairedHoleTypeId: "cavilha_10x30",
+    ferragemId: CAVILHA_10x40_FERRAGEM_ID,
   },
   {
     id: "parafuso_4x19",

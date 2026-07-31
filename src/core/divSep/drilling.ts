@@ -2,6 +2,12 @@ import type { PanelDrillHole } from "../types";
 import type { DivSepRules } from "../../admin/rules/divSepRules/rulesDefaults";
 import { CORNER_FF_EDGE_DOWEL_DEPTH_MM } from "../cornerCabinet/cornerFixedFrontDowels";
 import {
+  CAVILHA_10x40_FERRAGEM_ID,
+  CAVILHA_EDGE_HOLE_TYPE_ID,
+  CAVILHA_FACE_DEPTH_MM,
+  CAVILHA_FACE_HOLE_TYPE_ID,
+} from "../drill/cavilha10x40Rule";
+import {
   calcularPosicoesCavilha,
   getCavilhaDepthMm,
   getCavilhaDiameterMm,
@@ -56,9 +62,25 @@ function pushHole(
   depth: number,
   holeType: PanelDrillHole["holeType"],
   face: "A" | "B" = "B",
-  topDrillable?: boolean
+  topDrillable?: boolean,
+  meta?: {
+    pairedHoleKey?: string;
+    holeCatalogId?: string;
+    ferragemId?: string;
+  }
 ): void {
-  out.push({ x, y, diameter, depth, holeType, face, topDrillable });
+  out.push({
+    x,
+    y,
+    diameter,
+    depth,
+    holeType,
+    face,
+    topDrillable,
+    pairedHoleKey: meta?.pairedHoleKey,
+    holeCatalogId: meta?.holeCatalogId,
+    ferragemId: meta?.ferragemId,
+  });
 }
 
 /** Posições ao longo da profundidade: cavilha 60/60 mm, parafuso 90/90 mm. */
@@ -83,14 +105,25 @@ function drillSeparadorEdgeHoles(
   sepHoles: PanelDrillHole[],
   panelLarguraMm: number,
   profundidadeMm: number,
-  rules: DivSepRules
+  rules: DivSepRules,
+  sepId: string
 ): void {
   const cavilhaD = getCavilhaDiameterMm(rules);
   const depthPos = calcDepthHolePositions(profundidadeMm, rules);
-  for (const yPos of depthPos.cavilha) {
-    pushHole(sepHoles, 0, yPos, cavilhaD, CORNER_FF_EDGE_DOWEL_DEPTH_MM, "cavilha", "B", false);
-    pushHole(sepHoles, panelLarguraMm, yPos, cavilhaD, CORNER_FF_EDGE_DOWEL_DEPTH_MM, "cavilha", "B", false);
-  }
+  depthPos.cavilha.forEach((yPos, i) => {
+    const keyL = `divsep-sep-${sepId}-L-${i}`;
+    const keyR = `divsep-sep-${sepId}-R-${i}`;
+    pushHole(sepHoles, 0, yPos, cavilhaD, CORNER_FF_EDGE_DOWEL_DEPTH_MM, "cavilha", "B", false, {
+      pairedHoleKey: keyL,
+      holeCatalogId: CAVILHA_EDGE_HOLE_TYPE_ID,
+      ferragemId: CAVILHA_10x40_FERRAGEM_ID,
+    });
+    pushHole(sepHoles, panelLarguraMm, yPos, cavilhaD, CORNER_FF_EDGE_DOWEL_DEPTH_MM, "cavilha", "B", false, {
+      pairedHoleKey: keyR,
+      holeCatalogId: CAVILHA_EDGE_HOLE_TYPE_ID,
+      ferragemId: CAVILHA_10x40_FERRAGEM_ID,
+    });
+  });
 }
 
 function drillLateralAtSepHeight(
@@ -99,15 +132,26 @@ function drillLateralAtSepHeight(
   centerY: number,
   receptorThickness: number,
   rules: DivSepRules,
-  includeParafuso: boolean
+  includeParafuso: boolean,
+  sepId: string
 ): void {
   const cavilhaD = getCavilhaDiameterMm(rules);
-  const faceCavilhaDepth = getCavilhaDepthMm(rules);
+  const faceCavilhaDepth = Math.min(getCavilhaDepthMm(rules), CAVILHA_FACE_DEPTH_MM);
   const depthPos = calcDepthHolePositions(profundidadeMm, rules);
-  for (const latX of depthPos.cavilha) {
-    pushHole(bucket.lateral_esquerda, latX, centerY, cavilhaD, faceCavilhaDepth, "cavilha", "B", true);
-    pushHole(bucket.lateral_direita, latX, centerY, cavilhaD, faceCavilhaDepth, "cavilha", "B", true);
-  }
+  depthPos.cavilha.forEach((latX, i) => {
+    const keyL = `divsep-sep-${sepId}-L-${i}`;
+    const keyR = `divsep-sep-${sepId}-R-${i}`;
+    pushHole(bucket.lateral_esquerda, latX, centerY, cavilhaD, faceCavilhaDepth, "cavilha", "B", true, {
+      pairedHoleKey: keyL,
+      holeCatalogId: CAVILHA_FACE_HOLE_TYPE_ID,
+      ferragemId: CAVILHA_10x40_FERRAGEM_ID,
+    });
+    pushHole(bucket.lateral_direita, latX, centerY, cavilhaD, faceCavilhaDepth, "cavilha", "B", true, {
+      pairedHoleKey: keyR,
+      holeCatalogId: CAVILHA_FACE_HOLE_TYPE_ID,
+      ferragemId: CAVILHA_10x40_FERRAGEM_ID,
+    });
+  });
   if (!includeParafuso) return;
   for (const latX of depthPos.parafuso) {
     pushHole(bucket.lateral_esquerda, latX, centerY, 5, receptorThickness, "parafuso", "B", true);
@@ -119,13 +163,19 @@ function drillSeparadorBottomFaceForDiv(
   sepHoles: PanelDrillHole[],
   sepLocalX: number,
   profundidadeMm: number,
-  rules: DivSepRules
+  rules: DivSepRules,
+  pairKeyPrefix: string
 ): void {
   const cavilhaD = getCavilhaDiameterMm(rules);
   const depthPos = calcDepthHolePositions(profundidadeMm, rules);
-  for (const yPos of depthPos.cavilha) {
-    pushHole(sepHoles, sepLocalX, yPos, cavilhaD, CORNER_FF_EDGE_DOWEL_DEPTH_MM, "cavilha", "B", true);
-  }
+  depthPos.cavilha.forEach((yPos, i) => {
+    // Face do SEP: 10×13 (par da aresta superior do DIV 10×30)
+    pushHole(sepHoles, sepLocalX, yPos, cavilhaD, CAVILHA_FACE_DEPTH_MM, "cavilha", "B", true, {
+      pairedHoleKey: `${pairKeyPrefix}-${i}`,
+      holeCatalogId: CAVILHA_FACE_HOLE_TYPE_ID,
+      ferragemId: CAVILHA_10x40_FERRAGEM_ID,
+    });
+  });
 }
 
 function drillSeparador(
@@ -142,14 +192,15 @@ function drillSeparador(
   const sepHoles: PanelDrillHole[] = [];
   const panelLarguraMm = item.larguraMm ?? dims.larguraMm;
 
-  drillSeparadorEdgeHoles(sepHoles, panelLarguraMm, dims.profundidadeMm, rules);
+  drillSeparadorEdgeHoles(sepHoles, panelLarguraMm, dims.profundidadeMm, rules, panelId);
   drillLateralAtSepHeight(
     bucket,
     dims.profundidadeMm,
     centerY,
     internal.espessura,
     rules,
-    linkedDivs.length > 0
+    linkedDivs.length > 0,
+    panelId
   );
 
   if (rules.enableDivSepCombinations) {
@@ -157,7 +208,13 @@ function drillSeparador(
       const divCenterX = resolveDivisorCenterX(box, linkedDiv);
       const sepLocalX = mapDivCenterXToSepLocalX(box, item, divCenterX);
       if (sepLocalX >= 0 && sepLocalX <= panelLarguraMm) {
-        drillSeparadorBottomFaceForDiv(sepHoles, sepLocalX, dims.profundidadeMm, rules);
+        drillSeparadorBottomFaceForDiv(
+          sepHoles,
+          sepLocalX,
+          dims.profundidadeMm,
+          rules,
+          `divsep-div-${linkedDiv.id ?? "div"}-sep-${item.id}`
+        );
       }
     }
   }
@@ -165,6 +222,10 @@ function drillSeparador(
   bucket.separador.set(panelId, sepHoles);
 }
 
+/**
+ * Face 10×13 em CIMA/FUNDO — pares das arestas do DIV (10×30).
+ * Parafusos de bordo mantêm-se na espessura (CNC TypeNo 2).
+ */
 function drillTopBottomForDiv(
   bucket: HoleBucket,
   box: DivSepBoxLike,
@@ -177,17 +238,23 @@ function drillTopBottomForDiv(
   const centerX = resolveDivisorCenterX(box, item);
   const depthPos = calcDepthHolePositions(dims.profundidadeMm, rules);
   const cavilhaD = getCavilhaDiameterMm(rules);
+  const faceDepth = Math.min(getCavilhaDepthMm(rules), CAVILHA_FACE_DEPTH_MM);
+  const divId = item.id ?? "div";
 
-  const targetPanels: PanelDrillHole[][] = [];
-  if (panels.includeCima) targetPanels.push(bucket.cima);
-  if (panels.includeFundo) targetPanels.push(bucket.fundo);
+  const faceTargets: Array<{ holes: PanelDrillHole[]; edge: "top" | "bot" }> = [];
+  if (panels.includeCima) faceTargets.push({ holes: bucket.cima, edge: "top" });
+  if (panels.includeFundo) faceTargets.push({ holes: bucket.fundo, edge: "bot" });
 
-  for (const panelHoles of targetPanels) {
-    for (const yPos of depthPos.cavilha) {
-      pushHole(panelHoles, centerX, yPos, cavilhaD, CORNER_FF_EDGE_DOWEL_DEPTH_MM, "cavilha", "B", false);
-    }
+  for (const { holes, edge } of faceTargets) {
+    depthPos.cavilha.forEach((yPos, i) => {
+      pushHole(holes, centerX, yPos, cavilhaD, faceDepth, "cavilha", "B", true, {
+        pairedHoleKey: `divsep-div-${divId}-${edge}-${i}`,
+        holeCatalogId: CAVILHA_FACE_HOLE_TYPE_ID,
+        ferragemId: CAVILHA_10x40_FERRAGEM_ID,
+      });
+    });
     for (const yPos of depthPos.parafuso) {
-      pushHole(panelHoles, centerX, yPos, 5, internal.espessura, "parafuso", "B", false);
+      pushHole(holes, centerX, yPos, 5, internal.espessura, "parafuso", "B", false);
     }
   }
 }
@@ -201,13 +268,64 @@ function resolveDivTopBottomPanels(item: DivisorItem, box: DivSepBoxLike, rules:
   };
 }
 
+/** Arestas 10×30 no DIV — pares de CIMA/FUNDO (face) ou SEP (face). */
+function drillDivisorEdgeCavilhas(
+  divHoles: PanelDrillHole[],
+  box: DivSepBoxLike,
+  item: DivisorItem,
+  rules: DivSepRules,
+  panels: TopBottomPanels
+): void {
+  const dims = resolveDivisorDimensions(box, item);
+  const depthPos = calcDepthHolePositions(dims.profundidadeMm, rules);
+  const cavilhaD = getCavilhaDiameterMm(rules);
+  const edgeOffset = Math.max(0.5, box.espessura ? Number(box.espessura) / 2 : 9.5);
+  const yTop = Math.max(edgeOffset, dims.alturaMm - edgeOffset);
+  const yBot = edgeOffset;
+  const divId = item.id ?? "div";
+
+  const linkedSep =
+    rules.enableDivSepCombinations && item.linkedSeparadorId
+      ? findSeparadorById(box, item.linkedSeparadorId)
+      : undefined;
+
+  depthPos.cavilha.forEach((xPos, i) => {
+    if (panels.includeFundo) {
+      pushHole(divHoles, xPos, yBot, cavilhaD, CORNER_FF_EDGE_DOWEL_DEPTH_MM, "cavilha", "B", false, {
+        pairedHoleKey: `divsep-div-${divId}-bot-${i}`,
+        holeCatalogId: CAVILHA_EDGE_HOLE_TYPE_ID,
+        ferragemId: CAVILHA_10x40_FERRAGEM_ID,
+      });
+    }
+    if (panels.includeCima) {
+      pushHole(divHoles, xPos, yTop, cavilhaD, CORNER_FF_EDGE_DOWEL_DEPTH_MM, "cavilha", "B", false, {
+        pairedHoleKey: `divsep-div-${divId}-top-${i}`,
+        holeCatalogId: CAVILHA_EDGE_HOLE_TYPE_ID,
+        ferragemId: CAVILHA_10x40_FERRAGEM_ID,
+      });
+    } else if (linkedSep) {
+      const sepId = linkedSep.id ?? item.linkedSeparadorId ?? "sep";
+      pushHole(divHoles, xPos, yTop, cavilhaD, CORNER_FF_EDGE_DOWEL_DEPTH_MM, "cavilha", "B", false, {
+        pairedHoleKey: `divsep-div-${divId}-sep-${sepId}-${i}`,
+        holeCatalogId: CAVILHA_EDGE_HOLE_TYPE_ID,
+        ferragemId: CAVILHA_10x40_FERRAGEM_ID,
+      });
+    }
+  });
+}
+
 function drillDivisor(
   bucket: HoleBucket,
   box: DivSepBoxLike,
   item: DivisorItem,
+  panelId: string,
   rules: DivSepRules
 ): void {
-  drillTopBottomForDiv(bucket, box, item, rules, resolveDivTopBottomPanels(item, box, rules));
+  const panels = resolveDivTopBottomPanels(item, box, rules);
+  drillTopBottomForDiv(bucket, box, item, rules, panels);
+  const divHoles: PanelDrillHole[] = [];
+  drillDivisorEdgeCavilhas(divHoles, box, item, rules, panels);
+  bucket.divisorio.set(panelId, divHoles);
 }
 
 export type DivSepDrillingResult = {
@@ -219,7 +337,15 @@ function countHoleTypes(holes: PanelDrillHole[]): { cavilhas10: number; parafuso
   let cavilhas10 = 0;
   let parafusos4x50 = 0;
   for (const h of holes) {
-    if (h.holeType === "cavilha") cavilhas10 += 1;
+    // 1× CAVILHA_10x40 por furo de aresta 10×30 (não contar faces 13)
+    if (
+      h.holeType === "cavilha" &&
+      h.diameter === 10 &&
+      h.depth === CORNER_FF_EDGE_DOWEL_DEPTH_MM &&
+      h.topDrillable === false
+    ) {
+      cavilhas10 += 1;
+    }
     if (h.holeType === "parafuso") parafusos4x50 += 1;
   }
   return { cavilhas10, parafusos4x50 };
@@ -256,8 +382,9 @@ export function buildDivSepDrilling(
     drillSeparador(bucket, box, sep, pid, cfg, linkedDivs);
   });
 
-  divisores.forEach((div) => {
-    drillDivisor(bucket, box, div, cfg);
+  divisores.forEach((div, i) => {
+    const pid = panelIds?.divisores?.[i] ?? div.id;
+    drillDivisor(bucket, box, div, pid, cfg);
   });
 
   const getExtraHoles = (tipo: string, panelId?: string): PanelDrillHole[] => {

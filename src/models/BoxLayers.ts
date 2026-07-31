@@ -85,6 +85,8 @@ export type DrawerLayerMetadata = {
    * `individual` após edição manual (prioridade até novo apply global).
    */
   hardwareSource?: "global" | "individual";
+  /** Elevação da base dos laterais acima da base do módulo (mm). */
+  sideBaseElevationMm?: number;
 };
 
 export interface DrawerLayerItem {

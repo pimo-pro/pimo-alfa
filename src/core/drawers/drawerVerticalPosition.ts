@@ -1,13 +1,23 @@
 /**
  * Posicionamento vertical unificado das gavetas (FASE 5 + folgas industriais).
  * Fonte única para DrawerGroup, useLayerActions e Viewer.
+ *
+ * Stack de frentes: flush à base do vão e flush à CIMA.
+ * Folga vertical apenas ENTRE frentes consecutivas (`DRAWER_VERTICAL_GAP_MM`).
  */
 
-import { DRAWER_VERTICAL_GAP_MM } from "./drawerGeometryConstants";
+import {
+  DRAWER_LOWEST_FRONT_BOTTOM_FROM_MODULE_BASE_MM,
+  DRAWER_VERTICAL_GAP_MM,
+} from "./drawerGeometryConstants";
 
 export { DRAWER_VERTICAL_GAP_MM };
 
-export const DRAWER_VERTICAL_BASE_OFFSET_MM = 10;
+/**
+ * Offset da 1ª frente relativamente à base do módulo (mm).
+ * SSOT = `DRAWER_LOWEST_FRONT_BOTTOM_FROM_MODULE_BASE_MM` (0 = flush).
+ */
+export const DRAWER_VERTICAL_BASE_OFFSET_MM = DRAWER_LOWEST_FRONT_BOTTOM_FROM_MODULE_BASE_MM;
 
 export function getDrawerUsableInternalHeightMm(boxInternalHeightMm: number): number {
   return Math.max(1, boxInternalHeightMm - DRAWER_VERTICAL_BASE_OFFSET_MM);
@@ -15,6 +25,7 @@ export function getDrawerUsableInternalHeightMm(boxInternalHeightMm: number): nu
 
 /**
  * Centro Y da gaveta no sistema local do módulo (mm, origem no centro do box).
+ * Índice 0 = gaveta inferior; último = gaveta superior.
  */
 export function resolveDrawerVerticalPosition(
   drawerIndex: number,

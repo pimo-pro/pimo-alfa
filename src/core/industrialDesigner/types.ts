@@ -50,6 +50,8 @@ export interface DesignDrillHole {
   drillFace?: DrillFace;
   /** ID do furo gerado automaticamente na peça oposta (encaixe cavilha). */
   pairedHoleId?: string;
+  /** Ferragem física associada ao par (CAVILHA_10x40). */
+  ferragemId?: string;
 }
 
 /** Tipo de constraint entre painéis. */

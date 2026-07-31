@@ -987,7 +987,10 @@ export function useGerarArquivoHandlers() {
           a.click();
         }
         setTimeout(() => urls.forEach((u) => URL.revokeObjectURL(u)), 500);
-        showToast("XML de furação gerado.", "info");
+        const nCnc = drillFiles.filter((f) => f.machineTarget === "cnc").length;
+        const nDrill = drillFiles.filter((f) => f.machineTarget === "drill").length;
+        const nCompleto = drillFiles.filter((f) => f.machineTarget === "completo").length;
+        showToast(`XML gerado: ${nCnc} CNC + ${nDrill} DRILL + ${nCompleto} COMPLETO.`, "info");
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -1392,20 +1395,19 @@ export function useGerarArquivoHandlers() {
         }
       }
 
-      // --- DRILL (XML): um ficheiro por lateral ---
+      // --- XML CNC + DRILL: pastas separadas ---
       if (!abortFullExport) {
         try {
-          const drillFiles = buildDrillFilesForProject(allItems, {
+          const xmlFiles = buildDrillFilesForProject(allItems, {
             projectName: project.projectName ?? "Projeto",
             boxes: boxes ?? [],
             rules: project.rules,
           });
-          for (const f of drillFiles) {
-            const path = `drill/XML/${f.filenameBase}.xml`;
-            zip.file(path, f.xml);
+          for (const f of xmlFiles) {
+            zip.file(f.zipPath, f.xml);
           }
         } catch (err) {
-          errors.push({ step: "DRILL (XML)", error: String(err) });
+          errors.push({ step: "XML CNC/DRILL", error: String(err) });
         }
       }
 

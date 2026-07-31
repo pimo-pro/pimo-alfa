@@ -42,6 +42,7 @@ import {
   type PieceProductionKind,
   type PieceProductionSequence,
 } from "../labelConfig/labelSequenceEngine";
+import { pieceShouldHaveDrillLabel } from "../drill/xmlMachineRouting";
 import type {
   LabelDesignerConfig,
   LabelTextElement,
@@ -496,7 +497,7 @@ function labelItemToPieceData(item: LabelItem, project: ProjectForEtiquetasPdf):
     name: item.pieceName ?? item.nome ?? "peca",
     kind: inferPieceKind(item),
     thicknessMm: item.espessura ?? 0,
-    hasDrillFile: Boolean(item.drillHoles?.length),
+    hasDrillFile: pieceShouldHaveDrillLabel(item),
     orlaPieceConfig,
     drillHoles: item.drillHoles?.map((h) => ({ x: h.x, y: h.y })),
     widthMm: item.dimensoes?.largura,

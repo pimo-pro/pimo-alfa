@@ -41,8 +41,9 @@ function buildFrenteIntXml(): string {
     boxes: [],
     rules: defaultRulesConfig,
   });
-  expect(files).toHaveLength(1);
-  return files[0].xml;
+  expect(files.length).toBeGreaterThanOrEqual(1);
+  const drill = files.find((f) => f.machineTarget === "drill") ?? files[0]!;
+  return drill.xml;
 }
 
 describe("drillExport — FRENTE_INT alinhado com XML industrial", () => {
@@ -53,21 +54,21 @@ describe("drillExport — FRENTE_INT alinhado com XML industrial", () => {
     expect(xml).toContain("<PanelThickness>16.00</PanelThickness>");
   });
 
-  it("4 cavilhas horizontais TypeNo=2 + corrediças", () => {
+  it("4 cavilhas horizontais TypeNo=2 (DRILL; sem Ø5 / corrediças)", () => {
     const xml = buildFrenteIntXml();
-    expect((xml.match(/<CAD>/g) ?? []).length).toBeGreaterThanOrEqual(7);
+    expect((xml.match(/<CAD>/g) ?? []).length).toBe(4);
     expect(xml).not.toContain("<TypeNo>3</TypeNo>");
-    // 4 cavilhas Ø10 + corrediças Ø5 (ambas TypeNo=2 neste pipeline)
+    expect(xml).not.toContain("<Diameter>5.00</Diameter>");
     expect((xml.match(/<Diameter>10.00<\/Diameter>/g) ?? []).length).toBe(4);
     expect(xml).toContain("<Depth>13.00</Depth>");
   });
 
-  it("furos horizontais X=0 e X=L com Y=30 e W-30; Depth face=13", () => {
+  it("furos horizontais X=0 e X=L com Y=15 e W-35; Depth face=13 (golden)", () => {
     const xml = buildFrenteIntXml();
     expect(xml).toContain("<X1>0.00</X1>");
     expect(xml).toContain("<X1>500.00</X1>");
-    expect(xml).toContain("<Y1>30.00</Y1>");
-    expect(xml).toContain("<Y1>170.00</Y1>");
+    expect(xml).toContain("<Y1>15.00</Y1>");
+    expect(xml).toContain("<Y1>165.00</Y1>"); // 200 − 35
     expect(xml).toContain("<Z1>8.00</Z1>");
     expect(xml).toContain("<Depth>13.00</Depth>");
     expect(xml).toContain("<Diameter>10.00</Diameter>");

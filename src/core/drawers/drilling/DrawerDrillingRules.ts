@@ -31,13 +31,39 @@ import {
 } from "./drawerSlideDrillingCatalog";
 import { DRAWER_VERTICAL_BASE_OFFSET_MM } from "../drawerVerticalPosition";
 import {
-  clampDrawerEdgeDowelDepthMm,
+  DRAWER_BOTTOM_GROOVE_DEPTH_EXTRA_MM,
+  DRAWER_BOTTOM_GROOVE_WIDTH_MM,
+  DRAWER_BOTTOM_GROOVE_Y_FROM_TOP_MM,
+  DRAWER_LAT_GROOVE_BOTTOM_DEPTH_MM,
+  DRAWER_LAT_GROOVE_BOTTOM_FROM_TOP_MM,
+  DRAWER_LAT_GROOVE_BOTTOM_WIDTH_MM,
+  DRAWER_LAT_GROOVE_CORRECTION,
+  DRAWER_LAT_GROOVE_TOOL_NAME,
+  DRAWER_LAT_GROOVE_TOP_DEPTH_MM,
+  DRAWER_LAT_GROOVE_TOP_FROM_TOP_MM,
+  DRAWER_LAT_GROOVE_TOP_WIDTH_MM,
+  DRAWER_LOWEST_BODY_ABOVE_MODULE_BASE_MM,
+  DRAWER_LOWEST_FRONT_DOWEL_X_INSET_MM,
+  DRAWER_LOWEST_FRONT_GROOVE_FROM_TOP_MM,
+  DRAWER_LOWEST_FRONT_GROOVE_X_INSET_MM,
+  DRAWER_SIDE_BASE_ELEVATION_MM,
+} from "../drawerGeometryConstants";
+import {
+  CAVILHA_10x40_FERRAGEM_ID,
+  CAVILHA_EDGE_HOLE_TYPE_ID,
+  CAVILHA_FACE_HOLE_TYPE_ID,
+} from "../../drill/cavilha10x40Rule";
+import type { DrawerStackRole } from "../drawerStackPosition";
+import {
   clampDrawerFaceDowelDepthMm,
   DRAWER_DOWEL_DIAMETER_MM,
+  DRAWER_DOWEL_EDGE_DEPTH_MM,
   DRAWER_SLIDE_OFFSET_FROM_BOTTOM_MM,
   drawerThicknessCenterMm,
+  getDrawerCostaDowelYPositionsMm,
   getDrawerFrontDowelYPositionsMm,
-  getDrawerRearDowelYPositionsMm,
+  getDrawerLateralEdgeDowelYPositionsMm,
+  getDrawerLateralFaceDowelYPositionsMm,
 } from "./drawerDowelInterlock";
 
 export {
@@ -525,22 +551,15 @@ export function resolvePiDrawerCountForDrilling(input: {
   return clampMm(input.legacyFixedLineCount ?? 3, 1, 4);
 }
 
-// ─── Furação Estrutural de Montagem (interlock face ↔ espessura) ───
+// --- Furacao Estrutural (golden XML_COMPLITO) ---
 
 /**
- * Furação estrutural das laterais da gaveta.
- *
- * Sistema de coordenadas da peça:
- *   x = ao longo de largura (= profundidade do corpo da gaveta, L no KDT)
- *   y = ao longo de altura  (= altura da gaveta, W no KDT)
- *
- * Interlock:
- *   - Aresta traseira ↔ costa (face): Y = 39 / H−39, prof. aresta clamp(30)
- *   - Aresta frontal ↔ frente (face): Y tabela SSOT, prof. aresta clamp(30)
- *   - Centro na espessura: Z KDT = T/2 (modelado via face de aresta)
- *
- * LAT_ESQ: traseira X=L face tras; frente X=0 face frente (Q1).
- * LAT_DIR: traseira X=0 face frente; frente X=L face tras (Q2, espelho).
+ * Laterais — golden LAT_DIR / LAT_ESQ.
+ * Face TypeNo=1: X=T/2|L-T/2; Y=15, W-38; Depth 13
+ * Aresta TypeNo=2: X=0|L; Y=15, W-35; Depth 30
+ * Rasgos inferiores fixos (independentes de L / frente / stack):
+ *   W−13 → Width 13 Depth 3; W−23 → Width 11 Depth 10
+ *   CAD: BeginX=L+10 … EndX=−10, Correction=2, FRESA_DESBASTE_10MM
  */
 export function computeDrawerLateralStructuralHoles(params: {
   largura: number;
@@ -549,76 +568,118 @@ export function computeDrawerLateralStructuralHoles(params: {
   side: "esq" | "dir";
   isLowestDrawer?: boolean;
 }): TechnicalDrillHole[] {
-  const { largura, altura, espessura, side, isLowestDrawer } = params;
+  void params.isLowestDrawer;
+  const { largura, altura, espessura, side } = params;
   const holes: TechnicalDrillHole[] = [];
-  const edgeDepth = clampDrawerEdgeDowelDepthMm(espessura);
   const dia = DRAWER_DOWEL_DIAMETER_MM;
+  const faceDepth = clampDrawerFaceDowelDepthMm(espessura);
+  const edgeDepth = DRAWER_DOWEL_EDGE_DEPTH_MM;
+  const tHalf = drawerThicknessCenterMm(espessura);
 
-  const rearX = side === "dir" ? 0 : largura;
-  const rearFace: DrillFace = side === "dir" ? "frente" : "tras";
-  const frontX = side === "dir" ? largura : 0;
-  const frontFace: DrillFace = side === "dir" ? "tras" : "frente";
-
-  for (const y of getDrawerRearDowelYPositionsMm(altura)) {
+  const faceX = side === "dir" ? largura - tHalf : tHalf;
+  for (const y of getDrawerLateralFaceDowelYPositionsMm(altura)) {
+    if (y <= 0 || y >= altura) continue;
     holes.push({
-      x: rearX,
+      x: faceX,
+      y,
+      diametro: dia,
+      profundidade: faceDepth,
+      tipo: "cavilha",
+      face: "cima",
+      topDrillable: true,
+    });
+  }
+
+  const edgeX = side === "dir" ? 0 : largura;
+  const edgeFace: DrillFace = side === "dir" ? "frente" : "tras";
+  let edgeIdx = 0;
+  for (const y of getDrawerLateralEdgeDowelYPositionsMm(altura)) {
+    if (y <= 0 || y >= altura) continue;
+    const sideKey = side === "dir" ? "dir" : "esq";
+    holes.push({
+      x: edgeX,
       y,
       diametro: dia,
       profundidade: edgeDepth,
       tipo: "cavilha",
-      face: rearFace,
+      face: edgeFace,
+      holeCatalogId: CAVILHA_EDGE_HOLE_TYPE_ID,
+      ferragemId: CAVILHA_10x40_FERRAGEM_ID,
+      pairedHoleKey: `gav-frent-lat-${edgeIdx++}-${sideKey}`,
     });
   }
 
-  for (const y of getDrawerFrontDowelYPositionsMm(altura, isLowestDrawer)) {
-    holes.push({
-      x: frontX,
-      y,
-      diametro: dia,
-      profundidade: edgeDepth,
-      tipo: "cavilha",
-      face: frontFace,
-    });
-  }
-
-  // Rasgo — face "cima" (encaixe do fundo; igual em esq/dir no KDT)
-  holes.push({
-    x: 0,
-    y: altura - 13,
-    diametro: 0,
-    profundidade: 3,
-    tipo: "fixacao_estrutural",
-    face: "cima",
-    holeSubtype: "groove",
-    grooveWidth: 13,
-    grooveLength: largura,
-  });
+  holes.push(...buildDrawerLateralBottomGrooves(largura, altura));
 
   return holes;
 }
 
 /**
- * Furação estrutural da costa da gaveta (gaveta_traseira).
- * Furos de face/aresta sincronizados com laterais (Y=39 / H−39, prof. 13 mm).
- * Face "cima": fixação do fundo (mantida).
+ * Dois rasgos inferiores permanentes dos laterais (esq/dir).
+ * Y/Width/Depth fixos relativos a W; comprimento CAD adapta-se a L no export.
+ */
+export function buildDrawerLateralBottomGrooves(
+  larguraMm: number,
+  alturaMm: number
+): TechnicalDrillHole[] {
+  const L = Math.max(0, Number(larguraMm) || 0);
+  const W = Math.max(0, Number(alturaMm) || 0);
+  if (W <= 0) return [];
+
+  const meta = {
+    tipo: "fixacao_estrutural" as const,
+    face: "frente" as const,
+    holeSubtype: "groove" as const,
+    grooveFullPanelOvercut: true,
+    grooveCorrection: DRAWER_LAT_GROOVE_CORRECTION,
+    grooveToolName: DRAWER_LAT_GROOVE_TOOL_NAME,
+    /** Comprimento útil do painel (informativo); export usa overcut L±10. */
+    grooveLength: L,
+  };
+
+  return [
+    {
+      x: 0,
+      y: W - DRAWER_LAT_GROOVE_TOP_FROM_TOP_MM,
+      diametro: 0,
+      profundidade: DRAWER_LAT_GROOVE_TOP_DEPTH_MM,
+      grooveWidth: DRAWER_LAT_GROOVE_TOP_WIDTH_MM,
+      ...meta,
+    },
+    {
+      x: 0,
+      y: W - DRAWER_LAT_GROOVE_BOTTOM_FROM_TOP_MM,
+      diametro: 0,
+      profundidade: DRAWER_LAT_GROOVE_BOTTOM_DEPTH_MM,
+      grooveWidth: DRAWER_LAT_GROOVE_BOTTOM_WIDTH_MM,
+      ...meta,
+    },
+  ];
+}
+
+/**
+ * Costa � golden COSTA_GAVETA.
+ * Altura SSOT = laterais - 23; Y = 15 e W-15; Depth 30; topo X=8/L-8 Depth 10.
  */
 export function computeDrawerCostaStructuralHoles(params: {
   largura: number;
   altura: number;
   espessura: number;
+  lateralAlturaMm?: number;
 }): TechnicalDrillHole[] {
-  const { largura, altura, espessura } = params;
+  void params.lateralAlturaMm;
+  void params.espessura;
+  const { largura, altura } = params;
   const holes: TechnicalDrillHole[] = [];
-  const faceDepth = clampDrawerFaceDowelDepthMm(espessura);
   const dia = DRAWER_DOWEL_DIAMETER_MM;
-  const ys = getDrawerRearDowelYPositionsMm(altura);
+  const edgeDepth = DRAWER_DOWEL_EDGE_DEPTH_MM;
 
-  for (const y of ys) {
+  for (const y of getDrawerCostaDowelYPositionsMm(altura)) {
     holes.push({
       x: 0,
       y,
       diametro: dia,
-      profundidade: faceDepth,
+      profundidade: edgeDepth,
       tipo: "cavilha",
       face: "esquerda",
     });
@@ -626,44 +687,46 @@ export function computeDrawerCostaStructuralHoles(params: {
       x: largura,
       y,
       diametro: dia,
-      profundidade: faceDepth,
+      profundidade: edgeDepth,
       tipo: "cavilha",
       face: "direita",
     });
   }
 
-  // Furos verticais — face "cima" (fixação do fundo)
-  const inset = drawerThicknessCenterMm(espessura) || 8;
+  const inset = 8;
   holes.push({
     x: inset,
     y: altura,
     diametro: dia,
-    profundidade: Math.min(10, clampDrawerFaceDowelDepthMm(espessura)),
+    profundidade: 10,
     tipo: "fixacao_estrutural",
     face: "cima",
+    topDrillable: true,
   });
   holes.push({
     x: largura - inset,
     y: altura,
     diametro: dia,
-    profundidade: Math.min(10, clampDrawerFaceDowelDepthMm(espessura)),
+    profundidade: 10,
     tipo: "fixacao_estrutural",
     face: "cima",
+    topDrillable: true,
   });
 
   return holes;
 }
 
 /**
- * Furação estrutural da frente interna da gaveta (gaveta_frente).
- * Y sincronizados com laterais (tabela SSOT); profundidade face 13 mm.
+ * Frente interna � Y sync laterais (15 / H-35); Depth 13.
  */
 export function computeDrawerFrenteIntStructuralHoles(params: {
   largura: number;
   altura: number;
   espessura: number;
-  /** Gaveta mais baixa do módulo — pino inferior a 41 mm da base da frente. */
   isLowestDrawer?: boolean;
+  bottomThicknessMm?: number;
+  sideHeightMm?: number;
+  sideBaseElevationMm?: number;
 }): TechnicalDrillHole[] {
   const { largura, altura, espessura, isLowestDrawer } = params;
   const holes: TechnicalDrillHole[] = [];
@@ -689,7 +752,251 @@ export function computeDrawerFrenteIntStructuralHoles(params: {
     });
   }
 
+  const groove = buildDrawerFrenteBottomGroove({
+    largura,
+    altura,
+    bottomThicknessMm: params.bottomThicknessMm,
+    sideHeightMm: params.sideHeightMm ?? altura,
+    sideBaseElevationMm: params.sideBaseElevationMm ?? 0,
+  });
+  if (groove) holes.push(groove);
+
   return holes;
+}
+
+/**
+ * Frente externa madeira — regra global CAVILHA_10×40:
+ * cada 10×30 na aresta dos laterais → 10×13 na face da frente (Y = elev + Y_lateral).
+ * - lowest/single: rasgo golden W−56.5 / X=12; cavilhas só do pairing (sem W−73.5 duplicado)
+ * - highest/middle: mesmo pairing; rasgo alinhado ao topo das laterais
+ */
+export function computeDrawerFrenteExtStructuralHoles(params: {
+  largura: number;
+  altura: number;
+  espessura: number;
+  isLowestDrawer?: boolean;
+  stackRole?: DrawerStackRole | string;
+  sideHeightMm: number;
+  bodyWidthMm: number;
+  sideThicknessMm: number;
+  bottomThicknessMm: number;
+  sideBaseElevationMm?: number;
+}): TechnicalDrillHole[] {
+  const useLowestFixed =
+    params.stackRole === "lowest" ||
+    params.stackRole === "single" ||
+    (params.stackRole == null && params.isLowestDrawer === true);
+
+  if (useLowestFixed) {
+    return computeDrawerLowestFrenteExtFixedHoles({
+      largura: params.largura,
+      altura: params.altura,
+      espessura: params.espessura,
+      bottomThicknessMm: params.bottomThicknessMm,
+      sideHeightMm: params.sideHeightMm,
+      sideBaseElevationMm: params.sideBaseElevationMm,
+      bodyWidthMm: params.bodyWidthMm,
+      sideThicknessMm: params.sideThicknessMm,
+    });
+  }
+
+  const {
+    largura,
+    altura,
+    espessura,
+    sideHeightMm,
+    bodyWidthMm,
+    sideThicknessMm,
+    bottomThicknessMm,
+  } = params;
+  const elev =
+    params.sideBaseElevationMm != null && Number.isFinite(params.sideBaseElevationMm)
+      ? params.sideBaseElevationMm
+      : DRAWER_SIDE_BASE_ELEVATION_MM;
+
+  const holes = projectDrawerLateralEdgeCavilhasOntoFront({
+    frontWidthMm: largura,
+    frontHeightMm: altura,
+    espessuraMm: espessura,
+    sideHeightMm,
+    sideBaseElevationMm: elev,
+    bodyWidthMm,
+    sideThicknessMm,
+  });
+
+  const bodyW = Math.min(Math.max(0, bodyWidthMm), largura);
+  const overhang = Math.max(0, (largura - bodyW) / 2);
+  const groove = buildDrawerFrenteBottomGroove({
+    largura,
+    altura,
+    bottomThicknessMm,
+    sideHeightMm,
+    sideBaseElevationMm: elev,
+    grooveLengthMm: bodyW > 0 ? bodyW : largura,
+    grooveStartXMm: overhang,
+  });
+  if (groove) holes.push(groove);
+
+  return holes;
+}
+
+/**
+ * Projecta os furos 10×30 da aresta dos laterais para a face da frente (10×13).
+ * Y_frente = elevação + Y_aresta_lateral (15 e sideH−35).
+ * X = overhang + T/2 (encaixe com a espessura do lateral), fallback inset 33.
+ */
+export function projectDrawerLateralEdgeCavilhasOntoFront(params: {
+  frontWidthMm: number;
+  frontHeightMm: number;
+  espessuraMm: number;
+  sideHeightMm: number;
+  sideBaseElevationMm: number;
+  bodyWidthMm?: number;
+  sideThicknessMm?: number;
+  xInsetMm?: number;
+}): TechnicalDrillHole[] {
+  const {
+    frontWidthMm: largura,
+    frontHeightMm: altura,
+    espessuraMm: espessura,
+    sideHeightMm: sideH,
+    sideBaseElevationMm: elev,
+  } = params;
+  if (!(sideH > 0) || !(largura > 0) || !(altura > 0)) return [];
+
+  const faceDepth = clampDrawerFaceDowelDepthMm(espessura);
+  const dia = DRAWER_DOWEL_DIAMETER_MM;
+  const sideT = Math.max(0, params.sideThicknessMm ?? 16);
+  const bodyW =
+    params.bodyWidthMm != null && Number.isFinite(params.bodyWidthMm)
+      ? Math.min(Math.max(0, params.bodyWidthMm), largura)
+      : Math.max(0, largura - 2 * DRAWER_LOWEST_FRONT_DOWEL_X_INSET_MM);
+  const overhang = Math.max(0, (largura - bodyW) / 2);
+  const xLeft = overhang + sideT / 2;
+  const xRight = largura - overhang - sideT / 2;
+  const xInset = params.xInsetMm ?? DRAWER_LOWEST_FRONT_DOWEL_X_INSET_MM;
+  const leftX =
+    xLeft > 0 && xLeft < largura / 2 ? xLeft : Math.min(xInset, largura / 2);
+  const rightX =
+    xRight > largura / 2 && xRight < largura ? xRight : Math.max(largura - xInset, largura / 2);
+
+  const holes: TechnicalDrillHole[] = [];
+  const edgeYs = getDrawerLateralEdgeDowelYPositionsMm(sideH);
+  let pairIdx = 0;
+  for (const yLat of edgeYs) {
+    const y = elev + yLat;
+    if (y <= 0 || y >= altura) continue;
+    const pairBase = `gav-frent-lat-${pairIdx++}`;
+    for (const [x, side] of [
+      [leftX, "esq"],
+      [rightX, "dir"],
+    ] as const) {
+      holes.push({
+        x,
+        y,
+        diametro: dia,
+        profundidade: faceDepth,
+        tipo: "cavilha",
+        face: "tras",
+        topDrillable: true,
+        holeCatalogId: CAVILHA_FACE_HOLE_TYPE_ID,
+        ferragemId: CAVILHA_10x40_FERRAGEM_ID,
+        pairedHoleKey: `${pairBase}-${side}`,
+      });
+    }
+  }
+  return holes;
+}
+
+/**
+ * Frente inferior — rasgo golden XML_COMPLITO + cavilhas 10×13 só do pairing com laterais.
+ * (Removido W−73.5 fixo que duplicava o furo superior ~elev+(sideH−35).)
+ */
+export function computeDrawerLowestFrenteExtFixedHoles(params: {
+  largura: number;
+  altura: number;
+  espessura: number;
+  bottomThicknessMm: number;
+  sideHeightMm?: number;
+  sideBaseElevationMm?: number;
+  bodyWidthMm?: number;
+  sideThicknessMm?: number;
+}): TechnicalDrillHole[] {
+  const { largura, altura, espessura, bottomThicknessMm } = params;
+  const sideH = params.sideHeightMm ?? 0;
+  const elev =
+    params.sideBaseElevationMm != null && Number.isFinite(params.sideBaseElevationMm)
+      ? params.sideBaseElevationMm
+      : DRAWER_LOWEST_BODY_ABOVE_MODULE_BASE_MM;
+
+  const holes =
+    sideH > 0
+      ? projectDrawerLateralEdgeCavilhasOntoFront({
+          frontWidthMm: largura,
+          frontHeightMm: altura,
+          espessuraMm: espessura,
+          sideHeightMm: sideH,
+          sideBaseElevationMm: elev,
+          bodyWidthMm: params.bodyWidthMm,
+          sideThicknessMm: params.sideThicknessMm,
+          xInsetMm: DRAWER_LOWEST_FRONT_DOWEL_X_INSET_MM,
+        })
+      : [];
+
+  const xGroove = DRAWER_LOWEST_FRONT_GROOVE_X_INSET_MM;
+  const yGroove = altura - DRAWER_LOWEST_FRONT_GROOVE_FROM_TOP_MM;
+  const bottomT = Number(bottomThicknessMm);
+  if (
+    Number.isFinite(bottomT) &&
+    bottomT > 0 &&
+    yGroove > 0 &&
+    yGroove < altura &&
+    xGroove >= 0 &&
+    largura > 2 * xGroove
+  ) {
+    holes.push({
+      x: xGroove,
+      y: yGroove,
+      diametro: 0,
+      profundidade: bottomT + DRAWER_BOTTOM_GROOVE_DEPTH_EXTRA_MM,
+      tipo: "fixacao_estrutural",
+      face: "tras",
+      holeSubtype: "groove",
+      grooveWidth: DRAWER_BOTTOM_GROOVE_WIDTH_MM,
+      grooveLength: largura - 2 * xGroove,
+    });
+  }
+
+  return holes;
+}
+
+function buildDrawerFrenteBottomGroove(params: {
+  largura: number;
+  altura: number;
+  bottomThicknessMm?: number;
+  sideHeightMm: number;
+  sideBaseElevationMm: number;
+  grooveLengthMm?: number;
+  grooveStartXMm?: number;
+}): TechnicalDrillHole | null {
+  const bottomT = Number(params.bottomThicknessMm);
+  if (!Number.isFinite(bottomT) || bottomT <= 0) return null;
+  const y =
+    params.sideBaseElevationMm +
+    params.sideHeightMm -
+    DRAWER_BOTTOM_GROOVE_Y_FROM_TOP_MM;
+  if (y <= 0 || y >= params.altura) return null;
+  return {
+    x: params.grooveStartXMm ?? 0,
+    y,
+    diametro: 0,
+    profundidade: bottomT + DRAWER_BOTTOM_GROOVE_DEPTH_EXTRA_MM,
+    tipo: "fixacao_estrutural",
+    face: "tras",
+    holeSubtype: "groove",
+    grooveWidth: DRAWER_BOTTOM_GROOVE_WIDTH_MM,
+    grooveLength: params.grooveLengthMm ?? params.largura,
+  };
 }
 
 /** Furação de puxadores — módulo independente (ver DrawerHandleDrillingRules). */

@@ -1,5 +1,6 @@
 /**
  * Garante que o layout PDF usa as mesmas cavilhas SSOT que o XML (drillExport).
+ * Modelo golden XML_COMPLITO: face Y=15/H?38 Depth13; aresta Y=15/H?35 Depth30.
  */
 import { describe, expect, it } from "vitest";
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -46,7 +47,7 @@ function latItem(side: "esq" | "dir"): CutListItemComPreco {
   };
 }
 
-describe("layout PDF  cavilhas SSOT (interlock)", () => {
+describe("layout PDF — cavilhas SSOT (golden)", () => {
   it("cutlistToPieces NAO descarta cavilhas de aresta (topDrillable=false)", () => {
     const pieces = cutlistToPieces([latItem("esq")]);
     expect(pieces).toHaveLength(1);
@@ -54,13 +55,17 @@ describe("layout PDF  cavilhas SSOT (interlock)", () => {
     const cavilhas = holes.filter((h) => h.holeType === "cavilha");
     expect(cavilhas.length).toBe(4);
     const ys = [...new Set(cavilhas.map((h) => h.y))].sort((a, b) => a - b);
-    expect(ys).toEqual([30, 39, 111, 120]);
-    expect(cavilhas.every((h) => h.depth === 14)).toBe(true);
+    expect(ys).toEqual([15, 112, 115]); // face 15/112 + aresta 15/115
+    const face = cavilhas.filter((h) => h.topDrillable);
+    const edge = cavilhas.filter((h) => !h.topDrillable);
+    expect(face.every((h) => h.depth === 13)).toBe(true);
+    expect(edge.every((h) => h.depth === 30)).toBe(true);
   });
 
   it("applyRotationGeometryToSheets preserva furos de aresta X=0/L", () => {
-    const pieces = cutlistToPieces([latItem("esq")]);
-    const pl: CutPlacement = {
+    const piecesEsq = cutlistToPieces([latItem("esq")]);
+    const piecesDir = cutlistToPieces([latItem("dir")]);
+    const plEsq: CutPlacement = {
       x_mm: 50,
       y_mm: 50,
       largura_mm: LAT.largura,
@@ -71,23 +76,29 @@ describe("layout PDF  cavilhas SSOT (interlock)", () => {
       pieceNumber: 1,
       shortCode: "1",
       partName: "LAT_ESQ",
-      drillHoles: pieces[0]!.drillHoles,
+      drillHoles: piecesEsq[0]!.drillHoles,
+    };
+    const plDir: CutPlacement = {
+      ...plEsq,
+      boxId: "box-2",
+      pieceNumber: 2,
+      partName: "LAT_DIR",
+      drillHoles: piecesDir[0]!.drillHoles,
     };
     applyRotationGeometryToSheets([
       {
         sheet: { largura_mm: 2800, altura_mm: 2070, espessura_mm: 16 },
-        placements: [pl],
+        placements: [plEsq, plDir],
       },
     ]);
-    const orig = pl.originalDrillHoles ?? [];
-    const cavilhas = orig.filter((h) => h.holeType === "cavilha");
-    expect(cavilhas.length).toBe(4);
-    expect(cavilhas.some((h) => h.x === 0)).toBe(true);
-    expect(cavilhas.some((h) => h.x === LAT.largura)).toBe(true);
-    expect(cavilhas.some((h) => h.y === 39)).toBe(true);
+    const esqCav = (plEsq.originalDrillHoles ?? []).filter((h) => h.holeType === "cavilha");
+    const dirCav = (plDir.originalDrillHoles ?? []).filter((h) => h.holeType === "cavilha");
+    expect(esqCav.some((h) => h.x === LAT.largura && !h.topDrillable)).toBe(true);
+    expect(dirCav.some((h) => h.x === 0 && !h.topDrillable)).toBe(true);
+    expect(esqCav.some((h) => h.y === 115)).toBe(true);
   });
 
-  it("holesForPdf inclui Y=39 e profundidade 14 (SSOT)", () => {
+  it("holesForPdf inclui Y golden e profundidades 13/30", () => {
     const structural = computeDrawerLateralStructuralHoles({
       ...LAT,
       side: "esq",
@@ -109,7 +120,7 @@ describe("layout PDF  cavilhas SSOT (interlock)", () => {
         diameter: h.diametro,
         depth: h.profundidade,
         holeType: h.tipo,
-        topDrillable: false,
+        topDrillable: h.topDrillable === true,
       })),
     };
     const pdfHoles = holesForPdf(
@@ -118,20 +129,20 @@ describe("layout PDF  cavilhas SSOT (interlock)", () => {
       false
     );
     expect(pdfHoles).toHaveLength(4);
-    expect(pdfHoles.map((h) => h.y).sort((a, b) => a - b)).toEqual([30, 39, 111, 120]);
-    expect(pdfHoles.every((h) => h.depth === 14)).toBe(true);
+    expect([...new Set(pdfHoles.map((h) => h.y))].sort((a, b) => a - b)).toEqual([15, 112, 115]);
+    expect(pdfHoles.some((h) => h.depth === 13)).toBe(true);
+    expect(pdfHoles.some((h) => h.depth === 30)).toBe(true);
   });
 
-  it("LAT_DIR espelho: traseira em X=0", () => {
+  it("LAT_DIR espelho: aresta em X=0", () => {
     const pieces = cutlistToPieces([latItem("dir")]);
     const cavilhas = (pieces[0]!.drillHoles ?? []).filter((h) => h.holeType === "cavilha");
-    // Em espaco cutlist, traseira dir = X=0 (face frente)
     const atZero = cavilhas.filter((h) => h.x === 0);
     expect(atZero.length).toBe(2);
-    expect(atZero.map((h) => h.y).sort((a, b) => a - b)).toEqual([39, 111]);
+    expect(atZero.map((h) => h.y).sort((a, b) => a - b)).toEqual([15, 115]);
   });
 
-  it("gera PDF de evidencia com cavilhas SSOT (layout_gaveta_cavilhas_ssot.pdf)", async () => {
+  it("gera PDF de evidencia com cavilhas golden (layout_gaveta_cavilhas_ssot.pdf)", async () => {
     const outDir = resolve(process.cwd(), "tmp");
     mkdirSync(outDir, { recursive: true });
 
@@ -169,13 +180,13 @@ describe("layout PDF  cavilhas SSOT (interlock)", () => {
 
     const doc = await buildCutLayoutPdf(
       { sheets: [{ sheet, placements }] },
-      { projectName: "Evidencia cavilhas SSOT" }
+      { projectName: "Evidencia cavilhas golden" }
     );
     doc.save(resolve(outDir, "layout_gaveta_cavilhas_ssot.pdf"));
 
-    expect(evidence[0]!.pdfCavilhas.some((h) => h.y === 39 && h.depth === 14)).toBe(true);
+    expect(evidence[0]!.pdfCavilhas.some((h) => h.y === 115 && h.depth === 30)).toBe(true);
     expect(
       evidence[1]!.pdfCavilhas.filter((h) => h.x === 0).map((h) => h.y).sort((a, b) => a - b)
-    ).toEqual([39, 111]);
+    ).toEqual([15, 115]);
   });
 });

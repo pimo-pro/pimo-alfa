@@ -1,15 +1,15 @@
 /**
  * Furação industrial para módulos de canto (cavilhas FF, estruturais, dobradiças, prateleira, costa L).
+ * Cavilhas FF: regra global 10×30 ↔ 10×13 + CAVILHA_10x40 via pairing.
  */
 
 import type { HoleTypeId } from "../../drill/holeCatalog";
-import {
-  buildCornerFixedFrontDowelHoles,
-} from "../../cornerCabinet/cornerFixedFrontDowels";
+import { buildCornerFixedFrontDowelHoles } from "../../cornerCabinet/cornerFixedFrontDowels";
 import type { PanelDrillHole } from "../../types";
 import {
   addDesignDrillHole,
   insertDesignHoleWithCavilhaPairing,
+  nextDesignId,
 } from "../designModel";
 import { isLeftLateral, isRightLateral } from "../cavilhaPairing";
 import type { DesignDrillHole, DesignPanel, IndustrialDesignBox } from "../types";
@@ -31,6 +31,7 @@ function panelHoleToDesign(
     xMm: hole.x,
     yMm: hole.y,
     face,
+    ferragemId: hole.ferragemId,
   };
 }
 
@@ -52,7 +53,42 @@ function findPanelBySuffix(box: IndustrialDesignBox, suffix: string): DesignPane
   return box.panels.find((p) => p.id.endsWith(`:${suffix}`));
 }
 
-/** Cavilhas frente fixa ↔ cima/fundo/lateral (motor cornerFixedFrontDowels). */
+function ensureCornerFfConstraints(
+  box: IndustrialDesignBox,
+  cimaId: string,
+  fundoId: string,
+  ffId: string,
+  lateralInternaId?: string
+): IndustrialDesignBox {
+  const needed: Array<[string, string]> = [
+    [cimaId, ffId],
+    [fundoId, ffId],
+  ];
+  if (lateralInternaId) needed.push([lateralInternaId, ffId]);
+
+  const existing = new Set(
+    box.constraints
+      .filter((c) => c.tipo === "encaixe_cavilha")
+      .map((c) => [c.panelAId, c.panelBId].sort().join("|"))
+  );
+
+  const extra = needed
+    .filter(([a, b]) => !existing.has([a, b].sort().join("|")))
+    .map(([a, b]) => ({
+      id: nextDesignId("constraint"),
+      panelAId: a,
+      panelBId: b,
+      tipo: "encaixe_cavilha" as const,
+    }));
+
+  if (extra.length === 0) return box;
+  return { ...box, constraints: [...box.constraints, ...extra] };
+}
+
+/**
+ * Cavilhas frente fixa ↔ cima/fundo/lateral.
+ * Insere apenas 10×30 nas peças A; o pairing cria 10×13 na FF (+ CAVILHA_10x40).
+ */
 export function applyCornerFixedFrontDowelHoles(
   box: IndustrialDesignBox,
   layout: CornerIndustrialLayout
@@ -63,6 +99,15 @@ export function applyCornerFixedFrontDowelHoles(
   if (!cima || !fundo || !ff) return box;
 
   const fixedFrontSide: "left" | "right" = layout.cornerSide === "right" ? "left" : "right";
+  const lateralInterna = findPanelBySuffix(box, "lateral-interna");
+
+  let current = ensureCornerFfConstraints(
+    box,
+    cima.id,
+    fundo.id,
+    ff.id,
+    lateralInterna?.id
+  );
 
   const holes = buildCornerFixedFrontDowelHoles(
     {
@@ -70,41 +115,46 @@ export function applyCornerFixedFrontDowelHoles(
       fixedFrontHeightMm: layout.fixedFrontHeightMm,
       panelWidthMm: layout.outer.widthMm,
       fixedFrontSide,
+      thicknessMm: cima.thicknessMm,
     },
     layout.innerH
   );
 
-  let current = box;
-  current = applyPanelDrillHoles(current, cima.id, holes.cima, "cavilha_10x30", "espessura");
-  current = applyPanelDrillHoles(current, fundo.id, holes.fundo, "cavilha_10x30", "espessura");
+  const insertEdgePairs = (panelId: string, edgeHoles: PanelDrillHole[]) => {
+    for (const hole of edgeHoles) {
+      current = insertDesignHoleWithCavilhaPairing(
+        current,
+        panelId,
+        "cavilha_10x30",
+        hole.x,
+        hole.y,
+        "espessura"
+      ).box;
+    }
+  };
 
-  const lateralInterna = findPanelBySuffix(current, "lateral-interna");
+  insertEdgePairs(cima.id, holes.cima);
+  insertEdgePairs(fundo.id, holes.fundo);
+
   if (lateralInterna && fixedFrontSide === "left" && holes.lateral_esquerda) {
-    current = applyPanelDrillHoles(
-      current,
-      lateralInterna.id,
-      holes.lateral_esquerda,
-      "cavilha_10x30",
-      "espessura"
-    );
+    insertEdgePairs(lateralInterna.id, holes.lateral_esquerda);
   }
   if (lateralInterna && fixedFrontSide === "right" && holes.lateral_direita) {
-    current = applyPanelDrillHoles(
-      current,
-      lateralInterna.id,
-      holes.lateral_direita,
-      "cavilha_10x30",
-      "espessura"
-    );
+    insertEdgePairs(lateralInterna.id, holes.lateral_direita);
   }
 
-  current = applyPanelDrillHoles(
-    current,
-    ff.id,
-    holes.frente_fixa,
-    "cavilha_10x30",
-    "face"
-  );
+  const ffPanel = findPanelBySuffix(current, "frente-fixa");
+  const faceCount =
+    ffPanel?.drillHoles.filter((h) => h.holeTypeId === "cavilha_10x13").length ?? 0;
+  if (faceCount < holes.frente_fixa.length) {
+    current = applyPanelDrillHoles(
+      current,
+      ff.id,
+      holes.frente_fixa,
+      "cavilha_10x13",
+      "face"
+    );
+  }
 
   return current;
 }

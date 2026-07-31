@@ -32,8 +32,10 @@ import {
   resolveDrawerBottomCenterYMm,
   resolveDrawerFrontFlushLayoutMm,
   resolveDrawerManufacturedSideMode,
+  resolveDrawerSideBaseElevationMm,
   resolveDrawerViewerWoodSideLayoutMm,
   resolveDrawerViewerWoodBottomBackLayoutMm,
+  resolveDrawerWoodBodyHeightMm,
   type DrawerViewerWoodBottomBackLayoutMm,
   type DrawerViewerWoodSideLayoutMm,
   shouldRenderGenericDrawerSlideRails,
@@ -119,6 +121,8 @@ export type DrawerSpec = {
   backPosZ?: number;
   woodBodyHeightM?: number;
   bodyCenterOffsetYM?: number;
+  /** Elevação da base do corpo vs frente (mm). Inferior = 18.5. */
+  sideBaseElevationMm?: number;
   frontIntPosZ?: number;
   x: number;
   y: number;
@@ -232,7 +236,18 @@ export function buildDrawerSpecs(
           : undefined,
       bodyCenterOffsetYM: Number.isFinite(item.bodyCenterOffsetY)
         ? (item.bodyCenterOffsetY as number) / 1000
-        : resolveDrawerBodyCenterOffsetYMm(resolveDrawerExternalFrontHeightMm(item)) / 1000,
+        : resolveDrawerBodyCenterOffsetYMm(
+            resolveDrawerExternalFrontHeightMm(item),
+            undefined,
+            typeof item.metadata?.sideBaseElevationMm === "number"
+              ? item.metadata.sideBaseElevationMm
+              : undefined
+          ) / 1000,
+      sideBaseElevationMm:
+        typeof item.metadata?.sideBaseElevationMm === "number" &&
+        Number.isFinite(item.metadata.sideBaseElevationMm)
+          ? item.metadata.sideBaseElevationMm
+          : undefined,
       frontIntPosZ: undefined,
       sideThicknessM: item.sideThickness ? Math.max(0.001, item.sideThickness / 1000) : undefined,
       x: (item.posX ?? 0) / 1000,
@@ -440,12 +455,36 @@ function resolveSpecBottomCenterYM(spec: DrawerSpec): number {
   );
 }
 
+function resolveSpecSideBaseElevationMm(spec: DrawerSpec): number {
+  if (
+    spec.sideBaseElevationMm != null &&
+    Number.isFinite(spec.sideBaseElevationMm)
+  ) {
+    return resolveDrawerSideBaseElevationMm(spec.sideBaseElevationMm);
+  }
+  const frontH = spec.heightM * 1000;
+  const bodyHMm =
+    (spec.leftSideHeightM ??
+      spec.bodyHeightM ??
+      resolveDrawerWoodBodyHeightMm(frontH) / 1000) * 1000;
+  if (Number.isFinite(spec.bodyCenterOffsetYM) && bodyHMm > 0) {
+    return resolveDrawerSideBaseElevationMm(
+      (spec.bodyCenterOffsetYM as number) * 1000 + (frontH - bodyHMm) / 2
+    );
+  }
+  return resolveDrawerSideBaseElevationMm();
+}
+
 function resolveSpecSideCenterYM(spec: DrawerSpec): number {
   if (Number.isFinite(spec.leftSidePosY)) return spec.leftSidePosY as number;
   const frontHm = spec.heightM;
   return (
     spec.bodyCenterOffsetYM ??
-    resolveDrawerBodyCenterOffsetYMm(frontHm * 1000) / 1000
+    resolveDrawerBodyCenterOffsetYMm(
+      frontHm * 1000,
+      undefined,
+      resolveSpecSideBaseElevationMm(spec)
+    ) / 1000
   );
 }
 
@@ -504,6 +543,8 @@ export function getDrawerStructureFingerprint(
     backPosX: spec.backPosX,
     backPosY: spec.backPosY,
     backPosZ: spec.backPosZ,
+    sideBaseElevationMm: spec.sideBaseElevationMm ?? resolveSpecSideBaseElevationMm(spec),
+    bodyCenterOffsetYM: spec.bodyCenterOffsetYM,
     x: spec.x,
     y: spec.y,
     z: spec.z,
@@ -647,6 +688,7 @@ export function createDrawerObject(
       bodyWidthMm: spec.bodyWidthM * 1000,
       sideThicknessMm: (spec.leftSideWidthM ?? spec.sideThicknessM ?? 0.016) * 1000,
       slideLengthMm,
+      baseElevationMm: resolveSpecSideBaseElevationMm(spec),
     });
   }
 
@@ -834,6 +876,7 @@ export function createDrawerObject(
           bodyWidthMm: spec.bodyWidthM * 1000,
           sideThicknessMm: (spec.leftSideWidthM ?? spec.sideThicknessM ?? 0.016) * 1000,
           slideLengthMm: (spec.bodyDepthM ?? viewerBodyDepthM) * 1000,
+          baseElevationMm: resolveSpecSideBaseElevationMm(spec),
         });
       }
       const viewerSideHeightM = woodSideLayout.sideHeightMm / 1000;

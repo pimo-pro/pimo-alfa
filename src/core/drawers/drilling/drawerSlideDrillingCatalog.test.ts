@@ -198,8 +198,9 @@ describe("Catalogo industrial — marcacao corredica modulo (X1=38, X_last=D-38)
     const panelH = 720;
     const internalH = 720 - 2 * 19;
     const heights = [150, 150, 150];
+    // BASE_OFFSET = 0 (frente flush à base): 1ª gaveta começa no piso interno.
     const drawers = heights.map((h, i) => {
-      let offset = 10;
+      let offset = 0;
       for (let j = 0; j < i; j++) offset += heights[j]! + 4;
       return {
         posYMm: -internalH / 2 + offset + h / 2,

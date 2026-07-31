@@ -3,11 +3,18 @@ import {
   DRILL_DOWEL_DIAMETER_MM,
   getDrillFrontDistance,
 } from "../drill/drillConfig";
+import {
+  CAVILHA_10x40_FERRAGEM_ID,
+  CAVILHA_EDGE_DEPTH_MM,
+  CAVILHA_EDGE_HOLE_TYPE_ID,
+  CAVILHA_FACE_DEPTH_MM,
+  CAVILHA_FACE_HOLE_TYPE_ID,
+} from "../drill/cavilha10x40Rule";
 
 /** Profundidade dos furos de cavilha na espessura (lado da peça). */
-export const CORNER_FF_EDGE_DOWEL_DEPTH_MM = 30;
+export const CORNER_FF_EDGE_DOWEL_DEPTH_MM = CAVILHA_EDGE_DEPTH_MM;
 /** Profundidade dos furos de cavilha na face da frente fixa. */
-export const CORNER_FF_FACE_DOWEL_DEPTH_MM = 13;
+export const CORNER_FF_FACE_DOWEL_DEPTH_MM = CAVILHA_FACE_DEPTH_MM;
 
 export type CornerFixedFrontDowelLayout = {
   fixedFrontWidthMm: number;
@@ -43,7 +50,7 @@ export function resolveCornerDowelOffsets(thicknessMm: number): CornerDowelOffse
   };
 }
 
-function edgeDowelHole(x: number, y: number): PanelDrillHole {
+function edgeDowelHole(x: number, y: number, pairKey: string): PanelDrillHole {
   return {
     x,
     y,
@@ -52,10 +59,13 @@ function edgeDowelHole(x: number, y: number): PanelDrillHole {
     holeType: "cavilha",
     topDrillable: false,
     face: "B",
+    pairedHoleKey: pairKey,
+    holeCatalogId: CAVILHA_EDGE_HOLE_TYPE_ID,
+    ferragemId: CAVILHA_10x40_FERRAGEM_ID,
   };
 }
 
-function faceDowelHole(x: number, y: number): PanelDrillHole {
+function faceDowelHole(x: number, y: number, pairKey: string): PanelDrillHole {
   return {
     x,
     y,
@@ -64,6 +74,9 @@ function faceDowelHole(x: number, y: number): PanelDrillHole {
     holeType: "cavilha",
     topDrillable: true,
     face: "B",
+    pairedHoleKey: pairKey,
+    holeCatalogId: CAVILHA_FACE_HOLE_TYPE_ID,
+    ferragemId: CAVILHA_10x40_FERRAGEM_ID,
   };
 }
 
@@ -71,20 +84,23 @@ function resolveFixedFrontHoleSpanX(
   layout: CornerFixedFrontDowelLayout,
   depthOffset: number,
   edgeOffset: number
-): { xStart: number; xEnd: number; xLateralEdge: number } {
+): { xStart: number; xEnd: number; xLateralEdge: number; ffOriginX: number } {
   const ffW = Math.max(depthOffset * 2 + 1, layout.fixedFrontWidthMm);
   if (layout.fixedFrontSide === "left") {
     return {
       xStart: depthOffset,
       xEnd: ffW - depthOffset,
       xLateralEdge: edgeOffset,
+      ffOriginX: 0,
     };
   }
   const panelW = Math.max(ffW, layout.panelWidthMm);
+  const ffOriginX = panelW - ffW;
   return {
-    xStart: panelW - ffW + depthOffset,
+    xStart: ffOriginX + depthOffset,
     xEnd: panelW - depthOffset,
-    xLateralEdge: panelW - ffW + edgeOffset,
+    xLateralEdge: ffOriginX + edgeOffset,
+    ffOriginX,
   };
 }
 
@@ -106,9 +122,7 @@ export function resolveFrenteFixaLateralHoleYFromTop(
 
 /**
  * Furos de cavilha entre CIMA/FUNDO/lateral e frente fixa (módulo Canto — Direita Inferior).
- * Convenção industrial (Layout PRO): origem canto inferior-esquerdo, Y↑.
- * - Borda perpendicular: centro a espessura/2
- * - Face frontal: 60 mm para dentro (depthOffset)
+ * Cada furo 10×30 na espessura tem par 10×13 na face (mesmo `pairedHoleKey` + CAVILHA_10x40).
  */
 export function buildCornerFixedFrontDowelHoles(
   layout: CornerFixedFrontDowelLayout,
@@ -116,7 +130,11 @@ export function buildCornerFixedFrontDowelHoles(
 ): CornerFixedFrontDowelHolesByPanel {
   const { edgeOffset, depthOffset } = resolveCornerDowelOffsets(layout.thicknessMm ?? 19);
   const ffH = Math.max(edgeOffset * 2 + 1, layout.fixedFrontHeightMm);
-  const { xStart, xEnd, xLateralEdge } = resolveFixedFrontHoleSpanX(layout, depthOffset, edgeOffset);
+  const { xStart, xEnd, xLateralEdge } = resolveFixedFrontHoleSpanX(
+    layout,
+    depthOffset,
+    edgeOffset
+  );
 
   const yTop = ffH - edgeOffset;
   const yBottom = edgeOffset;
@@ -124,23 +142,37 @@ export function buildCornerFixedFrontDowelHoles(
 
   const latTopY = Math.max(edgeOffset, lateralHeightMm - edgeOffset);
   const latBottomY = edgeOffset;
+
+  const pairCimaL = "ff-cima-l";
+  const pairCimaR = "ff-cima-r";
+  const pairFundoL = "ff-fundo-l";
+  const pairFundoR = "ff-fundo-r";
+  const pairLatTop = "ff-lat-top";
+  const pairLatBot = "ff-lat-bot";
+
   const lateralHoles = [
-    edgeDowelHole(depthOffset, latTopY),
-    edgeDowelHole(depthOffset, latBottomY),
+    edgeDowelHole(depthOffset, latTopY, pairLatTop),
+    edgeDowelHole(depthOffset, latBottomY, pairLatBot),
   ];
 
   const frenteFaceHoles: PanelDrillHole[] = [
-    faceDowelHole(xStart, yTop),
-    faceDowelHole(xEnd, yTop),
-    faceDowelHole(xStart, yBottom),
-    faceDowelHole(xEnd, yBottom),
-    faceDowelHole(xLateralEdge, lateralY.topY),
-    faceDowelHole(xLateralEdge, lateralY.bottomY),
+    faceDowelHole(xStart, yTop, pairCimaL),
+    faceDowelHole(xEnd, yTop, pairCimaR),
+    faceDowelHole(xStart, yBottom, pairFundoL),
+    faceDowelHole(xEnd, yBottom, pairFundoR),
+    faceDowelHole(xLateralEdge, lateralY.topY, pairLatTop),
+    faceDowelHole(xLateralEdge, lateralY.bottomY, pairLatBot),
   ];
 
   const result: CornerFixedFrontDowelHolesByPanel = {
-    cima: [edgeDowelHole(xStart, depthOffset), edgeDowelHole(xEnd, depthOffset)],
-    fundo: [edgeDowelHole(xStart, depthOffset), edgeDowelHole(xEnd, depthOffset)],
+    cima: [
+      edgeDowelHole(xStart, depthOffset, pairCimaL),
+      edgeDowelHole(xEnd, depthOffset, pairCimaR),
+    ],
+    fundo: [
+      edgeDowelHole(xStart, depthOffset, pairFundoL),
+      edgeDowelHole(xEnd, depthOffset, pairFundoR),
+    ],
     frente_fixa: dedupePanelDrillHoles(frenteFaceHoles),
   };
 
