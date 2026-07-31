@@ -1,11 +1,21 @@
 {
-  "updatedAt": "2026-07-30T19:42:56.683Z",
+  "updatedAt": "2026-07-31T11:53:05.428Z",
   "news": [
+    {
+      "version": "v6.0731.1253",
+      "title": "Corrediças — padrão de marcação industrial actualizado. X1=38 mm, X_last=D−38 mm, distribuição proporcional 4/5 furos...",
+      "description": "Corrediças — padrão de marcação industrial actualizado. X1=38 mm, X_last=D−38 mm, distribuição proporcional 4/5 furos por NL, profundidade 1 mm (mark-only), simetria L/R, compatível com Quadro V6 (CC). Nenhum impacto no SSOT estrutural, interlock, cavilhas, XML ou PDF. 64/64 testes OK.",
+      "publishedAt": "2026-07-31T11:53:05.344Z",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "update",
+      "commit": "7089470"
+    },
     {
       "version": "v6.0730.2042",
       "title": "Gavetas — Sistema de cavilhas com interlock completo. Profundidades dinâmicas (face/espessura), Y paramétrico (39/30)...",
       "description": "Gavetas — Sistema de cavilhas com interlock completo. Profundidades dinâmicas (face/espessura), Y paramétrico (39/30), centro T/2, sincronização lateral↔frente↔costa, espelhamento L/R, XML alinhado ao SSOT. Correcção do layout PDF (cutLayoutEngine/cutLayoutPdf/cutLayoutGeomRotation) para incluir cavilhas de aresta sem filtro topDrillable. 71/71 + 5/5 + 13/13 testes OK.",
-      "publishedAt": "2026-07-30T19:42:56.580Z",
+      "publishedAt": "2026-07-30T20:47:03+01:00",
       "type": "update",
       "author": "pimo-pro",
       "icon": "update",

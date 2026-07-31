@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-31T11:53:04.701Z",
+      "author": "pimo-pro",
+      "commitMessage": "Corrediças — padrão de marcação industrial actualizado. X1=38 mm, X_last=D−38 mm, distribuição proporcional 4/5 furos por NL, profundidade 1 mm (mark-only), simetria L/R, compatível com Quadro V6 (CC). Nenhum impacto no SSOT estrutural, interlock, cavilhas, XML ou PDF. 64/64 testes OK.",
+      "version": "v6.0731.1253"
+    },
+    {
       "publishedAt": "2026-07-30T19:42:55.886Z",
       "author": "pimo-pro",
       "commitMessage": "Gavetas — Sistema de cavilhas com interlock completo. Profundidades dinâmicas (face/espessura), Y paramétrico (39/30), centro T/2, sincronização lateral↔frente↔costa, espelhamento L/R, XML alinhado ao SSOT. Correcção do layout PDF (cutLayoutEngine/cutLayoutPdf/cutLayoutGeomRotation) para incluir cavilhas de aresta sem filtro topDrillable. 71/71 + 5/5 + 13/13 testes OK.",
