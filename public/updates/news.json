@@ -1,11 +1,21 @@
 {
-  "updatedAt": "2026-07-31T19:21:19.749Z",
+  "updatedAt": "2026-07-31T20:48:35.266Z",
   "news": [
+    {
+      "version": "v6.0731.2148",
+      "title": "Atualização: melhorias no Layout de Corte PRO (nome completo, miniatura landscape, ajuste de colunas, altura das linh...",
+      "description": "Atualização: melhorias no Layout de Corte PRO (nome completo, miniatura landscape, ajuste de colunas, altura das linhas). Preparação para Layout de Corte manual.",
+      "publishedAt": "2026-07-31T20:48:35.168Z",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "update",
+      "commit": "f0d3918"
+    },
     {
       "version": "v6.0731.2021",
       "title": "feat(industrial): SSOT cavilha 10x30↔10x13 + CAVILHA_10x40 (gavetas, módulos, cantos)",
       "description": "feat(industrial): SSOT cavilha 10x30↔10x13 + CAVILHA_10x40 (gavetas, módulos, cantos)",
-      "publishedAt": "2026-07-31T19:21:19.649Z",
+      "publishedAt": "2026-07-31T20:23:35+01:00",
       "type": "feature",
       "author": "pimo-pro",
       "icon": "feature",

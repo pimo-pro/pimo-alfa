@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-07-31T20:48:34.338Z",
+      "author": "pimo-pro",
+      "commitMessage": "Atualização: melhorias no Layout de Corte PRO (nome completo, miniatura landscape, ajuste de colunas, altura das linhas). Preparação para Layout de Corte manual.",
+      "version": "v6.0731.2148"
+    },
+    {
       "publishedAt": "2026-07-31T19:21:18.855Z",
       "author": "pimo-pro",
       "commitMessage": "feat(industrial): SSOT cavilha 10x30↔10x13 + CAVILHA_10x40 (gavetas, módulos, cantos)",
