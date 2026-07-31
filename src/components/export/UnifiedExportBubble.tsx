@@ -147,6 +147,7 @@ export default function UnifiedExportBubble({ isOpen, onClose, onOpenNestingV3 }
     onFerragensIndustriaisXlsx,
     onAmbos,
     onLayoutCortePro,
+    onLayoutCorteManual,
     onArquivoCompleto,
     onEtiquetas,
     onArquivosCnc,
@@ -368,6 +369,12 @@ export default function UnifiedExportBubble({ isOpen, onClose, onOpenNestingV3 }
                 onClick={wrap(onLayoutCortePro)}
                 disabled={!hasBoxes}
                 icon={<Icon name="blueprint" size={18} aria-hidden />}
+              />
+              <ExportRow
+                label="Layout de Corte manual"
+                onClick={wrap(onLayoutCorteManual)}
+                disabled={!hasBoxes}
+                icon={<Icon name="grid" size={18} aria-hidden />}
               />
               <ExportRow
                 label="Nesting V3 (Manual)"

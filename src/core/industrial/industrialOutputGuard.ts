@@ -9,6 +9,7 @@ export type IndustrialOutputKind =
   | "tcn"
   | "txml"
   | "pdf-layout-pro"
+  | "pdf-layout-manual"
   | "pdf-cutlist"
   | "pdf-etiquetas"
   | "pdf-ferragens-industriais"
@@ -27,6 +28,7 @@ const ALL_OUTPUT_KINDS: IndustrialOutputKind[] = [
   "tcn",
   "txml",
   "pdf-layout-pro",
+  "pdf-layout-manual",
   "pdf-cutlist",
   "pdf-etiquetas",
   "pdf-ferragens-industriais",

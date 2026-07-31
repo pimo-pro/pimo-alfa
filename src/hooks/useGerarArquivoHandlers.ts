@@ -101,11 +101,24 @@ import {
 let cutLayoutLoaderRoot: Root | null = null;
 
 type CutLayoutPdfModule = typeof import("../core/cutlayout/cutLayoutPdf");
+type CutLayoutManualPdfModule = typeof import("../core/cutlayout/cutLayoutManualPdf");
 
 /** Import dinâmico com registo em Notificações/Invariantes se o chunk falhar (MIME HTML / 404). */
 async function loadCutLayoutPdfModule(step = "PDF Etiquetas / Layout PRO"): Promise<CutLayoutPdfModule> {
   try {
     return await import("../core/cutlayout/cutLayoutPdf");
+  } catch (err) {
+    const payload = payloadFromUnknownError(err, { step, source: "module" });
+    dispatchIndustrialNotification(payload);
+    throw err;
+  }
+}
+
+async function loadCutLayoutManualPdfModule(
+  step = "Layout de Corte manual"
+): Promise<CutLayoutManualPdfModule> {
+  try {
+    return await import("../core/cutlayout/cutLayoutManualPdf");
   } catch (err) {
     const payload = payloadFromUnknownError(err, { step, source: "module" });
     dispatchIndustrialNotification(payload);
@@ -810,6 +823,95 @@ export function useGerarArquivoHandlers() {
     prepareItemsForCnc,
   ]);
 
+  /** PDF único para marceneiro: nesting + cotas/furos (todas as espessuras). */
+  const onLayoutCorteManual = useCallback(async () => {
+    if (!hasBoxes) {
+      showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
+      return;
+    }
+    if (!guardIndustrialExport(project, showToast)) return;
+    try {
+      showCutLayoutLoader();
+      await yieldToMainThread();
+      beginIndustrialFileGeneration();
+      try {
+        viewerSync.setUltraPerformanceMode(true);
+      } catch {
+        /* ignore */
+      }
+      const allItems = buildCutlistItemsForIndustrialExport({
+        boxes,
+        rules: project.rules,
+        materialId: project.materialId,
+        projectName: project.projectName,
+        remates: project.remates ?? [],
+        rodapes: project.rodapes ?? [],
+        extractedPartsByBoxId: project.extractedPartsByBoxId,
+        industrialPieceEdits: project.industrialPieceEdits,
+      });
+
+      const settingsSnapshot = getSettings();
+      const materialsSnapshot = listMaterials();
+      const cncItems = prepareItemsForCnc(allItems as CutlistItemForPieces[], materialsSnapshot);
+
+      await yieldToMainThread();
+
+      const thicknessBundles = await measureTime("Layout de corte manual (layout CNC por espessura)", async () =>
+        buildCncBundlesPerThickness(
+          settingsSnapshot,
+          materialsSnapshot,
+          { projectName: project.projectName ?? "Projeto" },
+          cncItems,
+          {
+            ...getDefaultCncLayoutOptions(),
+          }
+        )
+      );
+
+      if (thicknessBundles.length === 0) {
+        showToast("Nenhuma peça com espessura válida para o layout de corte manual.", "warning");
+        return;
+      }
+
+      await yieldToMainThread();
+      const { buildCutLayoutManualPdf, cutLayoutManualPdfFileName } =
+        await loadCutLayoutManualPdfModule("Layout de Corte manual");
+      const boxNomeById = Object.fromEntries(boxes.map((b) => [b.id, b.nome ?? ""]));
+      const sheets = thicknessBundles.flatMap((bundle) =>
+        bundle.cncBundle.layoutResult.sheets.map((sheetResult) => ({
+          sheetResult,
+          bucket: bundle.bucket,
+        }))
+      );
+      const doc = await buildCutLayoutManualPdf(sheets, {
+        projectName: project.projectName ?? "Projeto",
+        industrialProjectName: project.projectName ?? "Projeto",
+        boxNomeById,
+      });
+      doc.save(`${slug}_${cutLayoutManualPdfFileName()}`);
+      showToast("Layout de Corte manual gerado.", "info");
+    } catch (err) {
+      devLogger.error("Layout de Corte manual:", err);
+      toastExportError(showToast, err, "Layout de Corte manual: falha");
+    } finally {
+      try {
+        viewerSync.setUltraPerformanceMode(false);
+      } catch {
+        /* ignore */
+      }
+      endIndustrialFileGeneration();
+      hideCutLayoutLoader();
+    }
+  }, [
+    hasBoxes,
+    showToast,
+    boxes,
+    project,
+    slug,
+    viewerSync,
+    prepareItemsForCnc,
+  ]);
+
   const onExportarCnc = useCallback(async () => {
     if (!hasBoxes) {
       showToast("Nenhuma caixa no projeto. Gere o design primeiro.", "warning");
@@ -1315,6 +1417,29 @@ export function useGerarArquivoHandlers() {
             });
           }
         }
+
+        // Layout de Corte manual — PDF único com todas as chapas/espessuras
+        const { buildCutLayoutManualPdf, cutLayoutManualPdfFileName } =
+          await loadCutLayoutManualPdfModule("Layout de Corte manual (arquivo completo)");
+        const manualSheets = thicknessCncBundles.flatMap((bundle) =>
+          bundle.cncBundle.layoutResult.sheets.map((sheetResult) => ({
+            sheetResult,
+            bucket: bundle.bucket,
+          }))
+        );
+        if (manualSheets.length > 0) {
+          const docManual = await buildCutLayoutManualPdf(manualSheets, {
+            projectName: project.projectName ?? "Projeto",
+            industrialProjectName: project.projectName ?? "Projeto",
+            boxNomeById,
+          });
+          if (!safeAddPdf(zip, cutLayoutManualPdfFileName(), docManual)) {
+            errors.push({
+              step: "Layout de Corte manual",
+              message: "Falha ao adicionar PDF ao ZIP.",
+            });
+          }
+        }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         errors.push({ step: "PDF Etiquetas / Layout PRO", message: msg });
@@ -1540,6 +1665,7 @@ export function useGerarArquivoHandlers() {
     onArquivoCompleto,
     onLayoutCorte,
     onLayoutCortePro,
+    onLayoutCorteManual,
     onEtiquetas,
     onExportarCnc,
     onArquivosCnc,
