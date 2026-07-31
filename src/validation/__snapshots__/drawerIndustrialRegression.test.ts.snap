@@ -4,27 +4,27 @@ exports[`Certificação — regressão industrial (snapshots) > furação europe
 [
   {
     "face": "B",
-    "x": 37,
+    "x": 38,
     "y": 401.5,
   },
   {
     "face": "B",
-    "x": 69,
+    "x": 141.5,
     "y": 401.5,
   },
   {
     "face": "B",
-    "x": 165,
+    "x": 245,
     "y": 401.5,
   },
   {
     "face": "B",
-    "x": 261,
+    "x": 348.5,
     "y": 401.5,
   },
   {
     "face": "B",
-    "x": 413,
+    "x": 452,
     "y": 401.5,
   },
 ]

@@ -23,6 +23,8 @@ import {
 import {
   clampHoleToPanel,
   mirrorSlideHoleXFromFront,
+  MODULE_SLIDE_EDGE_SETBACK_MM,
+  MODULE_SLIDE_MARK_DEPTH_MM,
   resolveSlideDrillingPattern,
   type ResolvedSlideDrillingPattern,
   type SlideDrillingHoleDef,
@@ -154,11 +156,13 @@ export function getDrawerSlideDrillingRules(
   const offsetFrente =
     metalProfile?.slideOffsetFrontMm ??
     pattern.holes.find((h) => h.role === "front")?.xFromFrontMm ??
-    clampMm(cfg?.offsetFrente ?? 38, 5);
-  const rearHole = [...pattern.holes].reverse().find((h) => h.role === "rear" || h.role === "mount");
+    clampMm(cfg?.offsetFrente ?? MODULE_SLIDE_EDGE_SETBACK_MM, 5);
+  const rearHole = [...pattern.holes].reverse().find((h) => h.role === "rear" || h.role === "mount" || h.role === "mark");
   const offsetFundo =
     metalProfile?.slideOffsetRearMm ??
-    (rearHole ? Math.max(5, pattern.comprimentoMm - rearHole.xFromFrontMm) : clampMm(cfg?.offsetFundo ?? 38, 5));
+    (rearHole
+      ? Math.max(5, panelDepthMm - rearHole.xFromFrontMm)
+      : clampMm(cfg?.offsetFundo ?? MODULE_SLIDE_EDGE_SETBACK_MM, 5));
   const offsetMark =
     pattern.holes.find((h) => h.role === "mark")?.xFromFrontMm ??
     clampMm(cfg?.offsetMark ?? PI_LEGACY_MARK_X, 5);
@@ -170,22 +174,27 @@ export function getDrawerSlideDrillingRules(
   const offsetVerticalAdicional = clampMm(cfg?.offsetVerticalAdicional ?? 0, 0);
   const softCloseVerticalOffsetMm = softClose ? 2 : 0;
   const mode = ctx.mode ?? "drawer_piece";
-  const profundidadeMm = clampMm(cfg?.profundidade ?? pattern.profundidadeMm, 0.1);
+  // Furos de corredica no modulo = apenas marcacao (1 mm). Nao estruturais.
+  const profundidadeMm = clampMm(
+    cfg?.profundidade ?? pattern.profundidadeMm ?? MODULE_SLIDE_MARK_DEPTH_MM,
+    0.1
+  );
   const profundidadeMarkMm = clampMm(
-    cfg?.profundidadeMark ?? cfg?.profundidade ?? pattern.profundidadeMarkMm,
+    cfg?.profundidadeMark ?? pattern.profundidadeMarkMm ?? MODULE_SLIDE_MARK_DEPTH_MM,
     0.1
   );
 
-  // Metal box: offsets frente/traseiro do perfil; manter padrão de furos do slideType.
-  let holePatternFromFront = pattern.holes;
+  // Metal box: offsets frente/traseiro do perfil; manter padrao de furos do slideType.
+  let holePatternFromFront = pattern.holes.map((h) => ({ ...h, isMarkOnly: true as const }));
   if (metalProfile) {
     const mid = pattern.holes.filter((h) => h.role === "mark" || h.role === "mount");
     holePatternFromFront = [
-      { xFromFrontMm: offsetFrente, role: "front" as const },
-      ...mid,
+      { xFromFrontMm: offsetFrente, role: "front" as const, isMarkOnly: true },
+      ...mid.map((h) => ({ ...h, isMarkOnly: true as const })),
       {
-        xFromFrontMm: Math.max(offsetFrente + 10, pattern.comprimentoMm - offsetFundo),
+        xFromFrontMm: Math.max(offsetFrente + 10, panelDepthMm - offsetFundo),
         role: "rear" as const,
+        isMarkOnly: true,
       },
     ];
   }
@@ -370,16 +379,16 @@ export function computePiModuleLateralCorredicaHoles(params: {
         side === "left"
           ? [panelDepthMm - frontOff, panelDepthMm - markOff, panelDepthMm - rearOff]
           : [frontOff, markOff, rearOff];
-      const depths = [rules.profundidadeMm, rules.profundidadeMarkMm, rules.profundidadeMm];
-      const marks = [false, true, false];
-      xs.forEach((xRaw, i) => {
+      // Legacy PI: tambem marcacao 1 mm (nao atravessa a peca).
+      const markDepth = rules.profundidadeMarkMm || MODULE_SLIDE_MARK_DEPTH_MM;
+      xs.forEach((xRaw) => {
         const clamped = clampHoleToPanel(xRaw, y, panelDepthMm, panelHeightMm, rules.diametroMm);
         holes.push({
           x: clamped.x,
           y: clamped.y,
-          depth: depths[i]!,
+          depth: markDepth,
           holeType: "corredica",
-          isMarkOnly: marks[i],
+          isMarkOnly: true,
         });
       });
     }
@@ -421,12 +430,14 @@ export function computePiModuleLateralCorredicaHoles(params: {
         panelHeightMm,
         rules.alturaRelativaFundoMm || DRAWER_SLIDE_OFFSET_FROM_BOTTOM_MM
       );
+      // Laterais do modulo: todos os furos de corredica sao so marcacao (1 mm).
+      const markDepth = rules.profundidadeMarkMm || MODULE_SLIDE_MARK_DEPTH_MM;
       holes.push({
         x: clamped.x,
         y: yFinal,
-        depth: hole.isMarkOnly ? rules.profundidadeMarkMm : rules.profundidadeMm,
+        depth: markDepth,
         holeType: "corredica",
-        isMarkOnly: hole.isMarkOnly === true,
+        isMarkOnly: true,
       });
     }
   }
@@ -526,11 +537,12 @@ export function buildEuropeanModuleLateralCorredicaDrilling(input: {
     useLegacyPiOffsets: false,
   });
 
+  const markDepth = rules.profundidadeMarkMm || MODULE_SLIDE_MARK_DEPTH_MM;
   return specs.map((spec) => ({
     x: spec.x,
     y: spec.y,
     diameter: rules.diametroMm,
-    depth: spec.isMarkOnly ? rules.profundidadeMarkMm : rules.profundidadeMm,
+    depth: markDepth,
     holeType: "corredica" as const,
     face: "B" as const,
     topDrillable: true,
