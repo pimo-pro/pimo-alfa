@@ -162,8 +162,3 @@ export function useSupervisorDashboard() {
 }
 
 export type UseSupervisorDashboardReturn = ReturnType<typeof useSupervisorDashboard>;
-
-export function filterAlertsByLevel(alerts: SupervisorAlertItem[], level?: SupervisorAlertItem['level']) {
-  if (!level) return alerts;
-  return alerts.filter((a) => a.level === level);
-}

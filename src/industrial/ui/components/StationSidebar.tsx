@@ -4,8 +4,10 @@ import { INDUSTRIAL_STATIONS, STATION_LABELS, type IndustrialStation } from '@/i
 import {
   INDUSTRIAL_CONTROL_CLASS,
   ensureIndustrialInteractionStyles,
+  industrialBtnStyle,
   industrialBtnStyleLight,
 } from '@/industrial/ui/layouts/industrialStyles';
+import { industrialUi, useIndustrialTone } from '@/industrial/ui/layouts/industrialTheme';
 
 interface StationSidebarProps {
   activeStation: IndustrialStation;
@@ -40,6 +42,10 @@ export default function StationSidebar({
 }: StationSidebarProps) {
   ensureIndustrialInteractionStyles();
   const location = useLocation();
+  const tone = useIndustrialTone();
+  const ui = industrialUi(tone);
+  const btn = (active: boolean) =>
+    tone === 'light' ? industrialBtnStyleLight(active) : industrialBtnStyle(active);
 
   return (
     <nav
@@ -48,10 +54,11 @@ export default function StationSidebar({
         gap: 8,
         justifyItems: 'center',
         alignContent: 'start',
-        color: '#1e1e1e',
+        color: ui.textStrong,
         lineHeight: 1.5,
       }}
       aria-label="Navegação de estações"
+      data-station-tone={tone}
     >
       {INDUSTRIAL_STATIONS.map((station) => {
         const path = `/industrial/work-orders/${station}`;
@@ -64,7 +71,7 @@ export default function StationSidebar({
             className={INDUSTRIAL_CONTROL_CLASS}
             data-active={active ? 'true' : undefined}
             style={{
-              ...industrialBtnStyleLight(active),
+              ...btn(active),
               width: 40,
               height: 40,
               display: 'grid',
@@ -79,7 +86,7 @@ export default function StationSidebar({
         );
       })}
 
-      <div style={{ height: 1, width: '100%', background: 'var(--border, #334155)', margin: '4px 0' }} />
+      <div style={{ height: 1, width: '100%', background: ui.panelBorder, margin: '4px 0' }} />
 
       {onToggleNotifications ? (
         <button
@@ -88,7 +95,7 @@ export default function StationSidebar({
           title="Notificações"
           onClick={onToggleNotifications}
           style={{
-            ...industrialBtnStyleLight(false),
+            ...btn(false),
             width: 40,
             height: 40,
             padding: 0,
@@ -126,7 +133,7 @@ export default function StationSidebar({
           title="Chat industrial"
           onClick={onToggleChat}
           style={{
-            ...industrialBtnStyleLight(chatOpen),
+            ...btn(chatOpen),
             width: 40,
             height: 40,
             padding: 0,
@@ -143,7 +150,7 @@ export default function StationSidebar({
         title="Ordens de trabalho"
         className={INDUSTRIAL_CONTROL_CLASS}
         style={{
-          ...industrialBtnStyleLight(false),
+          ...btn(false),
           width: 40,
           height: 40,
           display: 'grid',

@@ -1,12 +1,21 @@
 import type { CSSProperties, ReactNode } from 'react';
 
-export type IndustrialLayoutTone = 'light' | 'dark';
+import {
+  industrialUi,
+  useIndustrialTone,
+  type IndustrialLayoutTone,
+} from '@/industrial/ui/layouts/industrialTheme';
+
+export type { IndustrialLayoutTone };
 
 export interface IndustrialLayoutProps {
   title: string;
   description?: string;
   children: ReactNode;
-  /** light = texto #1e1e1e em fundo claro (Ordens/Estações). dark = Operador/legado. */
+  /**
+   * Tema do layout. `undefined` / omitido → segue o toggle global (ThemeContext).
+   * Passar explicitamente só quando for preciso forçar (legado).
+   */
   tone?: IndustrialLayoutTone;
 }
 
@@ -14,15 +23,18 @@ export function IndustrialLayout({
   title,
   description,
   children,
-  tone = 'dark',
+  tone: toneProp,
 }: IndustrialLayoutProps) {
-  const isLight = tone === 'light';
+  const themeTone = useIndustrialTone();
+  const tone = toneProp ?? themeTone;
+  const ui = industrialUi(tone);
+
   const mainStyle: CSSProperties = {
     display: 'grid',
     gap: 20,
     padding: 24,
-    color: isLight ? '#1e1e1e' : '#f1f5f9',
-    background: isLight ? '#f8fafc' : undefined,
+    color: ui.text,
+    background: ui.pageBg,
     lineHeight: 1.5,
     minHeight: '100%',
   };
@@ -33,7 +45,7 @@ export function IndustrialLayout({
         <p
           style={{
             margin: 0,
-            color: isLight ? '#64748b' : '#a3b2c2',
+            color: ui.muted,
             fontSize: 12,
             fontWeight: 600,
             letterSpacing: 1,
@@ -48,7 +60,7 @@ export function IndustrialLayout({
             margin: '4px 0 0',
             fontSize: 28,
             fontWeight: 700,
-            color: isLight ? '#1e1e1e' : '#f1f5f9',
+            color: ui.textStrong,
             lineHeight: 1.5,
           }}
         >
@@ -60,7 +72,7 @@ export function IndustrialLayout({
               margin: '10px 0 0',
               fontSize: 12,
               fontWeight: 400,
-              color: isLight ? '#475569' : '#a3b2c2',
+              color: ui.muted,
               lineHeight: 1.5,
             }}
           >

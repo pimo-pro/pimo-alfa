@@ -11,6 +11,7 @@ import {
 } from '@/industrial/work-orders/resolveWorkOrderPiece';
 import { readOfflineProjects } from '@/core/projects/projectsOfflineStore';
 import { IndustrialLayout, useIndustrialPageState } from '@/industrial/ui/components';
+import { industrialUi, useIndustrialTone } from '@/industrial/ui/layouts/industrialTheme';
 import { INDUSTRIAL_STATIONS, STATION_LABELS, type IndustrialStation } from '@/industrial/work-orders/types';
 import { industrialFeatureFlags } from '@/industrial/config/featureFlags';
 import { buildIndustrialOnlineAnalysisIndexPath } from '@/core/industrial/onlineAnalysis';
@@ -37,6 +38,8 @@ function normalizeProjectQueryParam(raw: string | null): string {
 
 export default function IndustrialWorkOrdersRoute() {
   useIndustrialPageState();
+  const tone = useIndustrialTone();
+  const ui = industrialUi(tone);
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [stationFilter, setStationFilter] = useState<IndustrialStation | ''>('');
@@ -113,13 +116,29 @@ export default function IndustrialWorkOrdersRoute() {
     }
   };
 
+  const inputStyle = {
+    padding: '8px 10px',
+    borderRadius: 6,
+    border: `1px solid ${ui.inputBorder}`,
+    background: ui.inputBg,
+    color: ui.text,
+  } as const;
+
+  const secondaryBtnStyle = {
+    padding: '8px 12px',
+    borderRadius: 6,
+    border: `1px solid ${ui.btnSecondaryBorder}`,
+    background: ui.btnSecondaryBg,
+    color: ui.btnSecondaryText,
+    cursor: 'pointer' as const,
+  };
+
   return (
     <IndustrialLayout
-      tone="light"
       title="Ordens de Trabalho"
       description="Gestão e execução das work orders industriais por estação."
     >
-      <div style={{ display: 'grid', gap: 20 }}>
+      <div style={{ display: 'grid', gap: 20, color: ui.text }}>
         <QrScannerPanel />
 
         <section style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -130,10 +149,11 @@ export default function IndustrialWorkOrdersRoute() {
               style={{
                 padding: '6px 12px',
                 borderRadius: 6,
-                border: '1px solid #cbd5e1',
+                border: `1px solid ${ui.btnSecondaryBorder}`,
                 fontSize: 13,
-                color: '#0f172a',
+                color: ui.textStrong,
                 textDecoration: 'none',
+                background: ui.btnSecondaryBg,
               }}
             >
               {STATION_LABELS[station]}
@@ -146,17 +166,18 @@ export default function IndustrialWorkOrdersRoute() {
             display: 'grid',
             gap: 12,
             padding: 16,
-            border: '1px solid #e2e8f0',
+            border: `1px solid ${ui.panelBorder}`,
             borderRadius: 8,
-            background: '#fff',
+            background: ui.panelBg,
+            color: ui.text,
           }}
         >
-          <h3 style={{ margin: 0, fontSize: 14 }}>Gerar ordens por projeto</h3>
+          <h3 style={{ margin: 0, fontSize: 14, color: ui.textStrong }}>Gerar ordens por projeto</h3>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
             <select
               value={projectFilter}
               onChange={(e) => syncProjectQuery(e.target.value)}
-              style={{ minWidth: 220, padding: '8px 10px', borderRadius: 6, border: '1px solid #cbd5e1' }}
+              style={{ ...inputStyle, minWidth: 220 }}
             >
               <option value="">Seleccionar projeto…</option>
               {projects.map((project) => (
@@ -173,8 +194,8 @@ export default function IndustrialWorkOrdersRoute() {
                 padding: '8px 14px',
                 borderRadius: 6,
                 border: 'none',
-                background: '#0f172a',
-                color: '#fff',
+                background: ui.btnPrimaryBg,
+                color: ui.btnPrimaryText,
                 cursor: generating ? 'wait' : 'pointer',
               }}
             >
@@ -190,9 +211,9 @@ export default function IndustrialWorkOrdersRoute() {
                       style={{
                         padding: '8px 14px',
                         borderRadius: 6,
-                        border: '1px solid #cbd5e1',
-                        background: '#fff',
-                        color: '#0f172a',
+                        border: `1px solid ${ui.btnSecondaryBorder}`,
+                        background: ui.btnSecondaryBg,
+                        color: ui.btnSecondaryText,
                         textDecoration: 'none',
                         fontSize: 13,
                       }}
@@ -203,19 +224,29 @@ export default function IndustrialWorkOrdersRoute() {
                 })()
               : null}
             {user?.id ? (
-              <span style={{ fontSize: 12, color: '#64748b' }}>Operador: {user.id}</span>
+              <span style={{ fontSize: 12, color: ui.muted }}>Operador: {user.id}</span>
             ) : null}
           </div>
           {message ? <p style={{ margin: 0, color: '#16a34a', fontSize: 13 }}>{message}</p> : null}
           {error ? <p style={{ margin: 0, color: '#dc2626', fontSize: 13 }}>{error}</p> : null}
         </section>
 
-        <section style={{ display: 'grid', gap: 12 }}>
+        <section
+          style={{
+            display: 'grid',
+            gap: 12,
+            padding: 16,
+            border: `1px solid ${ui.panelBorder}`,
+            borderRadius: 8,
+            background: ui.panelBg,
+            color: ui.text,
+          }}
+        >
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <select
               value={stationFilter}
               onChange={(e) => setStationFilter(e.target.value as IndustrialStation | '')}
-              style={{ padding: '8px 10px', borderRadius: 6, border: '1px solid #cbd5e1' }}
+              style={inputStyle}
             >
               <option value="">Todas as estações</option>
               {INDUSTRIAL_STATIONS.map((station) => (
@@ -224,41 +255,31 @@ export default function IndustrialWorkOrdersRoute() {
                 </option>
               ))}
             </select>
-            <button
-              type="button"
-              onClick={() => void reload()}
-              style={{
-                padding: '8px 12px',
-                borderRadius: 6,
-                border: '1px solid #cbd5e1',
-                background: '#fff',
-                cursor: 'pointer',
-              }}
-            >
+            <button type="button" onClick={() => void reload()} style={secondaryBtnStyle}>
               Actualizar
             </button>
           </div>
 
           {projectFilter ? (
-            <p style={{ margin: 0, fontSize: 12, color: '#64748b' }}>
-              Filtro: <strong style={{ fontFamily: 'monospace' }}>{projectFilter}</strong>
+            <p style={{ margin: 0, fontSize: 12, color: ui.muted }}>
+              Filtro: <strong style={{ fontFamily: 'monospace', color: ui.textStrong }}>{projectFilter}</strong>
             </p>
           ) : null}
 
-          {loading ? <p style={{ color: '#64748b' }}>A carregar ordens…</p> : null}
+          {loading ? <p style={{ color: ui.muted }}>A carregar ordens…</p> : null}
           {loadError ? <p style={{ color: '#dc2626' }}>{loadError}</p> : null}
 
           {!loading && orders.length === 0 ? (
-            <p style={{ color: '#64748b' }}>Nenhuma ordem encontrada.</p>
+            <p style={{ color: ui.muted }}>Nenhuma ordem encontrada.</p>
           ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, color: ui.text }}>
               <thead>
-                <tr style={{ textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>
-                  <th style={{ padding: 8 }}>Projeto</th>
-                  <th style={{ padding: 8 }}>Estação</th>
-                  <th style={{ padding: 8 }}>Estado</th>
-                  <th style={{ padding: 8 }}>Peças</th>
-                  <th style={{ padding: 8 }}>Acções</th>
+                <tr style={{ textAlign: 'left', borderBottom: `1px solid ${ui.tableHeadBorder}` }}>
+                  <th style={{ padding: 8, color: ui.muted, fontWeight: 600 }}>Projeto</th>
+                  <th style={{ padding: 8, color: ui.muted, fontWeight: 600 }}>Estação</th>
+                  <th style={{ padding: 8, color: ui.muted, fontWeight: 600 }}>Estado</th>
+                  <th style={{ padding: 8, color: ui.muted, fontWeight: 600 }}>Peças</th>
+                  <th style={{ padding: 8, color: ui.muted, fontWeight: 600 }}>Acções</th>
                 </tr>
               </thead>
               <tbody>
@@ -266,24 +287,26 @@ export default function IndustrialWorkOrdersRoute() {
                   const projectCode = resolveOrderProjectCode(order);
                   const projetosLink = resolveProjetosLinkForProjectId(order.projectId);
                   return (
-                    <tr key={order.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: 8 }}>
-                        <div style={{ fontFamily: 'monospace', fontWeight: 600 }}>{projectCode}</div>
+                    <tr key={order.id} style={{ borderBottom: `1px solid ${ui.rowBorder}` }}>
+                      <td style={{ padding: 8, color: ui.text }}>
+                        <div style={{ fontFamily: 'monospace', fontWeight: 600, color: ui.textStrong }}>
+                          {projectCode}
+                        </div>
                         {projetosLink ? (
-                          <Link to={projetosLink.href} style={{ fontSize: 11, color: '#2563eb' }}>
+                          <Link to={projetosLink.href} style={{ fontSize: 11, color: ui.link }}>
                             Abrir PROJETOS
                           </Link>
                         ) : null}
                       </td>
-                      <td style={{ padding: 8 }}>{STATION_LABELS[order.station]}</td>
-                      <td style={{ padding: 8 }}>{STATUS_LABEL[order.status] ?? order.status}</td>
-                      <td style={{ padding: 8 }}>{order.pieceIds.length}</td>
+                      <td style={{ padding: 8, color: ui.text }}>{STATION_LABELS[order.station]}</td>
+                      <td style={{ padding: 8, color: ui.text }}>{STATUS_LABEL[order.status] ?? order.status}</td>
+                      <td style={{ padding: 8, color: ui.text }}>{order.pieceIds.length}</td>
                       <td style={{ padding: 8 }}>
-                        <Link to={`/industrial/work-orders/order/${order.id}`} style={{ color: '#2563eb' }}>
+                        <Link to={`/industrial/work-orders/order/${order.id}`} style={{ color: ui.link }}>
                           Executar
                         </Link>
                         {' · '}
-                        <Link to={`/industrial/work-orders/${order.station}`} style={{ color: '#64748b' }}>
+                        <Link to={`/industrial/work-orders/${order.station}`} style={{ color: ui.linkMuted }}>
                           Estação
                         </Link>
                       </td>

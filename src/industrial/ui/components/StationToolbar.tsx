@@ -2,8 +2,10 @@
 import {
   INDUSTRIAL_CONTROL_CLASS,
   ensureIndustrialInteractionStyles,
+  industrialBtnStyle,
   industrialBtnStyleLight,
 } from '@/industrial/ui/layouts/industrialStyles';
+import { useIndustrialTone } from '@/industrial/ui/layouts/industrialTheme';
 
 interface StationToolbarProps {
   toolMode: StationToolMode;
@@ -25,14 +27,17 @@ export default function StationToolbar({
   sidebarOpen = true,
 }: StationToolbarProps) {
   ensureIndustrialInteractionStyles();
+  const tone = useIndustrialTone();
+  const btn = (active: boolean) =>
+    tone === 'light' ? industrialBtnStyleLight(active) : industrialBtnStyle(active);
 
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }} data-station-tone={tone}>
       <button
         type="button"
         className={INDUSTRIAL_CONTROL_CLASS}
         onClick={() => onToolMode('move')}
-        style={industrialBtnStyleLight(toolMode === 'move')}
+        style={btn(toolMode === 'move')}
       >
         Mover
       </button>
@@ -40,7 +45,7 @@ export default function StationToolbar({
         type="button"
         className={INDUSTRIAL_CONTROL_CLASS}
         onClick={() => onToolMode('rotate')}
-        style={industrialBtnStyleLight(toolMode === 'rotate')}
+        style={btn(toolMode === 'rotate')}
       >
         Rodar
       </button>
@@ -48,12 +53,12 @@ export default function StationToolbar({
         type="button"
         className={INDUSTRIAL_CONTROL_CLASS}
         onClick={onToggleSnap}
-        style={industrialBtnStyleLight(snapEnabled)}
+        style={btn(snapEnabled)}
       >
         Snap
       </button>
       {onReload ? (
-        <button type="button" className={INDUSTRIAL_CONTROL_CLASS} onClick={onReload} style={industrialBtnStyleLight(false)}>
+        <button type="button" className={INDUSTRIAL_CONTROL_CLASS} onClick={onReload} style={btn(false)}>
           Actualizar
         </button>
       ) : null}
@@ -63,7 +68,7 @@ export default function StationToolbar({
           className={INDUSTRIAL_CONTROL_CLASS}
           title="Ocultar/mostrar histórico"
           onClick={onToggleSidebar}
-          style={industrialBtnStyleLight(sidebarOpen)}
+          style={btn(sidebarOpen)}
         >
           Histórico
         </button>

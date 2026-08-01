@@ -4,6 +4,7 @@ import StationCanvas from '@/industrial/ui/components/StationCanvas';
 import StationPanel from '@/industrial/ui/components/StationPanel';
 import StationSidebar from '@/industrial/ui/components/StationSidebar';
 import { IndustrialThreeColumnLayout } from '@/industrial/ui/layouts/IndustrialThreeColumnLayout';
+import { industrialUi, useIndustrialTone } from '@/industrial/ui/layouts/industrialTheme';
 import type { IndustrialStation } from '@/industrial/work-orders/types';
 import { STATION_LABELS } from '@/industrial/work-orders/types';
 
@@ -18,16 +19,17 @@ interface StationPageShellProps {
 
 export default function StationPageShell({ station, workOrderId = null }: StationPageShellProps) {
   const page = useStationPage(station, { workOrderId });
+  const tone = useIndustrialTone();
+  const ui = industrialUi(tone);
 
   if (page.loading && page.tasks.length === 0) {
     return (
       <IndustrialThreeColumnLayout
-        tone="light"
         title={page.title}
         description={page.description}
         sidebarOpen={false}
         leftLeft={<div />}
-        left={<div style={{ color: '#475569', fontSize: 13 }}>A carregar estação…</div>}
+        left={<div style={{ color: ui.muted, fontSize: 13 }}>A carregar estação…</div>}
         right={<div />}
       />
     );
@@ -35,7 +37,6 @@ export default function StationPageShell({ station, workOrderId = null }: Statio
 
   return (
     <IndustrialThreeColumnLayout
-      tone="light"
       title={page.title}
       description={page.description}
       sidebarOpen={page.sidebarOpen}
@@ -53,7 +54,7 @@ export default function StationPageShell({ station, workOrderId = null }: Statio
       }
       left={
         <StationPanel
-          tone="light"
+          tone={tone}
           title={page.config.panelTitle}
           description={page.description}
           sections={page.sections}
@@ -84,13 +85,13 @@ export default function StationPageShell({ station, workOrderId = null }: Statio
           extra={
             <div style={{ display: 'grid', gap: 6 }}>
               {workOrderId ? (
-                <Link to={`/industrial/work-orders/${station}`} style={{ fontSize: 12, color: '#1d4ed8' }}>
+                <Link to={`/industrial/work-orders/${station}`} style={{ fontSize: 12, color: ui.link }}>
                   Ver toda a estação
                 </Link>
               ) : null}
               <Link
                 to={`/industrial/supervisor?station=${station}`}
-                style={{ fontSize: 12, color: '#1d4ed8' }}
+                style={{ fontSize: 12, color: ui.link }}
               >
                 Ver no Supervisor
               </Link>

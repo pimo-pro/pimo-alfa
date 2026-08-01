@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 
 import { fetchWorkOrderDetail } from '@/industrial/api/workOrderActions';
 import { IndustrialLayout, useIndustrialPageState } from '@/industrial/ui/components';
+import { industrialUi, useIndustrialTone } from '@/industrial/ui/layouts/industrialTheme';
 import type { IndustrialWorkOrder } from '@/industrial/work-orders/types';
 import { INDUSTRIAL_STATIONS, type IndustrialStation } from '@/industrial/work-orders/types';
 
@@ -18,6 +19,8 @@ function isStation(value: string | undefined): value is IndustrialStation {
  */
 export default function WorkOrderExecutionPage() {
   useIndustrialPageState();
+  const tone = useIndustrialTone();
+  const ui = industrialUi(tone);
   const { workOrderId } = useParams<{ workOrderId: string }>();
 
   const [order, setOrder] = useState<IndustrialWorkOrder | null>(null);
@@ -45,25 +48,25 @@ export default function WorkOrderExecutionPage() {
 
   if (!workOrderId) {
     return (
-      <IndustrialLayout tone="light" title="Ordem de trabalho" description="Identificador em falta.">
-        <p style={{ color: '#1e1e1e' }}>Ordem inválida.</p>
+      <IndustrialLayout title="Ordem de trabalho" description="Identificador em falta.">
+        <p style={{ color: ui.textStrong }}>Ordem inválida.</p>
       </IndustrialLayout>
     );
   }
 
   if (loading && !order) {
     return (
-      <IndustrialLayout tone="light" title="Ordem de trabalho" description="A carregar…">
-        <p style={{ color: '#475569' }}>A carregar ordem…</p>
+      <IndustrialLayout title="Ordem de trabalho" description="A carregar…">
+        <p style={{ color: ui.muted }}>A carregar ordem…</p>
       </IndustrialLayout>
     );
   }
 
   if (error || !order || !isStation(order.station)) {
     return (
-      <IndustrialLayout tone="light" title="Ordem de trabalho" description="Execução operacional">
+      <IndustrialLayout title="Ordem de trabalho" description="Execução operacional">
         <div style={{ marginBottom: 12 }}>
-          <Link to="/industrial/work-orders" style={{ fontSize: 13, color: '#1d4ed8' }}>
+          <Link to="/industrial/work-orders" style={{ fontSize: 13, color: ui.link }}>
             ← Voltar à lista
           </Link>
         </div>

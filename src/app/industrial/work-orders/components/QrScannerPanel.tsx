@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { getRouteFromBarcode, parseBarcode } from '@/industrial/core/barcode/actions';
+import { industrialUi, useIndustrialTone } from '@/industrial/ui/layouts/industrialTheme';
 
 /**
  * Leitura QR / Barcode — modo individual + bulk (Enter adiciona; sem botão «Adicionar»).
@@ -15,6 +16,8 @@ interface QrScannerPanelProps {
 
 export default function QrScannerPanel({ onPieceScanned, continuous = true }: QrScannerPanelProps) {
   const navigate = useNavigate();
+  const tone = useIndustrialTone();
+  const ui = industrialUi(tone);
   const [value, setValue] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [lastOk, setLastOk] = useState<string | null>(null);
@@ -67,14 +70,15 @@ export default function QrScannerPanel({ onPieceScanned, continuous = true }: Qr
   return (
     <section
       style={{
-        border: '1px solid #e2e8f0',
+        border: `1px solid ${ui.panelBorder}`,
         borderRadius: 8,
         padding: 16,
-        background: 'rgba(15, 23, 42, 0.03)',
+        background: ui.panelBg,
+        color: ui.text,
       }}
     >
-      <h3 style={{ margin: '0 0 8px', fontSize: 14 }}>Leitura QR / Barcode</h3>
-      <p style={{ margin: '0 0 12px', fontSize: 12, color: '#64748b' }}>
+      <h3 style={{ margin: '0 0 8px', fontSize: 14, color: ui.textStrong }}>Leitura QR / Barcode</h3>
+      <p style={{ margin: '0 0 12px', fontSize: 12, color: ui.muted }}>
         Leitura individual ou contínua: Enter adiciona automaticamente (cole vários códigos separados por linha).
       </p>
       <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 8 }}>
@@ -87,7 +91,9 @@ export default function QrScannerPanel({ onPieceScanned, continuous = true }: Qr
             flex: 1,
             padding: '8px 10px',
             borderRadius: 6,
-            border: '1px solid #cbd5e1',
+            border: `1px solid ${ui.inputBorder}`,
+            background: ui.inputBg,
+            color: ui.text,
           }}
         />
         <button
@@ -96,8 +102,8 @@ export default function QrScannerPanel({ onPieceScanned, continuous = true }: Qr
             padding: '8px 14px',
             borderRadius: 6,
             border: 'none',
-            background: '#0f172a',
-            color: '#fff',
+            background: ui.btnPrimaryBg,
+            color: ui.btnPrimaryText,
             cursor: 'pointer',
           }}
         >
@@ -111,4 +117,3 @@ export default function QrScannerPanel({ onPieceScanned, continuous = true }: Qr
     </section>
   );
 }
-

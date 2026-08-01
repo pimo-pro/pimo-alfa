@@ -4,6 +4,7 @@ import {
   IndustrialLayout,
   type IndustrialLayoutTone,
 } from '@/industrial/ui/components/IndustrialLayout';
+import { useIndustrialTone } from '@/industrial/ui/layouts/industrialTheme';
 
 import { industrialPanelStyle, industrialPanelStyleLight } from './industrialStyles';
 
@@ -15,6 +16,7 @@ export interface IndustrialThreeColumnLayoutProps {
   left: ReactNode;
   right: ReactNode;
   history?: ReactNode;
+  /** Omitido → tema global. */
   tone?: IndustrialLayoutTone;
 }
 
@@ -26,8 +28,10 @@ export function IndustrialThreeColumnLayout({
   left,
   right,
   history,
-  tone = 'dark',
+  tone: toneProp,
 }: IndustrialThreeColumnLayoutProps) {
+  const themeTone = useIndustrialTone();
+  const tone = toneProp ?? themeTone;
   const gridTemplateColumns =
     sidebarOpen && history ? '56px 260px 300px 1fr' : '56px 300px 1fr';
   const panelStyle = tone === 'light' ? industrialPanelStyleLight : industrialPanelStyle;
@@ -41,6 +45,7 @@ export function IndustrialThreeColumnLayout({
           gap: 16,
           minHeight: 'calc(100vh - 220px)',
         }}
+        data-industrial-tone={tone}
       >
         <div style={{ ...panelStyle, padding: 8, display: 'grid', alignContent: 'start' }}>
           {leftLeft}
