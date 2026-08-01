@@ -1,6 +1,16 @@
 {
-  "updatedAt": "2026-08-01T14:16:27.065Z",
+  "updatedAt": "2026-08-01T14:19:54.284Z",
   "news": [
+    {
+      "version": "v6.0801.1519",
+      "title": "Atualização do ProjectState: Designer, Empresa executora, Materiais + integração Relatorio Final/PDF.",
+      "description": "Atualização do ProjectState: Designer, Empresa executora, Materiais + integração Relatorio Final/PDF.",
+      "publishedAt": "2026-08-01T14:19:54.031Z",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "update",
+      "commit": "c5fe581b"
+    },
     {
       "version": "v6.0801.1516",
       "title": "Atualização do ProjectState: Designer, Empresa executora, Materiais + integração Relatorio Final/PDF.",
