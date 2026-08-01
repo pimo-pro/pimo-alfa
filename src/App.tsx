@@ -29,6 +29,8 @@ import UserProjectsPage from "./pages/UserProjectsPage";
 import SettingsPage from "./pages/SettingsPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Navbar from "./components/Navbar";
+import TopBarTrak from "./components/TopBarTrak";
+import { resolveAppChrome } from "./chrome/resolveAppChrome";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import MePage from "./pages/MePage";
@@ -348,11 +350,14 @@ function LegacyApp() {
 }
 
 function ProtectedLayout() {
+  const { pathname } = useLocation();
+  const chrome = resolveAppChrome(pathname);
   return (
     <ProtectedRoute>
       <ToastProvider>
         <SettingsProvider>
-          <Navbar />
+          {chrome.topBar === "trak" ? <TopBarTrak /> : null}
+          {chrome.topBar === "navbar" ? <Navbar /> : null}
           <Outlet />
         </SettingsProvider>
       </ToastProvider>
@@ -361,9 +366,11 @@ function ProtectedLayout() {
 }
 
 function AppChromeLayout() {
+  const { pathname } = useLocation();
+  const chrome = resolveAppChrome(pathname);
   return (
     <div className="ui-app-frame">
-      <Header />
+      {chrome.showProHeader ? <Header /> : null}
       <main className="ui-app-frame__content">
         <Outlet />
       </main>
