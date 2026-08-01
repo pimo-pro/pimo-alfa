@@ -1,11 +1,21 @@
 {
-  "updatedAt": "2026-08-01T11:40:04.280Z",
+  "updatedAt": "2026-08-01T14:16:27.065Z",
   "news": [
+    {
+      "version": "v6.0801.1516",
+      "title": "Atualização do ProjectState: Designer, Empresa executora, Materiais + integração Relatorio Final/PDF.",
+      "description": "Atualização do ProjectState: Designer, Empresa executora, Materiais + integração Relatorio Final/PDF.",
+      "publishedAt": "2026-08-01T14:16:26.783Z",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "update",
+      "commit": "845f2a04"
+    },
     {
       "version": "v6.0801.1240",
       "title": "Relatório Final: PDF, histórico, notas, qualidade, integração TRAK/Industrial.",
       "description": "Relatório Final: PDF, histórico, notas, qualidade, integração TRAK/Industrial.",
-      "publishedAt": "2026-08-01T11:40:03.977Z",
+      "publishedAt": "2026-08-01T12:43:24+01:00",
       "type": "update",
       "author": "pimo-pro",
       "icon": "update",

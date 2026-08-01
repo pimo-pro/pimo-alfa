@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-08-01T14:16:25.698Z",
+      "author": "pimo-pro",
+      "commitMessage": "Atualização do ProjectState: Designer, Empresa executora, Materiais + integração Relatorio Final/PDF.",
+      "version": "v6.0801.1516"
+    },
+    {
       "publishedAt": "2026-08-01T11:40:02.877Z",
       "author": "pimo-pro",
       "commitMessage": "Relatório Final: PDF, histórico, notas, qualidade, integração TRAK/Industrial.",
