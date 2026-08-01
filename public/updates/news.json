@@ -1,11 +1,21 @@
 {
-  "updatedAt": "2026-08-01T21:55:30.396Z",
+  "updatedAt": "2026-08-01T22:55:25.348Z",
   "news": [
+    {
+      "version": "v6.0801.2355",
+      "title": "Ajustes industriais · navegação e chrome",
+      "description": "Ajustes industriais · navegação e chrome\n\nCorreção do chrome global, navegação SUP/NES/DRI/ORL/MON/EMB por projecto, naming correcto em Ordem · Drill e Estação · Nesting, remoção de caracteres estranhos e unificação visual.",
+      "publishedAt": "2026-08-01T22:55:25.343Z",
+      "type": "feature",
+      "author": "pimo-pro",
+      "icon": "feature",
+      "commit": "76d7ea9"
+    },
     {
       "version": "v6.0801.2255",
       "title": "Naming industrial · unificação completa",
       "description": "Naming industrial · unificação completa\n\nAplicação das Fases A+B+C. Unificação de nomes de projecto, rotas industriais por projecto, correção de relatório final, correção de links, eliminação de pimo-* como display, normalização de slug, anchors industriais e integração com cutlist, etiquetas e QR.",
-      "publishedAt": "2026-08-01T21:55:30.393Z",
+      "publishedAt": "2026-08-01T22:58:44+01:00",
       "type": "feature",
       "author": "pimo-pro",
       "icon": "feature",

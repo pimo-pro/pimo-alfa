@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-08-01T22:55:24.421Z",
+      "author": "pimo-pro",
+      "commitMessage": "Ajustes industriais · navegação por projecto · chrome global",
+      "version": "v6.0801.2355"
+    },
+    {
       "publishedAt": "2026-08-01T21:55:29.523Z",
       "author": "pimo-pro",
       "commitMessage": "fix: tokens UI industriais em ProjectOrderHubPage (panelBorder/panelBg)",
