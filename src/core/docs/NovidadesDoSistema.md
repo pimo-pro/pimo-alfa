@@ -1,16 +1,23 @@
 # Novidades do Sistema
 
-### Atualização — Layout de Corte PRO
-- Nome completo das peças agora segue o padrão da etiqueta (Projeto_Caixa_Peça).
-- Miniatura das peças redesenhada em landscape, sem bordas.
-- Colunas redistribuídas para melhor uso da largura da página.
+### Atualizacao - Layout de Corte PRO
+- Nome completo das pecas agora segue o padrao da etiqueta (Projeto_Caixa_Peca).
+- Miniatura das pecas redesenhada em landscape, sem bordas.
+- Colunas redistribuidas para melhor uso da largura da pagina.
 - Altura das linhas ajustada para maior clareza visual.
-- Preparação para o novo módulo 'Layout de Corte manual'.
+- Preparacao para o novo modulo Layout de Corte manual.
 
-### Nova funcionalidade — Layout de Corte manual
-- PDF único para todas as chapas.
-- Furos com cores e tamanhos reais (cavilha, prateleira, fixação, passante).
-- Cotas inteligentes (borda ? primeiro, último ? borda, espaçamento único).
-- Rasgos/fresagens exibidos com profundidade e posição.
-- Botão dedicado em Gerar arquivo.
-- Incluído em Gerar arquivo completo.
+### Nova funcionalidade - Layout de Corte manual
+- PDF unico para todas as chapas.
+- Furos com cores e tamanhos reais (cavilha, prateleira, fixacao, passante).
+- Cotas inteligentes (borda -> primeiro, ultimo -> borda, espacamento unico).
+- Rasgos/fresagens exibidos com profundidade e posicao.
+- Botao dedicado em Gerar arquivo.
+- Incluido em Gerar arquivo completo.
+
+### Hotfix - Cotagem de trilho (Layout de Corte manual)
+- Novo tipo trilho.
+- Cotas externas: 38 / 204 / 41 mm.
+- Sem repeticao.
+- Trilho superior e inferior como sistemas independentes.
+- Escala ajustada para leitura clara.
