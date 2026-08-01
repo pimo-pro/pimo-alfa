@@ -1,11 +1,21 @@
 {
-  "updatedAt": "2026-08-01T14:19:54.284Z",
+  "updatedAt": "2026-08-01T17:35:31.094Z",
   "news": [
+    {
+      "version": "v6.0801.1835",
+      "title": "Industrial Stations: seleção múltipla, leitura QR bulk, ações em grupo (Iniciar/Concluir/Rejeitar).",
+      "description": "Industrial Stations: seleção múltipla, leitura QR bulk, ações em grupo (Iniciar/Concluir/Rejeitar).",
+      "publishedAt": "2026-08-01T17:35:30.598Z",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "update",
+      "commit": "d452314b"
+    },
     {
       "version": "v6.0801.1519",
       "title": "Atualização do ProjectState: Designer, Empresa executora, Materiais + integração Relatorio Final/PDF.",
       "description": "Atualização do ProjectState: Designer, Empresa executora, Materiais + integração Relatorio Final/PDF.",
-      "publishedAt": "2026-08-01T14:19:54.031Z",
+      "publishedAt": "2026-08-01T15:23:27+01:00",
       "type": "update",
       "author": "pimo-pro",
       "icon": "update",
@@ -15,7 +25,7 @@
       "version": "v6.0801.1516",
       "title": "Atualização do ProjectState: Designer, Empresa executora, Materiais + integração Relatorio Final/PDF.",
       "description": "Atualização do ProjectState: Designer, Empresa executora, Materiais + integração Relatorio Final/PDF.",
-      "publishedAt": "2026-08-01T14:16:26.783Z",
+      "publishedAt": "2026-08-01T15:19:38+01:00",
       "type": "update",
       "author": "pimo-pro",
       "icon": "update",
