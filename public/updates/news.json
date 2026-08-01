@@ -1,11 +1,31 @@
 {
-  "updatedAt": "2026-08-01T20:54:19.805Z",
+  "updatedAt": "2026-08-01T21:55:30.396Z",
   "news": [
+    {
+      "version": "v6.0801.2255",
+      "title": "Naming industrial · unificação completa",
+      "description": "Naming industrial · unificação completa\n\nAplicação das Fases A+B+C. Unificação de nomes de projecto, rotas industriais por projecto, correção de relatório final, correção de links, eliminação de pimo-* como display, normalização de slug, anchors industriais e integração com cutlist, etiquetas e QR.",
+      "publishedAt": "2026-08-01T21:55:30.393Z",
+      "type": "feature",
+      "author": "pimo-pro",
+      "icon": "feature",
+      "commit": "1a4b38a"
+    },
+    {
+      "version": "v6.0801.2251",
+      "title": "Naming industrial · unificação completa",
+      "description": "Naming industrial · unificação completa\n\nAplicação das Fases A+B+C. Unificação de nomes de projecto, rotas industriais por projecto, correção de relatório final, correção de links, eliminação de pimo-* como display, normalização de slug, anchors industriais e integração com cutlist, etiquetas e QR.",
+      "publishedAt": "2026-08-01T21:51:47.533Z",
+      "type": "feature",
+      "author": "pimo-pro",
+      "icon": "feature",
+      "commit": "1a4b38a2"
+    },
     {
       "version": "v6.0801.2154",
       "title": "TopBar-TRK · Cabeçalho industrial unificado",
       "description": "TopBar-TRK · Cabeçalho industrial unificado\n\nReestruturação do chrome por módulo. Páginas industriais passam a usar o novo TopBarTrak com título dinâmico, indicadores reais (tarefas activas, ordens, online/offline) e sessão do utilizador. Remoção do Navbar antigo nas rotas TRK.",
-      "publishedAt": "2026-08-01T20:54:19.421Z",
+      "publishedAt": "2026-08-01T21:57:33+01:00",
       "type": "feature",
       "author": "pimo-pro",
       "icon": "feature",

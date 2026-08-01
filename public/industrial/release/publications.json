@@ -2,6 +2,18 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-08-01T21:55:29.523Z",
+      "author": "pimo-pro",
+      "commitMessage": "fix: tokens UI industriais em ProjectOrderHubPage (panelBorder/panelBg)",
+      "version": "v6.0801.2255"
+    },
+    {
+      "publishedAt": "2026-08-01T21:51:45.614Z",
+      "author": "pimo-pro",
+      "commitMessage": "Naming industrial · Fases A+B+C · unificação completa de projectos e rotas",
+      "version": "v6.0801.2251"
+    },
+    {
       "publishedAt": "2026-08-01T20:54:18.300Z",
       "author": "pimo-pro",
       "commitMessage": "TopBar-TRK · chrome por módulo · cabeçalho industrial unificado",
