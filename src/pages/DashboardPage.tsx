@@ -11,8 +11,14 @@ import {
   type OfflineProjectRecord,
 } from "../core/projects/projectsOfflineStore";
 import type { SavedProjectMeta } from "../core/projects/types";
+import { toProjetosPageSlug } from "../app/PROJETOS/projetosPageSlug";
 import Button from "../components/ui/Button";
 import "../components/ui/ui.css";
+
+function projectPublicPath(project: Pick<SavedProjectMeta, "id" | "name">): string {
+  const slug = toProjetosPageSlug(project.name || "");
+  return `/projects/${encodeURIComponent(slug || project.id)}`;
+}
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -200,7 +206,7 @@ type ProjectRowProps = {
 function ProjectRow({ project, right }: ProjectRowProps) {
   return (
     <Link
-      to={`/projects/${project.id}`}
+      to={projectPublicPath(project)}
       style={{ textDecoration: "none", color: "inherit", display: "block" }}
     >
       <div
@@ -647,7 +653,7 @@ function SectionContent({
                   style={{ fontSize: 12, padding: "4px 12px", flexShrink: 0 }}
                   onClick={(e) => {
                     e.preventDefault();
-                    navigate(`/projects/${lastOpened.id}`);
+                    navigate(projectPublicPath(lastOpened));
                   }}
                 >
                   Abrir

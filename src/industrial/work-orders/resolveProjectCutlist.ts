@@ -1,5 +1,5 @@
 import type { SavedProjectRecord } from '@/core/projects/types';
-import { readOfflineProjects } from '@/core/projects/projectsOfflineStore';
+import { findOfflineProjectByAnyKey } from '@/core/projects/projectIdentity';
 import { toSavedRecordFromOffline } from '@/core/projects/projectsMappers';
 
 import { resolveProjectCutlistFromRecord } from './resolveProjectCutlistFromRecord';
@@ -7,7 +7,7 @@ import { resolveProjectCutlistFromRecord } from './resolveProjectCutlistFromReco
 export type { ProjectCutlistContext } from './resolveProjectCutlistFromRecord';
 
 export function resolveProjectCutlist(projectId: string) {
-  const project = readOfflineProjects().find((p) => !p.deleted && p.id === projectId);
+  const project = findOfflineProjectByAnyKey(projectId);
   if (!project) return null;
   return resolveProjectCutlistFromRecord(toSavedRecordFromOffline(project));
 }

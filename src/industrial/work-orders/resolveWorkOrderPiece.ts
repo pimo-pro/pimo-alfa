@@ -294,7 +294,11 @@ export function attachDisplayToTasks(
 export function resolveWorkOrderProjectDisplay(projectId: string): string {
   const ctx = resolveProjectCutlist(projectId);
   if (ctx) return projectCodeFromName(ctx.projectName);
-  return projectCodeFromName(resolveProjectDisplayName(projectId));
+  const display = resolveProjectDisplayName(projectId);
+  if (!display || display === '—' || display.startsWith('pimo') || display.startsWith('local')) {
+    return 'PROJETO';
+  }
+  return projectCodeFromName(display);
 }
 
 export function resolveProjectIdByProjectCode(projectCode: string): string | null {

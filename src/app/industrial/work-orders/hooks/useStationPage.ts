@@ -22,6 +22,8 @@ import type {
   StationToolMode,
 } from '@/industrial/ui/components/stationTypes';
 import { useIndustrialPageState } from '@/industrial/ui/components';
+import { resolveProjectIdentity } from '@/core/projects/projectIdentity';
+import { resolveOrderProjectCode } from '@/industrial/work-orders/resolveWorkOrderPiece';
 
 import { buildCanvasPieces, buildStationListSections } from '../utils/stationListData';
 import { getStationConfig, getStationPageTitle } from '../stationConfigs';
@@ -130,6 +132,8 @@ const ACTION_LABEL: Record<StationBulkAction, string> = {
 export type UseStationPageOptions = {
   /** Quando definido, filtra ordens/tarefas à work order (página Ordem · Estação). */
   workOrderId?: string | null;
+  /** Slug / nome do projecto — filtra por projectCode. */
+  projectSlug?: string | null;
 };
 
 export function useStationPage(station: IndustrialStation, options: UseStationPageOptions = {}) {
@@ -137,6 +141,11 @@ export function useStationPage(station: IndustrialStation, options: UseStationPa
   const { user } = useAuth();
   const config = getStationConfig(station);
   const workOrderId = options.workOrderId?.trim() || null;
+  const projectIdentity = useMemo(
+    () => (options.projectSlug?.trim() ? resolveProjectIdentity(options.projectSlug) : null),
+    [options.projectSlug],
+  );
+  const projectCodeFilter = projectIdentity?.projectCode || null;
 
   const [orders, setOrders] = useState<IndustrialWorkOrder[]>([]);
   const [tasks, setTasks] = useState<IndustrialWorkOrderTask[]>([]);
@@ -183,15 +192,27 @@ export function useStationPage(station: IndustrialStation, options: UseStationPa
     setError(null);
     try {
       const [orderRows, taskRows] = await Promise.all([
-        fetchWorkOrders({ station }),
+        fetchWorkOrders({
+          station,
+          projectCode: projectCodeFilter || undefined,
+        }),
         fetchStationTasks(station),
       ]);
-      const filteredOrders = workOrderId
+      let filteredOrders = workOrderId
         ? orderRows.filter((order) => order.id === workOrderId)
         : orderRows;
-      const filteredTasks = workOrderId
+      if (projectCodeFilter) {
+        filteredOrders = filteredOrders.filter(
+          (order) => resolveOrderProjectCode(order).toUpperCase() === projectCodeFilter,
+        );
+      }
+      const orderIds = new Set(filteredOrders.map((o) => o.id));
+      let filteredTasks = workOrderId
         ? taskRows.filter((task) => task.workOrderId === workOrderId)
         : taskRows;
+      if (projectCodeFilter || workOrderId) {
+        filteredTasks = filteredTasks.filter((task) => orderIds.has(task.workOrderId));
+      }
       setOrders(filteredOrders);
       setTasks(filteredTasks);
       setSelectedTask((current) => {
@@ -204,7 +225,7 @@ export function useStationPage(station: IndustrialStation, options: UseStationPa
     } finally {
       setLoading(false);
     }
-  }, [station, workOrderId]);
+  }, [station, workOrderId, projectCodeFilter]);
 
   reloadRef.current = reload;
 

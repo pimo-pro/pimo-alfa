@@ -16,8 +16,13 @@ import {
   resolveMateriaisProjeto,
   resolveProjectDesigner,
 } from "@/core/projects/projectMeta";
+import { projectNameFromPageSlug } from "@/app/PROJETOS/projetosPageSlug";
+import {
+  findOfflineProjectByAnyKey,
+  isInternalProjectId,
+  resolveProjectIdentity,
+} from "@/core/projects/projectIdentity";
 import { toSavedRecordFromOffline } from "@/core/projects/projectsMappers";
-import { readOfflineProjects } from "@/core/projects/projectsOfflineStore";
 import { safeGetItem } from "@/utils/storage";
 import { resolveProjectCutlistFromRecord } from "@/industrial/work-orders/resolveProjectCutlistFromRecord";
 
@@ -63,10 +68,24 @@ function loadFerragens(): Ferragem[] {
 }
 
 function findOfflineProject(projectId: string) {
-  const id = projectId.trim();
-  return (
-    readOfflineProjects().find((p) => !p.deleted && (p.id === id || p.remoteId === id)) ?? null
-  );
+  return findOfflineProjectByAnyKey(projectId);
+}
+
+function resolveDisplayProjectName(
+  name: string,
+  stateName: string | undefined,
+  projectKey: string,
+): string {
+  const fromOffline = name.trim();
+  if (fromOffline && !isInternalProjectId(fromOffline)) return fromOffline;
+  const fromState = String(stateName ?? "").trim();
+  if (fromState && !isInternalProjectId(fromState)) return fromState;
+  const identity = resolveProjectIdentity(projectKey);
+  if (identity?.name && !isInternalProjectId(identity.name)) return identity.name;
+  if (!isInternalProjectId(projectKey)) {
+    return projectNameFromPageSlug(projectKey);
+  }
+  return "Projeto";
 }
 
 function reviveProjectState(projectId: string): {
@@ -227,7 +246,7 @@ export async function seedOrMergeProjectReport(
       updatedAt: now,
       gerais: {
         ...emptyGerais(),
-        nomeProjeto: name || state?.projectName || `Projeto ${id}`,
+        nomeProjeto: resolveDisplayProjectName(name, state?.projectName, id),
         designer: resolveProjectDesigner(state, ownerName),
         empresa: resolveEmpresaExecutora(state),
         materiaisDescricao: resolveMateriaisProjeto(state),
@@ -248,7 +267,15 @@ export async function seedOrMergeProjectReport(
   }
 
   const gerais = { ...emptyGerais(), ...existing.gerais };
-  if (!isManualPath(existing, "gerais.nomeProjeto") && name) gerais.nomeProjeto = name;
+  if (!isManualPath(existing, "gerais.nomeProjeto")) {
+    const resolvedName = resolveDisplayProjectName(name, state?.projectName, id);
+    if (
+      resolvedName &&
+      (resolvedName !== "Projeto" || !gerais.nomeProjeto || isInternalProjectId(gerais.nomeProjeto))
+    ) {
+      gerais.nomeProjeto = resolvedName;
+    }
+  }
   if (!isManualPath(existing, "gerais.designer") && !gerais.designer) {
     gerais.designer = resolveProjectDesigner(state, ownerName);
   }

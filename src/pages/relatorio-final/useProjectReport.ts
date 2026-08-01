@@ -9,8 +9,36 @@ import {
   type ProjectReport,
   type ReportStyle,
 } from "@/core/projectReport";
+import { resolveProjectIdentity } from "@/core/projects/projectIdentity";
 
-export function useProjectReport(projectId: string | undefined) {
+function loadReportFlexible(urlKey: string): ProjectReport | null {
+  const identity = resolveProjectIdentity(urlKey);
+  const keys = [
+    urlKey,
+    identity?.slug,
+    identity?.persistenceId,
+    identity?.remoteId,
+    identity?.localId,
+  ].filter((k): k is string => Boolean(k && String(k).trim()));
+
+  const seen = new Set<string>();
+  for (const key of keys) {
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const stored = loadProjectReport(key);
+    if (stored) return stored;
+  }
+  return null;
+}
+
+/** Chave de URL (slug ou id legado) → id de persistência para seed/TRAK. */
+function resolveSeedKey(urlKey: string): string {
+  const identity = resolveProjectIdentity(urlKey);
+  if (identity?.persistenceId) return identity.persistenceId;
+  return urlKey.trim();
+}
+
+export function useProjectReport(projectKey: string | undefined) {
   const [report, setReport] = useState<ProjectReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -21,7 +49,7 @@ export function useProjectReport(projectId: string | undefined) {
   useEffect(() => {
     let cancelled = false;
     async function run() {
-      if (!projectId?.trim()) {
+      if (!projectKey?.trim()) {
         setError("Projeto n\u00e3o especificado.");
         setLoading(false);
         return;
@@ -29,8 +57,9 @@ export function useProjectReport(projectId: string | undefined) {
       setLoading(true);
       setError(null);
       try {
-        const stored = loadProjectReport(projectId);
-        const merged = await seedOrMergeProjectReport(projectId, stored);
+        const seedKey = resolveSeedKey(projectKey);
+        const stored = loadReportFlexible(projectKey);
+        const merged = await seedOrMergeProjectReport(seedKey, stored);
         if (!cancelled) {
           setReport(merged);
           setDirty(!stored);
@@ -47,7 +76,7 @@ export function useProjectReport(projectId: string | undefined) {
     return () => {
       cancelled = true;
     };
-  }, [projectId]);
+  }, [projectKey]);
 
   const updateReport = useCallback(
     (updater: (prev: ProjectReport) => ProjectReport, manualPath?: string) => {

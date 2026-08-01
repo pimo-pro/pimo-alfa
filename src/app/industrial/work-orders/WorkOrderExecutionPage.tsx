@@ -21,7 +21,11 @@ export default function WorkOrderExecutionPage() {
   useIndustrialPageState();
   const tone = useIndustrialTone();
   const ui = industrialUi(tone);
-  const { workOrderId } = useParams<{ workOrderId: string }>();
+  const { workOrderId: workOrderIdParam, orderOrProject } = useParams<{
+    workOrderId?: string;
+    orderOrProject?: string;
+  }>();
+  const workOrderId = (workOrderIdParam ?? orderOrProject ?? '').trim();
 
   const [order, setOrder] = useState<IndustrialWorkOrder | null>(null);
   const [loading, setLoading] = useState(true);

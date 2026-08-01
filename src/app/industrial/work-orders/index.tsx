@@ -29,8 +29,10 @@ const STATUS_LABEL: Record<string, string> = {
 function normalizeProjectQueryParam(raw: string | null): string {
   if (!raw?.trim()) return '';
   const value = raw.trim();
-  if (/^pimo/i.test(value)) {
-    const project = readOfflineProjects().find((p) => !p.deleted && p.id === value);
+  if (/^pimo/i.test(value) || /^local/i.test(value)) {
+    const project = readOfflineProjects().find(
+      (p) => !p.deleted && (p.id === value || p.remoteId === value),
+    );
     if (project) return projectCodeFromName(project.name?.trim() || 'Projeto');
   }
   return value;

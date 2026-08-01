@@ -1,27 +1,40 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
+import { resolveProjectIdentity } from '@/core/projects/projectIdentity';
 import { loadSupervisorDashboardSnapshot } from '@/industrial/persistence/supervisor/loadSupervisorData';
 import type { SupervisorDashboardSnapshot } from '@/industrial/persistence/supervisor/types';
 import { useIndustrialRealtime } from '@/industrial/realtime';
 import { INDUSTRIAL_STATIONS, type IndustrialStation } from '@/industrial/work-orders/types';
+import { resolveOrderProjectCode } from '@/industrial/work-orders/resolveWorkOrderPiece';
 import { useIndustrialPageState } from '@/industrial/ui/components';
 
 export type SupervisorMainMode = 'canvas' | 'chat' | 'info' | 'alerts';
 export type SupervisorRailView = 'overview' | 'stations' | 'projects' | 'quality' | 'time' | 'chat' | 'alerts';
 
-export function useSupervisorDashboard() {
+export type UseSupervisorDashboardOptions = {
+  /** Slug / nome / id — pré-selecciona o projecto. */
+  initialProjectKey?: string | null;
+};
+
+export function useSupervisorDashboard(options: UseSupervisorDashboardOptions = {}) {
   useIndustrialPageState();
   const [searchParams] = useSearchParams();
   const stationFromQuery = searchParams.get('station');
   const pieceFromQuery = searchParams.get('piece');
+  const initialIdentity = useMemo(
+    () => (options.initialProjectKey?.trim() ? resolveProjectIdentity(options.initialProjectKey) : null),
+    [options.initialProjectKey],
+  );
 
   const [snapshot, setSnapshot] = useState<SupervisorDashboardSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mainMode, setMainMode] = useState<SupervisorMainMode>('canvas');
   const [railView, setRailView] = useState<SupervisorRailView>('overview');
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
+    () => initialIdentity?.persistenceId ?? null,
+  );
   const [selectedStation, setSelectedStation] = useState<IndustrialStation | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -63,6 +76,14 @@ export function useSupervisorDashboard() {
   }, [reload]);
 
   useEffect(() => {
+    if (initialIdentity?.persistenceId) {
+      setSelectedProjectId(initialIdentity.persistenceId);
+      setRailView('projects');
+      setMainMode('info');
+    }
+  }, [initialIdentity?.persistenceId]);
+
+  useEffect(() => {
     if (stationFromQuery && INDUSTRIAL_STATIONS.includes(stationFromQuery as IndustrialStation)) {
       setSelectedStation(stationFromQuery as IndustrialStation);
       setRailView('stations');
@@ -92,16 +113,32 @@ export function useSupervisorDashboard() {
 
   const filteredTasks = useMemo(() => {
     if (!snapshot) return [];
+    const filterIdentity = selectedProjectId
+      ? resolveProjectIdentity(selectedProjectId) ?? initialIdentity
+      : initialIdentity;
     return snapshot.tasks.filter((task) => {
-      if (selectedProjectId) {
+      if (selectedProjectId || filterIdentity) {
         const order = snapshot.orders.find((o) => o.id === task.workOrderId);
-        if (order?.projectId !== selectedProjectId) return false;
+        if (!order) return false;
+        const ids = new Set(
+          [
+            selectedProjectId,
+            filterIdentity?.localId,
+            filterIdentity?.remoteId,
+            filterIdentity?.persistenceId,
+          ].filter(Boolean) as string[],
+        );
+        const idMatch = ids.has(order.projectId);
+        const codeMatch = filterIdentity?.projectCode
+          ? resolveOrderProjectCode(order).toUpperCase() === filterIdentity.projectCode
+          : false;
+        if (!idMatch && !codeMatch) return false;
       }
       if (selectedStation && task.operationType !== selectedStation) return false;
       if (statusFilter !== 'all' && task.status !== statusFilter) return false;
       return true;
     });
-  }, [snapshot, selectedProjectId, selectedStation, statusFilter]);
+  }, [snapshot, selectedProjectId, selectedStation, statusFilter, initialIdentity]);
 
   const selectedTask = useMemo(
     () => snapshot?.tasks.find((t) => t.id === selectedTaskId) ?? null,

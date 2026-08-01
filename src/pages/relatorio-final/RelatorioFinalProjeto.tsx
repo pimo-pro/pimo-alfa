@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import Button from "@/components/ui/Button";
 import Loader from "@/components/ui/Loader";
 import PageContainer from "@/components/ui/PageContainer";
 import { emptyQualidade, exportProjectReportPdf, type ReportStyle } from "@/core/projectReport";
+import { resolveProjectIdentity } from "@/core/projects/projectIdentity";
 import { printHideClass, reportPageShell, reportSection, reportSectionTitle } from "./reportStyles";
 import { useProjectReport } from "./useProjectReport";
 import { R } from "./uiLabels";
@@ -17,7 +18,9 @@ import QualidadeBlock from "./components/QualidadeBlock";
 import HistoricoModal from "./components/HistoricoModal";
 
 export default function RelatorioFinalProjeto() {
-  const { projectId } = useParams<{ projectId: string }>();
+  const { projectId, project } = useParams<{ projectId?: string; project?: string }>();
+  const urlKey = (project ?? projectId ?? "").trim();
+  const identity = useMemo(() => resolveProjectIdentity(urlKey), [urlKey]);
   const {
     report,
     loading,
@@ -28,7 +31,10 @@ export default function RelatorioFinalProjeto() {
     updateReport,
     changeStyle,
     save,
-  } = useProjectReport(projectId);
+  } = useProjectReport(urlKey);
+  const backHref = identity?.persistenceId
+    ? `/projects/${encodeURIComponent(identity.slug || identity.persistenceId)}`
+    : "/projects";
   const [histOpen, setHistOpen] = useState(false);
   const [pdfMsg, setPdfMsg] = useState<string | null>(null);
 
@@ -46,7 +52,7 @@ export default function RelatorioFinalProjeto() {
         <p style={{ color: "var(--pi-btn-danger-bg, #dc2626)" }}>
           {error ?? R.indisponivel}
         </p>
-        <Link to={projectId ? `/projects/${projectId}` : "/projects"}>{R.voltar}</Link>
+        <Link to={backHref}>{R.voltar}</Link>
       </PageContainer>
     );
   }
@@ -119,7 +125,7 @@ export default function RelatorioFinalProjeto() {
             <Button type="button" variant="ghost" disabled title="Em breve">
               {R.email}
             </Button>
-            <Link to={`/projects/${report.projectId}`} style={{ alignSelf: "center", fontSize: 13 }}>
+            <Link to={backHref} style={{ alignSelf: "center", fontSize: 13 }}>
               {R.voltar}
             </Link>
           </div>

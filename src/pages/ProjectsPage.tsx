@@ -6,6 +6,7 @@ import { useAuth } from "../auth/useAuth";
 import type { AuthUser } from "../auth/AuthContext";
 import type { SavedProjectInfo } from "../context/projectTypes";
 import { listProjects, deleteProjectById } from "../core/projects/projectsClient";
+import { toProjetosPageSlug } from "../app/PROJETOS/projetosPageSlug";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
 import Loader from "../components/ui/Loader";
@@ -299,7 +300,10 @@ function ProjectCard({
           gap: 8,
         }}
       >
-        <Link to={`/projects/${project.id}`} style={{ flex: 1 }}>
+        <Link
+          to={`/projects/${encodeURIComponent(toProjetosPageSlug(project.name || "") || project.id)}`}
+          style={{ flex: 1 }}
+        >
           <Button variant="primary" style={{ width: "100%", fontSize: 13 }}>
             Abrir
           </Button>

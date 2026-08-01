@@ -1,7 +1,13 @@
-import { useCallback, useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, Navigate, useParams } from "react-router-dom";
 
 import { generateProjectWorkOrders } from "@/industrial/api/workOrderActions";
+import {
+  buildRelatorioFinalPath,
+  buildWorkOrdersListPath,
+  isInternalProjectId,
+  resolveProjectIdentity,
+} from "@/core/projects/projectIdentity";
 import { resolveProjectCutlist } from "@/industrial/work-orders/resolveProjectCutlist";
 import Card from "../components/ui/Card";
 import Loader from "../components/ui/Loader";
@@ -10,11 +16,13 @@ import PageHeader from "../components/ui/PageHeader";
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const identity = useMemo(() => resolveProjectIdentity(id), [id]);
+  const persistenceId = identity?.persistenceId || id || "";
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [projectName, setProjectName] = useState<string | null>(null);
+  const [projectName, setProjectName] = useState<string | null>(identity?.name ?? null);
   const [pieceCount, setPieceCount] = useState(0);
 
   useEffect(() => {
@@ -24,33 +32,39 @@ export default function ProjectDetailPage() {
         return;
       }
       const context = resolveProjectCutlist(id);
-      setProjectName(context?.projectName ?? null);
+      setProjectName(context?.projectName ?? identity?.name ?? null);
       setPieceCount(context?.pieces.length ?? 0);
       setLoading(false);
     }, 200);
     return () => window.clearTimeout(timer);
-  }, [id]);
+  }, [id, identity?.name]);
 
   const handleGenerateWorkOrders = useCallback(async () => {
-    if (!id) return;
+    if (!persistenceId) return;
     setGenerating(true);
     setError(null);
     setMessage(null);
     try {
-      const result = await generateProjectWorkOrders(id);
+      const result = await generateProjectWorkOrders(persistenceId);
       setMessage(`Criadas ${result.orders.length} ordens de trabalho para "${result.projectName}".`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao gerar ordens.");
     } finally {
       setGenerating(false);
     }
-  }, [id]);
+  }, [persistenceId]);
+
+  if (id && isInternalProjectId(id) && identity?.slug) {
+    return <Navigate to={`/projects/${encodeURIComponent(identity.slug)}`} replace />;
+  }
+
+  const displayName = projectName || identity?.name || "Projeto";
 
   return (
     <PageContainer>
       <Card>
-        <PageHeader title={projectName ? projectName : `Projeto ${id}`} />
-        {loading ? <Loader label={`Carregando projeto ${id}...`} /> : null}
+        <PageHeader title={displayName} />
+        {loading ? <Loader label={`Carregando projeto ${displayName}...`} /> : null}
         {!loading ? (
           <div style={{ display: "grid", gap: 16 }}>
             <p>Placeholder da FASE 4 (editor não implementado).</p>
@@ -74,19 +88,17 @@ export default function ProjectDetailPage() {
                 {generating ? "A gerar ordens…" : "Gerar Ordens de Trabalho Industriais"}
               </button>
               <Link
-                to={`/industrial/work-orders${id ? `?project=${id}` : ""}`}
+                to={buildWorkOrdersListPath(identity?.slug || displayName)}
                 style={{ alignSelf: "center", color: "#2563eb" }}
               >
                 Ver work orders
               </Link>
-              {id ? (
-                <Link
-                  to={`/relatorio-final/${id}`}
-                  style={{ alignSelf: "center", color: "#2563eb" }}
-                >
-                  Relatório Final
-                </Link>
-              ) : null}
+              <Link
+                to={buildRelatorioFinalPath(identity?.slug || displayName)}
+                style={{ alignSelf: "center", color: "#2563eb" }}
+              >
+                Relatório Final
+              </Link>
             </div>
             {message ? <p style={{ margin: 0, color: "#16a34a" }}>{message}</p> : null}
             {error ? <p style={{ margin: 0, color: "#dc2626" }}>{error}</p> : null}

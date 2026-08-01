@@ -53,8 +53,9 @@ import "./components/ui/ui.css";
 import type { V3Piece } from "./nesting-v3/nestingV3Types";
 import IndustrialHomePage from "./app/industrial/index";
 import IndustrialWorkOrdersPage from "./app/industrial/work-orders/index";
-import WorkOrderExecutionPage from "./app/industrial/work-orders/WorkOrderExecutionPage";
+import WorkOrderOrProjectOrderPage from "./app/industrial/work-orders/WorkOrderOrProjectOrderPage";
 import StationExecutionPage from "./app/industrial/work-orders/StationExecutionPage";
+import StationProjectPage from "./app/industrial/work-orders/StationProjectPage";
 import WarehouseWorkOrderPage from "./app/industrial/work-orders/warehouse";
 import NestingWorkOrderPage from "./app/industrial/work-orders/nesting";
 import DrillWorkOrderPage from "./app/industrial/work-orders/drill";
@@ -77,8 +78,10 @@ import IndustrialAdminSettingsPage from "./app/admin/settings/industrial/index";
 import RealtimeAlertsAdminPage from "./app/admin/system-settings/industrial/realtime-alerts";
 import PieceMainView from "./app/industrial/piece/PieceMainView";
 import IndustrialSupervisorDashboardPage from "./app/industrial/supervisor/index";
+import SupervisorProjectPage from "./app/industrial/supervisor/SupervisorProjectPage";
 import IndustrialOperadorPage from "./app/industrial/operador/index";
 import IndustrialReleaseNotesPage from "./app/industrial/release-notes/IndustrialReleaseNotesPage";
+import RelatorioFinalRoute from "./pages/relatorio-final/RelatorioFinalRoute";
 import ProjetosIndexPage from "./app/PROJETOS/page";
 import ProjetosProjectPage from "./app/PROJETOS/[project]/page";
 import ProjetosBoxPage from "./app/PROJETOS/[project]/[box]/page";
@@ -91,7 +94,6 @@ const Documentacao = lazy(() => import("./pages/Documentacao"));
 const AdminPanel = lazy(() => import("./pages/AdminPanel"));
 const V4Page = lazy(() => import("./pages/V4Page"));
 const NestingV3RoutePage = lazy(() => import("./app/nesting-v3/NestingV3RoutePage"));
-const RelatorioFinalProjeto = lazy(() => import("./pages/RelatorioFinalProjeto"));
 const DevPimoTest = import.meta.env.DEV
   ? lazy(() => import("./__dev__/DevPimoTest"))
   : null;
@@ -471,10 +473,10 @@ export default function App() {
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/projects/:id" element={<ProjectDetailPage />} />
             <Route
-              path="/relatorio-final/:projectId"
+              path="/relatorio-final/:project"
               element={
                 <Suspense fallback={<PageContainer><Card>A carregar relatorio...</Card></PageContainer>}>
-                  <RelatorioFinalProjeto />
+                  <RelatorioFinalRoute />
                 </Suspense>
               }
             />
@@ -530,15 +532,23 @@ export default function App() {
             <Route path="/industrial/release-notes" element={<IndustrialReleaseNotesPage />} />
             <Route path="/industrial" element={<IndustrialHomePage />} />
             <Route path="/industrial/supervisor" element={<IndustrialSupervisorDashboardPage />} />
+            <Route path="/industrial/supervisor/:project" element={<SupervisorProjectPage />} />
             <Route path="/industrial/operador" element={<IndustrialOperadorPage />} />
             <Route path="/industrial/work-orders" element={<IndustrialWorkOrdersPage />} />
+            {/* Ordem: UUID → execução WO | slug → hub por projecto + anchors */}
+            <Route
+              path="/industrial/work-orders/order/:orderOrProject"
+              element={<WorkOrderOrProjectOrderPage />}
+            />
+            {/* Estações com projecto (novo) — antes das rotas sem projecto */}
+            <Route path="/industrial/work-orders/:station/:project" element={<StationProjectPage />} />
+            {/* Legado sem projecto (transição) */}
             <Route path="/industrial/work-orders/warehouse" element={<WarehouseWorkOrderPage />} />
             <Route path="/industrial/work-orders/nesting" element={<NestingWorkOrderPage />} />
             <Route path="/industrial/work-orders/drill" element={<DrillWorkOrderPage />} />
             <Route path="/industrial/work-orders/orlar" element={<OrlarWorkOrderPage />} />
             <Route path="/industrial/work-orders/montagem" element={<MontagemWorkOrderPage />} />
             <Route path="/industrial/work-orders/embalagem" element={<EmbalagemWorkOrderPage />} />
-            <Route path="/industrial/work-orders/order/:workOrderId" element={<WorkOrderExecutionPage />} />
             <Route path="/industrial/stations/:station" element={<StationExecutionPage />} />
             <Route path="/industrial/tracking" element={<IndustrialTrackingPage />} />
             <Route path="/industrial/events" element={<IndustrialEventsPage />} />

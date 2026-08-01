@@ -7,8 +7,12 @@ import SupervisorMainArea from './components/SupervisorMainArea';
 import SupervisorRail from './components/SupervisorRail';
 import { useSupervisorDashboard } from './hooks/useSupervisorDashboard';
 
-export default function IndustrialSupervisorDashboardPage() {
-  const state = useSupervisorDashboard();
+export default function IndustrialSupervisorDashboardPage({
+  initialProjectKey = null,
+}: {
+  initialProjectKey?: string | null;
+}) {
+  const state = useSupervisorDashboard({ initialProjectKey });
 
   if (state.loading && !state.snapshot) {
     return (

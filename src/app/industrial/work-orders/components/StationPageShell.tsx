@@ -15,10 +15,16 @@ interface StationPageShellProps {
   station: IndustrialStation;
   /** Página Ordem · Estação — filtra à work order e título "Ordem · …". */
   workOrderId?: string | null;
+  /** Slug do projecto — filtra ordens/tarefas por projectCode. */
+  projectSlug?: string | null;
 }
 
-export default function StationPageShell({ station, workOrderId = null }: StationPageShellProps) {
-  const page = useStationPage(station, { workOrderId });
+export default function StationPageShell({
+  station,
+  workOrderId = null,
+  projectSlug = null,
+}: StationPageShellProps) {
+  const page = useStationPage(station, { workOrderId, projectSlug });
   const tone = useIndustrialTone();
   const ui = industrialUi(tone);
 

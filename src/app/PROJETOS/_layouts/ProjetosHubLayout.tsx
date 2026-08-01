@@ -14,6 +14,7 @@ import {
 } from "../projetosProjectLoader";
 import {
   snapshotMatchesProjetosPageSlug,
+  toProjetosPageSlug,
 } from "../projetosPageSlug";
 import { resolveProjetosFocusFromSegments } from "../projetosFocusSlug";
 
@@ -85,7 +86,7 @@ export default function ProjetosHubLayout({ children }: { children?: ReactNode }
     [snapshot, boxSegment, pieceSegment]
   );
 
-  const reportProjectId = (snapshot?.id ?? "").trim();
+  const reportProjectSlug = snapshot?.name ? toProjetosPageSlug(snapshot.name) : "";
 
   return (
     <div className="ui-projetos-hub">
@@ -126,9 +127,9 @@ export default function ProjetosHubLayout({ children }: { children?: ReactNode }
             color: "#3f3f46",
           }}
         >
-          {reportProjectId ? (
+          {reportProjectSlug ? (
             <Link
-              to={`/relatorio-final/${encodeURIComponent(reportProjectId)}`}
+              to={`/relatorio-final/${encodeURIComponent(reportProjectSlug)}`}
               style={{
                 display: "inline-flex",
                 alignItems: "center",

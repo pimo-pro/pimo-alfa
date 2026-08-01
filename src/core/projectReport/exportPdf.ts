@@ -6,6 +6,8 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+import { isInternalProjectId } from "@/core/projects/projectIdentity";
+
 import { buildChartMetrics } from "./chartMetrics";
 import type { ProjectReport } from "./types";
 
@@ -15,6 +17,12 @@ function safeName(name: string): string {
     .trim()
     .replace(/\s+/g, "_")
     .slice(0, 60);
+}
+
+function reportDisplayName(report: ProjectReport): string {
+  const nome = String(report.gerais.nomeProjeto ?? "").trim();
+  if (nome && !isInternalProjectId(nome)) return nome;
+  return "Projeto";
 }
 
 function sectionTitle(doc: jsPDF, text: string, y: number): number {
@@ -44,7 +52,7 @@ export function exportProjectReportPdf(report: ProjectReport): void {
 
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  doc.text(`Projeto: ${report.gerais.nomeProjeto || report.projectId}`, 14, y);
+  doc.text(`Projeto: ${reportDisplayName(report)}`, 14, y);
   y += 5;
   doc.text(`Designer: ${report.gerais.designer || "-"}`, 14, y);
   y += 5;
@@ -197,6 +205,6 @@ export function exportProjectReportPdf(report: ProjectReport): void {
     margin: { left: 14, right: 14 },
   });
 
-  const file = `Relatorio_Final_${safeName(report.gerais.nomeProjeto || report.projectId)}.pdf`;
+  const file = `Relatorio_Final_${safeName(reportDisplayName(report))}.pdf`;
   doc.save(file);
 }
