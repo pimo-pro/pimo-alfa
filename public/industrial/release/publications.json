@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-08-01T17:39:02.787Z",
+      "author": "pimo-pro",
+      "commitMessage": "Publicação PIMO — Sistema Industrial",
+      "version": "v6.0801.1839"
+    },
+    {
       "publishedAt": "2026-08-01T17:35:28.888Z",
       "author": "pimo-pro",
       "commitMessage": "Industrial Stations: seleção múltipla, leitura QR bulk, ações em grupo (Iniciar/Concluir/Rejeitar).",
