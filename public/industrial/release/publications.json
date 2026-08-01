@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-08-01T19:54:36.665Z",
+      "author": "pimo-pro",
+      "commitMessage": "fix: remove unused SupervisorAlertItem import blocking industrial build.",
+      "version": "v6.0801.2054"
+    },
+    {
       "publishedAt": "2026-08-01T19:47:13.830Z",
       "author": "pimo-pro",
       "commitMessage": "Industrial UI: tema global nas Ordens/Estacoes; remover Finalization Layer falsa (estacoes, supervisor, operador).",

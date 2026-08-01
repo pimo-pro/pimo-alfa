@@ -1,6 +1,16 @@
 {
-  "updatedAt": "2026-08-01T19:47:15.870Z",
+  "updatedAt": "2026-08-01T19:54:37.859Z",
   "news": [
+    {
+      "version": "v6.0801.2054",
+      "title": "fix: remove unused SupervisorAlertItem import blocking industrial build.",
+      "description": "fix: remove unused SupervisorAlertItem import blocking industrial build.",
+      "publishedAt": "2026-08-01T19:54:37.671Z",
+      "type": "fix",
+      "author": "pimo-pro",
+      "icon": "fix",
+      "commit": "e948b524"
+    },
     {
       "version": "v6.0801.2047",
       "title": "Industrial UI: tema global nas Ordens/Estacoes; remover Finalization Layer falsa (estacoes, supervisor, operador).",
