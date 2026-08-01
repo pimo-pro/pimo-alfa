@@ -11,6 +11,11 @@ import { FERRAGENS_DEFAULT, type Ferragem } from "@/core/ferragens/ferragens";
 import { computeFinanceiroUnificado } from "@/core/financeiro/financeiroUnificado";
 import { FINANCEIRO_CUSTO_KEYS } from "@/core/financeiro/financeiroUnificadoTypes";
 import { buildFerragensTotaisPdfData } from "@/core/industrial/industrialBottomSectionData";
+import {
+  resolveEmpresaExecutora,
+  resolveMateriaisProjeto,
+  resolveProjectDesigner,
+} from "@/core/projects/projectMeta";
 import { toSavedRecordFromOffline } from "@/core/projects/projectsMappers";
 import { readOfflineProjects } from "@/core/projects/projectsOfflineStore";
 import { safeGetItem } from "@/utils/storage";
@@ -223,8 +228,9 @@ export async function seedOrMergeProjectReport(
       gerais: {
         ...emptyGerais(),
         nomeProjeto: name || state?.projectName || `Projeto ${id}`,
-        designer: ownerName,
-        empresa: "",
+        designer: resolveProjectDesigner(state, ownerName),
+        empresa: resolveEmpresaExecutora(state),
+        materiaisDescricao: resolveMateriaisProjeto(state),
         dataInicioExecucao: toDateInput(createdAt),
         dataConclusaoExecucao: toDateInput(updatedAt),
       },
@@ -241,10 +247,16 @@ export async function seedOrMergeProjectReport(
     };
   }
 
-  const gerais = { ...existing.gerais };
+  const gerais = { ...emptyGerais(), ...existing.gerais };
   if (!isManualPath(existing, "gerais.nomeProjeto") && name) gerais.nomeProjeto = name;
-  if (!isManualPath(existing, "gerais.designer") && ownerName && !gerais.designer) {
-    gerais.designer = ownerName;
+  if (!isManualPath(existing, "gerais.designer") && !gerais.designer) {
+    gerais.designer = resolveProjectDesigner(state, ownerName);
+  }
+  if (!isManualPath(existing, "gerais.empresa") && !gerais.empresa) {
+    gerais.empresa = resolveEmpresaExecutora(state);
+  }
+  if (!isManualPath(existing, "gerais.materiaisDescricao") && !gerais.materiaisDescricao) {
+    gerais.materiaisDescricao = resolveMateriaisProjeto(state);
   }
   if (!isManualPath(existing, "gerais.dataInicioExecucao") && !gerais.dataInicioExecucao) {
     gerais.dataInicioExecucao = toDateInput(createdAt);

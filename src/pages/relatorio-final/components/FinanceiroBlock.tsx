@@ -20,6 +20,7 @@ import {
   reportTd,
   reportTh,
 } from "../reportStyles";
+import { R } from "../uiLabels";
 import EditableModal from "./EditableModal";
 
 type Props = {
@@ -47,13 +48,13 @@ export default function FinanceiroBlock({ style, value, onChange }: Props) {
 
   return (
     <section style={reportSection(style)}>
-      <h2 style={reportSectionTitle}>5. Financeiro (custos dinamicos)</h2>
+      <h2 style={reportSectionTitle}>{R.financeiro}</h2>
       <p style={{ margin: "0 0 10px", fontSize: 12, color: "var(--text-muted)" }}>
-        Isolado do modulo Custos ADMIN. Totais recalculam a partir de quantidade e preco.
+        {R.financeiroHint}
       </p>
 
       <label style={{ display: "inline-block", marginBottom: 10 }}>
-        <span style={reportLabel}>IVA (%)</span>
+        <span style={reportLabel}>{R.ivaPct}</span>
         <input
           type="number"
           min={0}
@@ -75,10 +76,10 @@ export default function FinanceiroBlock({ style, value, onChange }: Props) {
         <table style={reportTable}>
           <thead>
             <tr>
-              <th style={reportTh}>Linha</th>
-              <th style={reportTh}>Quantidade</th>
-              <th style={reportTh}>Preco unitario</th>
-              <th style={reportTh}>Total</th>
+              <th style={reportTh}>{R.linha}</th>
+              <th style={reportTh}>{R.quantidade}</th>
+              <th style={reportTh}>{R.precoUnit}</th>
+              <th style={reportTh}>{R.total}</th>
             </tr>
           </thead>
           <tbody>
@@ -113,7 +114,7 @@ export default function FinanceiroBlock({ style, value, onChange }: Props) {
                   </td>
                   <td style={reportTd}>
                     {locked ? (
-                      "ù"
+                      "-"
                     ) : (
                       <input
                         type="number"
@@ -121,7 +122,7 @@ export default function FinanceiroBlock({ style, value, onChange }: Props) {
                         step={0.01}
                         style={{ ...reportInput, minHeight: 32, width: 100 }}
                         value={linha.quantidade ?? ""}
-                        placeholder="ù"
+                        placeholder="-"
                         onChange={(e) => {
                           const raw = e.target.value;
                           const quantidade = raw === "" ? null : Math.max(0, Number(raw) || 0);
@@ -136,7 +137,7 @@ export default function FinanceiroBlock({ style, value, onChange }: Props) {
                   </td>
                   <td style={reportTd}>
                     {locked ? (
-                      "ù"
+                      "-"
                     ) : (
                       <input
                         type="number"
@@ -144,7 +145,7 @@ export default function FinanceiroBlock({ style, value, onChange }: Props) {
                         step={0.01}
                         style={{ ...reportInput, minHeight: 32, width: 110 }}
                         value={linha.precoUnitario ?? ""}
-                        placeholder="ù"
+                        placeholder="-"
                         onChange={(e) => {
                           const raw = e.target.value;
                           const precoUnitario = raw === "" ? null : Math.max(0, Number(raw) || 0);
@@ -166,14 +167,15 @@ export default function FinanceiroBlock({ style, value, onChange }: Props) {
       </div>
 
       <div style={{ marginTop: 12, fontSize: 13, color: "var(--text-muted)" }}>
-        Subtotal: <strong>{formatEur(value.subtotal)}</strong> ù IVA:{" "}
-        <strong>{formatEur(value.ivaValor)}</strong> ù Total:{" "}
-        <strong>{formatEur(value.totalProjeto)}</strong>
+        {R.subtotal}: <strong>{formatEur(value.subtotal)}</strong>
+        {" \u00b7 "}IVA: <strong>{formatEur(value.ivaValor)}</strong>
+        {" \u00b7 "}
+        {R.total}: <strong>{formatEur(value.totalProjeto)}</strong>
       </div>
 
       <EditableModal
         open={!!openLinha && !!openKey}
-        title={`Detalhe ù ${openLinha?.label ?? ""}`}
+        title={`${R.detalhe} \u2014 ${openLinha?.label ?? ""}`}
         onClose={() => setOpenKey(null)}
       >
         {openLinha && openKey ? (
@@ -181,11 +183,15 @@ export default function FinanceiroBlock({ style, value, onChange }: Props) {
             {(openLinha.detalhe ?? []).map((d, idx) => (
               <div
                 key={d.id}
-                style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 1fr 1fr 1fr auto", gap: 6 }}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "2fr 1.5fr 1fr 1fr 1fr auto",
+                  gap: 6,
+                }}
               >
                 <input
                   style={reportInput}
-                  placeholder="Tipo"
+                  placeholder={R.tipo}
                   value={d.tipo}
                   onChange={(e) => {
                     const detalhe = [...openLinha.detalhe];
@@ -195,7 +201,7 @@ export default function FinanceiroBlock({ style, value, onChange }: Props) {
                 />
                 <input
                   style={reportInput}
-                  placeholder="Dimensoes"
+                  placeholder={R.dimensoes}
                   value={d.dimensoes}
                   onChange={(e) => {
                     const detalhe = [...openLinha.detalhe];
@@ -223,7 +229,7 @@ export default function FinanceiroBlock({ style, value, onChange }: Props) {
                   min={0}
                   step={0.01}
                   style={reportInput}
-                  placeholder="Preco"
+                  placeholder={R.preco}
                   value={d.precoUnitario}
                   onChange={(e) => {
                     const detalhe = [...openLinha.detalhe];
@@ -238,11 +244,9 @@ export default function FinanceiroBlock({ style, value, onChange }: Props) {
                 <Button
                   type="button"
                   variant="ghost"
-                  onClick={() =>
-                    setDetalhe(openLinha.detalhe.filter((_, i) => i !== idx))
-                  }
+                  onClick={() => setDetalhe(openLinha.detalhe.filter((_, i) => i !== idx))}
                 >
-                  Remover
+                  {R.remover}
                 </Button>
               </div>
             ))}
@@ -263,7 +267,7 @@ export default function FinanceiroBlock({ style, value, onChange }: Props) {
                 ])
               }
             >
-              Adicionar tipo
+              {R.adicionarTipo}
             </Button>
           </div>
         ) : null}

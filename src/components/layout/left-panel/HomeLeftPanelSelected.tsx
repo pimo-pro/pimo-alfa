@@ -20,6 +20,7 @@ import CostaMaterialControl from "./CostaMaterialControl";
 import BoxRemateDrawer from "../../settings/remate/BoxRemateDrawer";
 import CornerOrientationPanel from "../../settings/corner/CornerOrientationPanel";
 import { SectionTitleWithHelp } from "../../ui/MiniHelpTooltip";
+import { ProjectNameMetaFields } from "./ProjectNameMetaFields";
 
 const HOME_SELECTED_SECTION_HELP_TEXT =
   "Controles principais da caixa selecionada e definição inicial do projeto.";
@@ -577,6 +578,7 @@ export function HomeLeftPanelSelected({ materialsPicker }: HomeLeftPanelSelected
                 placeholder="Nome do projeto"
                 className="input input-sm"
               />
+              <ProjectNameMetaFields />
             </Panel>
           )}
 

@@ -50,6 +50,8 @@ export function exportProjectReportPdf(report: ProjectReport): void {
   y += 5;
   doc.text(`Empresa: ${report.gerais.empresa || "-"}`, 14, y);
   y += 5;
+  doc.text(`Materiais: ${report.gerais.materiaisDescricao || "-"}`, 14, y);
+  y += 5;
   doc.text(
     `Execucao: ${report.gerais.dataInicioExecucao || "-"} -> ${report.gerais.dataConclusaoExecucao || "-"}`,
     14,

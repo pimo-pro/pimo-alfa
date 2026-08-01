@@ -5,6 +5,7 @@ import {
   reportTd,
   reportTh,
 } from "../reportStyles";
+import { R } from "../uiLabels";
 import EditableModal from "./EditableModal";
 
 type Props = {
@@ -27,19 +28,19 @@ export default function HistoricoModal({ open, history, onClose }: Props) {
   const rows = sortHistoryChronological(history ?? [], true);
 
   return (
-    <EditableModal open={open} title="Historico de alteracoes" onClose={onClose}>
+    <EditableModal open={open} title={R.historicoTitulo} onClose={onClose}>
       <p style={{ margin: "0 0 10px", fontSize: 12, color: "var(--text-muted)" }}>
-        Registo local das edicoes manuais do relatorio (mais recentes primeiro).
+        {R.historicoHint}
       </p>
       <div style={reportTableWrap}>
         <table style={reportTable}>
           <thead>
             <tr>
-              <th style={reportTh}>Data</th>
-              <th style={reportTh}>Utilizador</th>
-              <th style={reportTh}>Campo</th>
-              <th style={reportTh}>Antes</th>
-              <th style={reportTh}>Depois</th>
+              <th style={reportTh}>{R.data}</th>
+              <th style={reportTh}>{R.utilizador}</th>
+              <th style={reportTh}>{R.campo}</th>
+              <th style={reportTh}>{R.antes}</th>
+              <th style={reportTh}>{R.depois}</th>
             </tr>
           </thead>
           <tbody>
@@ -59,7 +60,7 @@ export default function HistoricoModal({ open, history, onClose }: Props) {
             {rows.length === 0 ? (
               <tr>
                 <td style={reportTd} colSpan={5}>
-                  Sem alteracoes registadas ainda.
+                  {R.semAlteracoes}
                 </td>
               </tr>
             ) : null}

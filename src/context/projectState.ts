@@ -292,6 +292,9 @@ const defaultWorkspaceBoxes: WorkspaceBox[] = [];
 
 export const defaultState: ProjectState = {
   projectName: defaultAutoProjectName,
+  designer: "",
+  empresaExecutora: "Carpintaria",
+  materiaisProjeto: "",
   tipoProjeto: "Estante de Parede – 3 Portas",
   material: defaultMaterial,
   materialId: "",

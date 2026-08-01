@@ -6,6 +6,7 @@ import {
   reportSection,
   reportSectionTitle,
 } from "../reportStyles";
+import { R } from "../uiLabels";
 
 type Props = {
   style: ReportStyle;
@@ -16,10 +17,10 @@ type Props = {
 export default function InfoGeraisBlock({ style, value, onChange }: Props) {
   return (
     <section style={reportSection(style)}>
-          <h2 style={reportSectionTitle}>1. Informaùùes gerais do projeto</h2>
+      <h2 style={reportSectionTitle}>{R.infoGerais}</h2>
       <div style={{ ...reportGrid3, alignItems: "end" }}>
         <label>
-          <span style={reportLabel}>Designer</span>
+          <span style={reportLabel}>{R.designer}</span>
           <input
             style={reportInput}
             value={value.designer}
@@ -27,7 +28,7 @@ export default function InfoGeraisBlock({ style, value, onChange }: Props) {
           />
         </label>
         <label style={{ textAlign: "center" }}>
-          <span style={reportLabel}>Nome do projeto</span>
+          <span style={reportLabel}>{R.nomeProjeto}</span>
           <input
             style={{ ...reportInput, fontSize: 18, fontWeight: 700, textAlign: "center" }}
             value={value.nomeProjeto}
@@ -37,15 +38,28 @@ export default function InfoGeraisBlock({ style, value, onChange }: Props) {
           />
         </label>
         <label>
-          <span style={reportLabel}>Empresa executora</span>
+          <span style={reportLabel}>{R.empresa}</span>
           <input
             style={reportInput}
             value={value.empresa}
             onChange={(e) => onChange({ ...value, empresa: e.target.value }, "gerais.empresa")}
           />
         </label>
+        <label style={{ gridColumn: "1 / -1" }}>
+          <span style={reportLabel}>{R.materiaisDescricao}</span>
+          <input
+            style={reportInput}
+            value={value.materiaisDescricao ?? ""}
+            onChange={(e) =>
+              onChange(
+                { ...value, materiaisDescricao: e.target.value },
+                "gerais.materiaisDescricao"
+              )
+            }
+          />
+        </label>
         <label>
-          <span style={reportLabel}>Data inùcio execuùùo</span>
+          <span style={reportLabel}>{R.dataInicioExec}</span>
           <input
             type="date"
             style={reportInput}
@@ -60,7 +74,7 @@ export default function InfoGeraisBlock({ style, value, onChange }: Props) {
         </label>
         <div />
         <label>
-          <span style={reportLabel}>Data conclus„o execuÁ„o</span>
+          <span style={reportLabel}>{R.dataFimExec}</span>
           <input
             type="date"
             style={reportInput}

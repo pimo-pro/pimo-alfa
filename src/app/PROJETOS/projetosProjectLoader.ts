@@ -5,27 +5,31 @@ import {
   projectMatchesId,
   type OfflineProjectRecord,
 } from "@/core/projects/projectsOfflineStore";
-import { decodeProjetosPageSlug, toProjetosPageSlug } from "./projetosPageSlug";
+import {
+  normalizeProjetosPageSlug,
+  projectNameFromPageSlug,
+  toProjetosPageSlug,
+} from "./projetosPageSlug";
 
 function offlineRecordMatchesPageSlug(record: OfflineProjectRecord, pageSlug: string): boolean {
-  return toProjetosPageSlug(record.name) === decodeProjetosPageSlug(pageSlug);
+  return toProjetosPageSlug(record.name) === normalizeProjetosPageSlug(pageSlug);
 }
 
-/** Carrega projecto pelo slug da URL (nome). Compatível com URLs antigas por id interno. */
+/** Carrega projecto pelo slug da URL (nome). Compativel com URLs antigas (espacos / id). */
 export async function loadProjectRecordByPageSlug(pageSlug: string): Promise<SavedProjectRecord | null> {
-  const projectName = decodeProjetosPageSlug(pageSlug);
+  const projectName = projectNameFromPageSlug(pageSlug);
   const projects = readOfflineProjects();
   const byName = projects.find(
     (project) => !project.deleted && offlineRecordMatchesPageSlug(project, pageSlug)
   );
   if (byName) {
-    return loadProjectRecord(projectName);
+    return loadProjectRecord(byName.remoteId ?? byName.id);
   }
   const byLegacyId = projects.find(
     (project) => !project.deleted && projectMatchesId(project, pageSlug)
   );
   if (byLegacyId) {
-    return loadProjectRecord(projectName || (byLegacyId.remoteId ?? byLegacyId.id));
+    return loadProjectRecord(byLegacyId.remoteId ?? byLegacyId.id);
   }
   return loadProjectRecord(projectName);
 }

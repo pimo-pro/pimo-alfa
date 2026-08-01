@@ -4,6 +4,7 @@
  */
 
 import {
+  emptyGerais,
   emptyQualidade,
   PROJECT_REPORT_STORAGE_KEY,
   type ProjectReport,
@@ -44,6 +45,7 @@ function normalizeReport(raw: ProjectReport): ProjectReport {
     ...raw,
     version: 1,
     reportStyle: raw.reportStyle === "cards" ? "cards" : "classic",
+    gerais: { ...emptyGerais(), ...(raw.gerais ?? {}) },
     manualPaths: Array.isArray(raw.manualPaths) ? raw.manualPaths : [],
     history: Array.isArray(raw.history) ? raw.history : [],
     notas: Array.isArray(raw.notas) ? raw.notas : [],

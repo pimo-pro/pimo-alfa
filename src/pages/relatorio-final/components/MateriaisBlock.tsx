@@ -13,6 +13,7 @@ import {
   reportTd,
   reportTh,
 } from "../reportStyles";
+import { R } from "../uiLabels";
 
 type Props = {
   style: ReportStyle;
@@ -23,19 +24,19 @@ type Props = {
 export default function MateriaisBlock({ style, value, onChange }: Props) {
   return (
     <section style={reportSection(style)}>
-      <h2 style={reportSectionTitle}>4. Materiais / ferragens / consumos</h2>
+      <h2 style={reportSectionTitle}>{R.materiais}</h2>
       <p style={{ margin: "0 0 10px", fontSize: 12, color: "var(--text-muted)" }}>
-        Dados iniciais de ferragens_totais. Edicoes ficam so no relatorio.
+        {R.materiaisHint}
       </p>
       <div style={reportTableWrap}>
         <table style={reportTable}>
           <thead>
             <tr>
-              <th style={reportTh}>Tipo</th>
-              <th style={reportTh}>Quantidade</th>
-              <th style={reportTh}>Observacoes</th>
-              <th style={reportTh}>Erro</th>
-              <th style={reportTh}>Substituicao</th>
+              <th style={reportTh}>{R.tipo}</th>
+              <th style={reportTh}>{R.quantidade}</th>
+              <th style={reportTh}>{R.observacoes}</th>
+              <th style={reportTh}>{R.erro}</th>
+              <th style={reportTh}>{R.substituicao}</th>
               <th style={reportTh} />
             </tr>
           </thead>
@@ -108,7 +109,7 @@ export default function MateriaisBlock({ style, value, onChange }: Props) {
                     variant="ghost"
                     onClick={() => onChange(value.filter((_, i) => i !== idx))}
                   >
-                    Remover
+                    {R.remover}
                   </Button>
                 </td>
               </tr>
@@ -116,7 +117,7 @@ export default function MateriaisBlock({ style, value, onChange }: Props) {
             {value.length === 0 ? (
               <tr>
                 <td style={reportTd} colSpan={6}>
-                  Sem materiais. Adicione linhas manualmente ou abra um projeto com ferragens.
+                  {R.semMateriais}
                 </td>
               </tr>
             ) : null}
@@ -141,7 +142,7 @@ export default function MateriaisBlock({ style, value, onChange }: Props) {
             ])
           }
         >
-          Adicionar linha
+          {R.adicionarLinha}
         </Button>
       </div>
     </section>

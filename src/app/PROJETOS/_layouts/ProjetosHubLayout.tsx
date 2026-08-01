@@ -1,6 +1,6 @@
 import type { SavedProjectRecord } from "@/core/projects/types";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 
 import ProjetosShowroomPanel, { type ProjetosFocusLevel } from "../ProjetosShowroomPanel";
 import ProjetosElementSections from "../ProjetosElementSections";
@@ -43,7 +43,7 @@ export default function ProjetosHubLayout({ children }: { children?: ReactNode }
 
   useEffect(() => {
     if (!pageSlug) {
-      setError("Projeto não especificado na URL.");
+      setError("Projeto nao especificado na URL.");
       setLoading(false);
       return;
     }
@@ -66,7 +66,7 @@ export default function ProjetosHubLayout({ children }: { children?: ReactNode }
       if (!record) {
         setSnapshot(null);
         setLoading(false);
-        setError("Projeto não encontrado.");
+        setError("Projeto nao encontrado.");
         return;
       }
 
@@ -84,6 +84,8 @@ export default function ProjetosHubLayout({ children }: { children?: ReactNode }
     () => resolveProjetosFocusFromSegments(snapshot, boxSegment, pieceSegment),
     [snapshot, boxSegment, pieceSegment]
   );
+
+  const reportProjectId = (snapshot?.id ?? "").trim();
 
   return (
     <div className="ui-projetos-hub">
@@ -115,6 +117,8 @@ export default function ProjetosHubLayout({ children }: { children?: ReactNode }
             padding: "0 16px",
             display: "flex",
             alignItems: "center",
+            justifyContent: "flex-start",
+            gap: 12,
             background: "#fafafa",
             borderBottom: "1px solid #e4e4e7",
             fontSize: 13,
@@ -122,7 +126,27 @@ export default function ProjetosHubLayout({ children }: { children?: ReactNode }
             color: "#3f3f46",
           }}
         >
-          {snapshot?.name?.trim() || decodeURIComponent(pageSlug ?? "Projeto")}
+          {reportProjectId ? (
+            <Link
+              to={`/relatorio-final/${encodeURIComponent(reportProjectId)}`}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                padding: "6px 12px",
+                borderRadius: 8,
+                border: "1px solid #e4e4e7",
+                background: "#fff",
+                color: "#18181b",
+                textDecoration: "none",
+                fontSize: 13,
+                fontWeight: 600,
+              }}
+            >
+              Relat{"\u00f3"}rio Final
+            </Link>
+          ) : (
+            <span style={{ color: "#a1a1aa", fontWeight: 500 }}>Relat{"\u00f3"}rio Final</span>
+          )}
         </header>
         <main style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "row", overflow: "hidden" }}>
           <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>

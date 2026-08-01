@@ -1,5 +1,5 @@
 /**
- * Cálculos financeiros do relatório — coerentes e isolados do módulo Custos.
+ * Calculos financeiros do relatorio - coerentes e isolados do modulo Custos.
  */
 
 import { FINANCEIRO_CUSTO_KEYS } from "../financeiro/financeiroUnificadoTypes";
@@ -62,7 +62,7 @@ export function recalcLinha(linha: ReportFinanceiroLinha): ReportFinanceiroLinha
   };
 }
 
-/** Recalcula subtotal, IVA e total. Linhas iva/total são sempre derivadas. */
+/** Recalcula subtotal, IVA e total. Linhas iva/total sao sempre derivadas. */
 export function recalcFinanceiro(fin: ProjectReportFinanceiro): ProjectReportFinanceiro {
   const ivaPct =
     typeof fin.ivaPct === "number" && Number.isFinite(fin.ivaPct) && fin.ivaPct >= 0

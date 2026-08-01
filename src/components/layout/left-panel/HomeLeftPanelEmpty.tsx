@@ -2,6 +2,7 @@ import { useProject } from "../../../context/useProject";
 import Panel from "../../ui/Panel";
 import type { SavedProjectInfo } from "../../../context/projectTypes";
 import { NotesField } from "./NotesField";
+import { ProjectNameMetaFields } from "./ProjectNameMetaFields";
 import { HOME_SECTION_HELP_TEXT, SectionTitleWithHelp } from "../../ui/MiniHelpTooltip";
 
 export type HomeLeftPanelEmptyProps = {
@@ -52,6 +53,7 @@ export function HomeLeftPanelEmpty({
               placeholder="Nome do projeto"
               className="input input-sm"
             />
+            <ProjectNameMetaFields />
           </Panel>
 
           <Panel title="Notas">

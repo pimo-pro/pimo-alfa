@@ -95,6 +95,15 @@ export type ViewerSettings = {
  */
 export interface ProjectState {
   projectName: string;
+  /**
+   * Designer do projeto (editavel na Home).
+   * Vazio = resolver com utilizador atual / "Visitante" na UI e no seed.
+   */
+  designer?: string;
+  /** Empresa executora (editavel na Home). Default tipico: "Carpintaria". */
+  empresaExecutora?: string;
+  /** Descricao livre de materiais do projeto (editavel na Home). */
+  materiaisProjeto?: string;
   tipoProjeto: string;
   /** Material legado (compatibilidade); não usar como fonte principal. */
   material: Material;
@@ -461,6 +470,9 @@ export type ViewerSync = {
 
 export interface ProjectActions {
   setProjectName: (_name: string) => void;
+  setProjectDesigner: (_designer: string) => void;
+  setEmpresaExecutora: (_empresa: string) => void;
+  setMateriaisProjeto: (_materiais: string) => void;
   setTipoProjeto: (_tipo: string) => void;
   setMaterial: (_material: Material) => void;
   /** @deprecated LEGADO — Sem implementação em runtime. Usar setMaterial para Material completo. */

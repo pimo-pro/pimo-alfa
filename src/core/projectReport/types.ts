@@ -85,6 +85,8 @@ export type ProjectReportGerais = {
   nomeProjeto: string;
   designer: string;
   empresa: string;
+  /** Descricao livre de materiais (seed a partir de ProjectState.materiaisProjeto). */
+  materiaisDescricao: string;
   dataInicioExecucao: string;
   dataConclusaoExecucao: string;
 };
@@ -207,6 +209,7 @@ export function emptyGerais(): ProjectReportGerais {
     nomeProjeto: "",
     designer: "",
     empresa: "",
+    materiaisDescricao: "",
     dataInicioExecucao: "",
     dataConclusaoExecucao: "",
   };

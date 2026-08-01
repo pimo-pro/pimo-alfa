@@ -1,11 +1,11 @@
 /**
- * Testes unitários dos cálculos do Relatório Final (isolados do industrial).
+ * Testes unitarios dos calculos do Relatorio Final (isolados do industrial).
  */
 import { describe, expect, it } from "vitest";
 import { ensureFinanceiroShape, recalcFinanceiro, updateFinanceiroLinha } from "./financeReportCalc";
 
 describe("financeReportCalc", () => {
-  it("recalcula linha por quantidade × preço", () => {
+  it("recalcula linha por quantidade x preco", () => {
     const fin = ensureFinanceiroShape(null, { paineis: 100 });
     const next = updateFinanceiroLinha(fin, "paineis", {
       quantidade: 2,
@@ -15,7 +15,7 @@ describe("financeReportCalc", () => {
     expect(paineis?.total).toBe(30);
   });
 
-  it("mantém Total = subtotal + IVA 23%", () => {
+  it("mantem Total = subtotal + IVA 23%", () => {
     const fin = ensureFinanceiroShape(null, { paineis: 100, portas: 0 });
     const next = recalcFinanceiro({
       ...fin,
@@ -37,7 +37,7 @@ describe("financeReportCalc", () => {
       detalhe: [
         {
           id: "a",
-          tipo: "Dobradiça",
+          tipo: "Dobradica",
           dimensoes: "",
           quantidade: 10,
           precoUnitario: 2,
@@ -45,7 +45,7 @@ describe("financeReportCalc", () => {
         },
         {
           id: "b",
-          tipo: "Corrediça",
+          tipo: "Corredica",
           dimensoes: "",
           quantidade: 4,
           precoUnitario: 5,

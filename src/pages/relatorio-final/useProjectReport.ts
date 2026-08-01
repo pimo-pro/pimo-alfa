@@ -22,7 +22,7 @@ export function useProjectReport(projectId: string | undefined) {
     let cancelled = false;
     async function run() {
       if (!projectId?.trim()) {
-        setError("Projeto nao especificado.");
+        setError("Projeto n\u00e3o especificado.");
         setLoading(false);
         return;
       }
@@ -38,7 +38,7 @@ export function useProjectReport(projectId: string | undefined) {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Falha ao carregar relatorio.");
+          setError(err instanceof Error ? err.message : "Falha ao carregar relat\u00f3rio.");
           setLoading(false);
         }
       }
@@ -83,7 +83,7 @@ export function useProjectReport(projectId: string | undefined) {
       const saved = saveProjectReport(report);
       setReport(saved);
       setDirty(false);
-      setSaveMsg("Alteracoes guardadas no relatorio.");
+      setSaveMsg("Altera\u00e7\u00f5es guardadas no relat\u00f3rio.");
     } catch (err) {
       setSaveMsg(err instanceof Error ? err.message : "Falha ao guardar.");
     } finally {

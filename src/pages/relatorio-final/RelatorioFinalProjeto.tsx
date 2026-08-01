@@ -6,6 +6,7 @@ import PageContainer from "@/components/ui/PageContainer";
 import { emptyQualidade, exportProjectReportPdf, type ReportStyle } from "@/core/projectReport";
 import { printHideClass, reportPageShell, reportSection, reportSectionTitle } from "./reportStyles";
 import { useProjectReport } from "./useProjectReport";
+import { R } from "./uiLabels";
 import InfoGeraisBlock from "./components/InfoGeraisBlock";
 import PainelGraficoBlock from "./components/PainelGraficoBlock";
 import EstadoProjetoBlock from "./components/EstadoProjetoBlock";
@@ -34,7 +35,7 @@ export default function RelatorioFinalProjeto() {
   if (loading) {
     return (
       <PageContainer>
-        <Loader label="A carregar relatorio final..." />
+        <Loader label={R.carregar} />
       </PageContainer>
     );
   }
@@ -43,9 +44,9 @@ export default function RelatorioFinalProjeto() {
     return (
       <PageContainer>
         <p style={{ color: "var(--pi-btn-danger-bg, #dc2626)" }}>
-          {error ?? "Relatorio indisponivel."}
+          {error ?? R.indisponivel}
         </p>
-        <Link to={projectId ? `/projects/${projectId}` : "/projects"}>Voltar ao projeto</Link>
+        <Link to={projectId ? `/projects/${projectId}` : "/projects"}>{R.voltar}</Link>
       </PageContainer>
     );
   }
@@ -55,9 +56,9 @@ export default function RelatorioFinalProjeto() {
   const handleExportPdf = () => {
     try {
       exportProjectReportPdf(report);
-      setPdfMsg("PDF exportado.");
+      setPdfMsg(R.pdfOk);
     } catch (err) {
-      setPdfMsg(err instanceof Error ? err.message : "Falha ao exportar PDF.");
+      setPdfMsg(err instanceof Error ? err.message : R.pdfFail);
     }
   };
 
@@ -82,12 +83,10 @@ export default function RelatorioFinalProjeto() {
           }}
         >
           <div>
-            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700 }}>
-              Relatorio Final do Projeto
-            </h1>
+            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700 }}>{R.titulo}</h1>
             <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--text-muted)" }}>
-              Documento isolado - nao altera o fluxo industrial.
-              {dirty ? " - Alteracoes por guardar" : ""}
+              {R.isolado}
+              {dirty ? R.dirty : ""}
             </p>
           </div>
           <div className={printHideClass} style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -96,32 +95,32 @@ export default function RelatorioFinalProjeto() {
               variant={style === "classic" ? "primary" : "secondary"}
               onClick={() => changeStyle("classic")}
             >
-              Estilo classico
+              {R.classico}
             </Button>
             <Button
               type="button"
               variant={style === "cards" ? "primary" : "secondary"}
               onClick={() => changeStyle("cards")}
             >
-              Estilo cards
+              {R.cards}
             </Button>
             <Button type="button" variant="secondary" onClick={() => setHistOpen(true)}>
-              Historico
+              {R.historico}
             </Button>
             <Button type="button" variant="secondary" onClick={() => window.print()}>
-              Imprimir
+              {R.imprimir}
             </Button>
             <Button type="button" variant="secondary" onClick={handleExportPdf}>
-              Exportar PDF
+              {R.exportarPdf}
             </Button>
             <Button type="button" variant="primary" disabled={saving} onClick={() => void save()}>
-              {saving ? "A guardar..." : "Guardar alteracoes"}
+              {saving ? R.aGuardar : R.guardar}
             </Button>
             <Button type="button" variant="ghost" disabled title="Em breve">
-              Enviar por email
+              {R.email}
             </Button>
             <Link to={`/projects/${report.projectId}`} style={{ alignSelf: "center", fontSize: 13 }}>
-              Voltar
+              {R.voltar}
             </Link>
           </div>
         </header>
@@ -183,7 +182,7 @@ export default function RelatorioFinalProjeto() {
         />
 
         <section style={reportSection(style)}>
-          <h2 style={reportSectionTitle}>9. Resumo final (Total do projeto)</h2>
+          <h2 style={reportSectionTitle}>{R.resumo}</h2>
           <div
             style={{
               display: "grid",
@@ -192,25 +191,25 @@ export default function RelatorioFinalProjeto() {
             }}
           >
             <div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Caixas</div>
+              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{R.caixas}</div>
               <div style={{ fontSize: 22, fontWeight: 700 }}>{report.producao.caixas.length}</div>
             </div>
             <div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Pecas</div>
+              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{R.pecas}</div>
               <div style={{ fontSize: 22, fontWeight: 700 }}>{report.producao.pecas.length}</div>
             </div>
             <div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Materiais / ferragens</div>
+              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{R.materiaisFerragens}</div>
               <div style={{ fontSize: 22, fontWeight: 700 }}>{report.materiais.length}</div>
             </div>
             <div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Qualidade</div>
+              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{R.qualidadeLabel}</div>
               <div style={{ fontSize: 22, fontWeight: 700 }}>
                 {(report.qualidade ?? emptyQualidade()).rating} / 5
               </div>
             </div>
             <div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Subtotal</div>
+              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{R.subtotal}</div>
               <div style={{ fontSize: 22, fontWeight: 700 }}>
                 {report.financeiro.subtotal.toFixed(2)} EUR
               </div>
@@ -224,7 +223,7 @@ export default function RelatorioFinalProjeto() {
               </div>
             </div>
             <div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Total do projeto</div>
+              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{R.totalProjeto}</div>
               <div style={{ fontSize: 26, fontWeight: 800, color: "var(--blue-light, #2563eb)" }}>
                 {report.financeiro.totalProjeto.toFixed(2)} EUR
               </div>

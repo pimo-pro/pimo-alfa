@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Button from "@/components/ui/Button";
 import { ModalPortal } from "@/components/ui/ModalPortal";
 import { reportModalBackdrop, reportModalPanel } from "../reportStyles";
+import { R } from "../uiLabels";
 
 type Props = {
   open: boolean;
@@ -26,7 +27,7 @@ export default function EditableModal({ open, title, onClose, children, footer }
           <div style={{ display: "flex", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
             <h3 style={{ margin: 0, fontSize: 16 }}>{title}</h3>
             <Button type="button" variant="ghost" onClick={onClose}>
-              Fechar
+              {R.fechar}
             </Button>
           </div>
           {children}

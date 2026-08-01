@@ -6,6 +6,7 @@ import {
   reportSection,
   reportSectionTitle,
 } from "../reportStyles";
+import { R } from "../uiLabels";
 import SimpleBarChart from "./SimpleBarChart";
 
 type Props = {
@@ -15,18 +16,18 @@ type Props = {
 };
 
 const FIELDS: Array<{ key: keyof ProjectReportMetricas; label: string }> = [
-  { key: "tarefasConcluidas", label: "Tarefas concluÌdas" },
-  { key: "erros", label: "Erros" },
-  { key: "errosCorrigidos", label: "Erros corrigidos" },
-  { key: "melhorias", label: "Melhorias aplicadas" },
-  { key: "ordensTrabalho", label: "Ordens de trabalho" },
-  { key: "colaboradores", label: "Colaboradores" },
+  { key: "tarefasConcluidas", label: R.tarefasConcluidas },
+  { key: "erros", label: R.erros },
+  { key: "errosCorrigidos", label: R.errosCorrigidos },
+  { key: "melhorias", label: R.melhoriasAplicadas },
+  { key: "ordensTrabalho", label: R.ordensTrabalho },
+  { key: "colaboradores", label: R.colaboradores },
 ];
 
 export default function PainelGraficoBlock({ style, value, onChange }: Props) {
   return (
     <section style={reportSection(style)}>
-      <h2 style={reportSectionTitle}>2. Painel grùfico (resumo visual)</h2>
+      <h2 style={reportSectionTitle}>{R.painelGrafico}</h2>
       <SimpleBarChart metricas={value} />
       <div style={{ ...reportGrid3, marginTop: 14 }}>
         {FIELDS.map((f) => (

@@ -7,6 +7,7 @@ import {
   reportSection,
   reportSectionTitle,
 } from "../reportStyles";
+import { R } from "../uiLabels";
 
 type Props = {
   style: ReportStyle;
@@ -30,13 +31,13 @@ export default function QualidadeBlock({ style, value, onChange }: Props) {
 
   return (
     <section style={reportSection(style)}>
-      <h2 style={reportSectionTitle}>8. Avaliacao de Qualidade</h2>
+      <h2 style={reportSectionTitle}>{R.qualidade}</h2>
       <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
         {([1, 2, 3, 4, 5] as const).map((n) => (
           <button
             key={n}
             type="button"
-            aria-label={`${n} estrelas`}
+            aria-label={`${n} ${R.estrelas}`}
             onClick={() => setRating(n)}
             style={{
               fontSize: 22,
@@ -47,7 +48,7 @@ export default function QualidadeBlock({ style, value, onChange }: Props) {
               color: n <= value.rating ? "#f59e0b" : "var(--text-muted)",
             }}
           >
-            ?
+            {R.star}
           </button>
         ))}
         <span style={{ alignSelf: "center", fontSize: 13, color: "var(--text-muted)" }}>
@@ -80,19 +81,19 @@ export default function QualidadeBlock({ style, value, onChange }: Props) {
                 })
               }
             >
-              Remover
+              {R.remover}
             </Button>
           </div>
         ))}
         {(value.observacoes ?? []).length === 0 ? (
           <p style={{ margin: 0, fontSize: 13, color: "var(--text-muted)" }}>
-            Sem observacoes de qualidade.
+            {R.semObservacoes}
           </p>
         ) : null}
       </div>
 
       <label style={{ display: "block", marginBottom: 8 }}>
-        <span style={reportLabel}>Nova observacao</span>
+        <span style={reportLabel}>{R.novaObservacao}</span>
         <input
           style={reportInput}
           value={draft}
@@ -106,7 +107,7 @@ export default function QualidadeBlock({ style, value, onChange }: Props) {
         />
       </label>
       <Button type="button" variant="secondary" onClick={addObs}>
-        Adicionar observacao
+        {R.adicionarObservacao}
       </Button>
     </section>
   );

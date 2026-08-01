@@ -12,6 +12,10 @@ import { wallStore } from "../../stores/wallStore";
 import { applyProjectRoomToWallStore } from "../../3d/viewer-engine/room/RoomEngine";
 import { getCurrentProjectUser } from "../../core/projects/currentUser";
 import {
+  DEFAULT_EMPRESA_EXECUTORA,
+  resolveProjectDesigner,
+} from "../../core/projects/projectMeta";
+import {
   deleteProjectById,
   listProjects,
   loadProjectRecord,
@@ -38,6 +42,9 @@ export type ProjectIoActions = Pick<
   | "listSavedProjects"
   | "createNewProject"
   | "setProjectName"
+  | "setProjectDesigner"
+  | "setEmpresaExecutora"
+  | "setMateriaisProjeto"
   | "renameProject"
   | "deleteProject"
 >;
@@ -180,14 +187,28 @@ export function useProjectIoActions(ctx: ProjectActionsExecutionContext): Projec
       setProjectName: (name: string) => {
         updateProject((prev) => ({ ...prev, projectName: name }), true);
       },
+      setProjectDesigner: (designer: string) => {
+        updateProject((prev) => ({ ...prev, designer }), true);
+      },
+      setEmpresaExecutora: (empresa: string) => {
+        updateProject((prev) => ({ ...prev, empresaExecutora: empresa }), true);
+      },
+      setMateriaisProjeto: (materiais: string) => {
+        updateProject((prev) => ({ ...prev, materiaisProjeto: materiais }), true);
+      },
       createNewProject: async () => {
-        const freshState = applyResultados(defaultState);
+        const currentUser = getCurrentProjectUser();
+        const freshState = applyResultados({
+          ...defaultState,
+          designer: resolveProjectDesigner(defaultState, currentUser.ownerName),
+          empresaExecutora: defaultState.empresaExecutora || DEFAULT_EMPRESA_EXECUTORA,
+          materiaisProjeto: "",
+        });
         const snapshot: ProjectSnapshot = {
           projectState: serializeState(freshState),
           viewerSnapshot: null,
           roomSnapshot: null,
         };
-        const currentUser = getCurrentProjectUser();
         const saved = await saveProject({
           name: freshState.projectName,
           ownerId: currentUser.ownerId,

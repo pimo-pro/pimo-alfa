@@ -13,6 +13,7 @@ import {
   reportSectionTitle,
   reportTextarea,
 } from "../reportStyles";
+import { R } from "../uiLabels";
 import EditableModal from "./EditableModal";
 
 type Props = {
@@ -69,9 +70,9 @@ export default function NotasBlock({ style, value, onChange }: Props) {
   return (
     <section style={reportSection(style)}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
-        <h2 style={{ ...reportSectionTitle, margin: 0 }}>7. Notas do Projeto</h2>
+        <h2 style={{ ...reportSectionTitle, margin: 0 }}>{R.notasProjeto}</h2>
         <Button type="button" variant="secondary" onClick={openNew}>
-          Adicionar nota
+          {R.adicionarNota}
         </Button>
       </div>
       <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
@@ -85,47 +86,47 @@ export default function NotasBlock({ style, value, onChange }: Props) {
             }}
           >
             <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>
-              {n.autor} · {new Date(n.timestamp).toLocaleString("pt-PT")}
+              {n.autor}
+              {" \u00b7 "}
+              {new Date(n.timestamp).toLocaleString("pt-PT")}
             </div>
             <div style={{ whiteSpace: "pre-wrap", fontSize: 14 }}>{n.texto}</div>
             <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
               <Button type="button" variant="ghost" onClick={() => openEdit(n)}>
-                Editar
+                {R.editar}
               </Button>
               <Button
                 type="button"
                 variant="ghost"
                 onClick={() => onChange(value.filter((x) => x.id !== n.id))}
               >
-                Remover
+                {R.remover}
               </Button>
             </div>
           </div>
         ))}
         {value.length === 0 ? (
-          <p style={{ margin: 0, fontSize: 13, color: "var(--text-muted)" }}>
-            Sem notas internas.
-          </p>
+          <p style={{ margin: 0, fontSize: 13, color: "var(--text-muted)" }}>{R.semNotas}</p>
         ) : null}
       </div>
 
       <EditableModal
         open={open}
-        title={editId ? "Editar nota" : "Nova nota"}
+        title={editId ? R.editarNota : R.novaNota}
         onClose={() => setOpen(false)}
         footer={
           <>
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
-              Cancelar
+              {R.cancelar}
             </Button>
             <Button type="button" variant="primary" onClick={commit}>
-              Guardar
+              {R.guardarNota}
             </Button>
           </>
         }
       >
         <label style={{ display: "block", marginBottom: 10 }}>
-          <span style={reportLabel}>Autor</span>
+          <span style={reportLabel}>{R.autor}</span>
           <input
             style={reportInput}
             value={draftAutor}
@@ -133,7 +134,7 @@ export default function NotasBlock({ style, value, onChange }: Props) {
           />
         </label>
         <label style={{ display: "block" }}>
-          <span style={reportLabel}>Texto</span>
+          <span style={reportLabel}>{R.texto}</span>
           <textarea
             style={reportTextarea}
             value={draftTexto}

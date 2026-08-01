@@ -7,6 +7,11 @@ import {
   getCachedLogoIndustrialDataUrl,
   LOGO_INDUSTRIAL_SIZE_MM,
 } from "./logoIndustrialPublic";
+import { getIndustrialLiveProject } from "../industrial/onlineAnalysis/industrialLiveProjectStore";
+import {
+  resolveEmpresaExecutora,
+  resolveProjectDesigner,
+} from "../projects/projectMeta";
 
 const MARGIN = 14;
 const GRID_COLOR: [number, number, number] = [0, 0, 0];
@@ -27,11 +32,16 @@ export function resolveIndustrialSectionPdfMeta(
   overrides?: Partial<IndustrialSectionPdfMeta>
 ): IndustrialSectionPdfMeta {
   const attribution = resolveIndustrialPdfAttribution();
+  const liveState = getIndustrialLiveProject()?.state;
+  const liveCompany = liveState ? resolveEmpresaExecutora(liveState) : undefined;
+  const liveDesigner = liveState?.designer?.trim()
+    ? resolveProjectDesigner(liveState)
+    : undefined;
   return {
     sectionTitle,
     projectName: projectName?.trim() || "Projeto",
-    companyName: overrides?.companyName ?? "PIMO PRO",
-    designer: overrides?.designer ?? attribution.designer,
+    companyName: overrides?.companyName ?? liveCompany ?? "PIMO PRO",
+    designer: overrides?.designer ?? liveDesigner ?? attribution.designer,
     exportDate: overrides?.exportDate ?? formatIndustrialDesignDate(),
     responsible: overrides?.responsible ?? attribution.responsible,
   };

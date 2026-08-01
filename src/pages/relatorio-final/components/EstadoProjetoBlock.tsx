@@ -22,6 +22,7 @@ import {
   reportTextarea,
   reportTh,
 } from "../reportStyles";
+import { R } from "../uiLabels";
 import EditableModal from "./EditableModal";
 
 type Props = {
@@ -88,7 +89,7 @@ function OperadoresEditor({
             variant="ghost"
             onClick={() => onChange(list.filter((_, i) => i !== idx))}
           >
-            Remover
+            {R.remover}
           </Button>
         </div>
       ))}
@@ -102,7 +103,7 @@ function OperadoresEditor({
           ])
         }
       >
-        Adicionar pessoa
+        {R.adicionarPessoa}
       </Button>
     </div>
   );
@@ -121,14 +122,14 @@ export default function EstadoProjetoBlock({
 
   return (
     <section style={reportSection(style)}>
-      <h2 style={reportSectionTitle}>3. Estado do projeto (Design / Producao / Montagem)</h2>
+      <h2 style={reportSectionTitle}>{R.estadoProjeto}</h2>
 
       <div style={{ display: "grid", gap: 16 }}>
         <div style={reportSection(style === "cards" ? "classic" : "classic")}>
-          <h3 style={{ margin: "0 0 10px", fontSize: 14 }}>3.1 Design</h3>
+          <h3 style={{ margin: "0 0 10px", fontSize: 14 }}>{R.design}</h3>
           <div style={reportGrid3}>
             <label>
-              <span style={reportLabel}>Inicio design</span>
+              <span style={reportLabel}>{R.inicioDesign}</span>
               <input
                 type="date"
                 style={reportInput}
@@ -137,7 +138,7 @@ export default function EstadoProjetoBlock({
               />
             </label>
             <label>
-              <span style={reportLabel}>Conclusao design</span>
+              <span style={reportLabel}>{R.conclusaoDesign}</span>
               <input
                 type="date"
                 style={reportInput}
@@ -146,7 +147,7 @@ export default function EstadoProjetoBlock({
               />
             </label>
             <label>
-              <span style={reportLabel}>Revisoes antes producao</span>
+              <span style={reportLabel}>{R.revisoesAntes}</span>
               <input
                 type="number"
                 min={0}
@@ -161,7 +162,7 @@ export default function EstadoProjetoBlock({
               />
             </label>
             <label>
-              <span style={reportLabel}>Revisoes apos producao</span>
+              <span style={reportLabel}>{R.revisoesApos}</span>
               <input
                 type="number"
                 min={0}
@@ -179,10 +180,10 @@ export default function EstadoProjetoBlock({
           <div style={{ ...reportGrid3, marginTop: 10 }}>
             {(
               [
-                ["errosDesign", "Erros de design"],
-                ["solucoesAplicadas", "Solucoes aplicadas"],
-                ["melhoriasPropostas", "Melhorias propostas"],
-                ["melhoriasImplementadas", "Melhorias implementadas"],
+                ["errosDesign", R.errosDesign],
+                ["solucoesAplicadas", R.solucoes],
+                ["melhoriasPropostas", R.melhoriasPropostas],
+                ["melhoriasImplementadas", R.melhoriasImpl],
               ] as const
             ).map(([key, label]) => (
               <label key={key} style={{ gridColumn: "1 / -1" }}>
@@ -198,28 +199,28 @@ export default function EstadoProjetoBlock({
         </div>
 
         <div style={reportSection("classic")}>
-          <h3 style={{ margin: "0 0 10px", fontSize: 14 }}>3.2 Producao</h3>
+          <h3 style={{ margin: "0 0 10px", fontSize: 14 }}>{R.producao}</h3>
           <div style={reportGrid3}>
             <div>
-              <span style={reportLabel}>Operadores / funcionarios</span>
+              <span style={reportLabel}>{R.operadores}</span>
               <button type="button" style={reportClickable} onClick={() => setModal("operadores")}>
                 {producao.operadores.length}
               </button>
             </div>
             <div>
-              <span style={reportLabel}>Total de caixas</span>
+              <span style={reportLabel}>{R.totalCaixas}</span>
               <button type="button" style={reportClickable} onClick={() => setModal("caixas")}>
                 {producao.caixas.length}
               </button>
             </div>
             <div>
-              <span style={reportLabel}>Total de pecas</span>
+              <span style={reportLabel}>{R.totalPecas}</span>
               <button type="button" style={reportClickable} onClick={() => setModal("pecas")}>
                 {producao.pecas.length}
               </button>
             </div>
             <label>
-              <span style={reportLabel}>Inicio producao</span>
+              <span style={reportLabel}>{R.inicioProducao}</span>
               <input
                 type="date"
                 style={reportInput}
@@ -228,7 +229,7 @@ export default function EstadoProjetoBlock({
               />
             </label>
             <label>
-              <span style={reportLabel}>Fim producao</span>
+              <span style={reportLabel}>{R.fimProducao}</span>
               <input
                 type="date"
                 style={reportInput}
@@ -237,7 +238,7 @@ export default function EstadoProjetoBlock({
               />
             </label>
             <label>
-              <span style={reportLabel}>Horas efetivas</span>
+              <span style={reportLabel}>{R.horasEfetivas}</span>
               <input
                 type="number"
                 min={0}
@@ -253,7 +254,7 @@ export default function EstadoProjetoBlock({
               />
             </label>
             <label>
-              <span style={reportLabel}>Re-producoes</span>
+              <span style={reportLabel}>{R.reProducoes}</span>
               <input
                 type="number"
                 min={0}
@@ -271,9 +272,9 @@ export default function EstadoProjetoBlock({
           <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
             {(
               [
-                ["erros", "Erros na producao"],
-                ["solucoesAplicadas", "Solucoes aplicadas"],
-                ["melhoriasImplementadas", "Melhorias implementadas"],
+                ["erros", R.errosProducao],
+                ["solucoesAplicadas", R.solucoes],
+                ["melhoriasImplementadas", R.melhoriasImpl],
               ] as const
             ).map(([key, label]) => (
               <label key={key}>
@@ -289,10 +290,10 @@ export default function EstadoProjetoBlock({
         </div>
 
         <div style={reportSection("classic")}>
-          <h3 style={{ margin: "0 0 10px", fontSize: 14 }}>3.3 Montagem / Instalacao</h3>
+          <h3 style={{ margin: "0 0 10px", fontSize: 14 }}>{R.montagem}</h3>
           <div style={reportGrid3}>
             <label>
-              <span style={reportLabel}>Data de envio</span>
+              <span style={reportLabel}>{R.dataEnvio}</span>
               <input
                 type="date"
                 style={reportInput}
@@ -301,13 +302,13 @@ export default function EstadoProjetoBlock({
               />
             </label>
             <div>
-              <span style={reportLabel}>Marceneiros / instaladores</span>
+              <span style={reportLabel}>{R.instaladores}</span>
               <button type="button" style={reportClickable} onClick={() => setModal("instaladores")}>
                 {montagem.instaladores.length}
               </button>
             </div>
             <label>
-              <span style={reportLabel}>Inicio montagem</span>
+              <span style={reportLabel}>{R.inicioMontagem}</span>
               <input
                 type="date"
                 style={reportInput}
@@ -316,7 +317,7 @@ export default function EstadoProjetoBlock({
               />
             </label>
             <label>
-              <span style={reportLabel}>Fim montagem</span>
+              <span style={reportLabel}>{R.fimMontagem}</span>
               <input
                 type="date"
                 style={reportInput}
@@ -325,7 +326,7 @@ export default function EstadoProjetoBlock({
               />
             </label>
             <label>
-              <span style={reportLabel}>Intervencoes pos-montagem</span>
+              <span style={reportLabel}>{R.intervencoes}</span>
               <input
                 type="number"
                 min={0}
@@ -345,7 +346,7 @@ export default function EstadoProjetoBlock({
 
       <EditableModal
         open={modal === "operadores"}
-        title="Operadores / funcionarios"
+        title={R.operadores}
         onClose={() => setModal(null)}
       >
         <OperadoresEditor
@@ -354,14 +355,14 @@ export default function EstadoProjetoBlock({
         />
       </EditableModal>
 
-      <EditableModal open={modal === "caixas"} title="Lista de caixas" onClose={() => setModal(null)}>
+      <EditableModal open={modal === "caixas"} title={R.listaCaixas} onClose={() => setModal(null)}>
         <div style={reportTableWrap}>
           <table style={reportTable}>
             <thead>
               <tr>
-                <th style={reportTh}>Nome</th>
-                <th style={reportTh}>Dimensoes</th>
-                <th style={reportTh}>Tipo</th>
+                <th style={reportTh}>{R.nome}</th>
+                <th style={reportTh}>{R.dimensoes}</th>
+                <th style={reportTh}>{R.tipo}</th>
               </tr>
             </thead>
             <tbody>
@@ -375,7 +376,7 @@ export default function EstadoProjetoBlock({
               {producao.caixas.length === 0 ? (
                 <tr>
                   <td style={reportTd} colSpan={3}>
-                    Sem caixas no projeto.
+                    {R.semCaixas}
                   </td>
                 </tr>
               ) : null}
@@ -386,7 +387,7 @@ export default function EstadoProjetoBlock({
 
       <EditableModal
         open={modal === "pecas"}
-        title="Lista de pecas (formato tecnico)"
+        title={R.listaPecas}
         onClose={() => setModal(null)}
       >
         <div style={reportTableWrap}>
@@ -395,15 +396,15 @@ export default function EstadoProjetoBlock({
               <tr>
                 {[
                   "REF",
-                  "PECA",
+                  R.peca,
                   "MATERIAL",
                   "QTD",
                   "COMP",
                   "LARG",
                   "ESP",
-                  "Erro",
-                  "Notas",
-                  "Correcao",
+                  R.erro,
+                  R.notas,
+                  R.correcao,
                 ].map((h) => (
                   <th key={h} style={reportTh}>
                     {h}
@@ -463,7 +464,7 @@ export default function EstadoProjetoBlock({
 
       <EditableModal
         open={modal === "instaladores"}
-        title="Marceneiros / instaladores"
+        title={R.instaladores}
         onClose={() => setModal(null)}
       >
         <OperadoresEditor
