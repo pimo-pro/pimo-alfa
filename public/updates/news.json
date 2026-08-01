@@ -1,11 +1,41 @@
 {
-  "updatedAt": "2026-07-31T21:48:58.165Z",
+  "updatedAt": "2026-08-01T10:37:30.850Z",
   "news": [
+    {
+      "version": "v6.0801.1137",
+      "title": "Hotfix: cotagem engenheirada de trilho no Layout de Corte manual (38/204/41, sem repetição, cotas externas).",
+      "description": "Hotfix: cotagem engenheirada de trilho no Layout de Corte manual (38/204/41, sem repetição, cotas externas).",
+      "publishedAt": "2026-08-01T10:37:30.587Z",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "update",
+      "commit": "fc085064"
+    },
+    {
+      "version": "v-ref-layout-corte-manual-0731",
+      "title": "Nova funcionalidade: Layout de Corte manual (PDF único com furos coloridos, cotas inteligentes e rasgos). Integração ...",
+      "description": "Nova funcionalidade: Layout de Corte manual (PDF único com furos coloridos, cotas inteligentes e rasgos). Integração na UI e no Gerar arquivo completo.",
+      "publishedAt": "2026-07-31T22:52:24+01:00",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "update",
+      "commit": "290c26c"
+    },
     {
       "version": "v6.0731.2248",
       "title": "Nova funcionalidade: Layout de Corte manual (PDF único com furos coloridos, cotas inteligentes e rasgos). Integração ...",
       "description": "Nova funcionalidade: Layout de Corte manual (PDF único com furos coloridos, cotas inteligentes e rasgos). Integração na UI e no Gerar arquivo completo.",
       "publishedAt": "2026-07-31T21:48:57.913Z",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "update",
+      "commit": "05c9ef9"
+    },
+    {
+      "version": "v1.1.0-layout-corte-manual",
+      "title": "Nova funcionalidade: Layout de Corte manual (PDF único com furos coloridos, cotas inteligentes e rasgos). Integração ...",
+      "description": "Nova funcionalidade: Layout de Corte manual (PDF único com furos coloridos, cotas inteligentes e rasgos). Integração na UI e no Gerar arquivo completo.",
+      "publishedAt": "2026-07-31T22:44:33+01:00",
       "type": "update",
       "author": "pimo-pro",
       "icon": "update",

@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-08-01T10:37:28.198Z",
+      "author": "pimo-pro",
+      "commitMessage": "Hotfix: cotagem engenheirada de trilho no Layout de Corte manual (38/204/41, sem repetição, cotas externas).",
+      "version": "v6.0801.1137"
+    },
+    {
       "publishedAt": "2026-07-31T21:48:55.526Z",
       "author": "pimo-pro",
       "commitMessage": "Nova funcionalidade: Layout de Corte manual (PDF único com furos coloridos, cotas inteligentes e rasgos). Integração na UI e no Gerar arquivo completo.",
