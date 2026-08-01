@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-08-01T11:40:02.877Z",
+      "author": "pimo-pro",
+      "commitMessage": "Relatório Final: PDF, histórico, notas, qualidade, integração TRAK/Industrial.",
+      "version": "v6.0801.1240"
+    },
+    {
       "publishedAt": "2026-08-01T10:37:28.198Z",
       "author": "pimo-pro",
       "commitMessage": "Hotfix: cotagem engenheirada de trilho no Layout de Corte manual (38/204/41, sem repetição, cotas externas).",

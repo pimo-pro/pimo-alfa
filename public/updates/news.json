@@ -1,15 +1,35 @@
 {
-  "updatedAt": "2026-08-01T10:37:30.850Z",
+  "updatedAt": "2026-08-01T11:40:04.280Z",
   "news": [
+    {
+      "version": "v6.0801.1240",
+      "title": "Relatório Final: PDF, histórico, notas, qualidade, integração TRAK/Industrial.",
+      "description": "Relatório Final: PDF, histórico, notas, qualidade, integração TRAK/Industrial.",
+      "publishedAt": "2026-08-01T11:40:03.977Z",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "update",
+      "commit": "fce5d21d"
+    },
     {
       "version": "v6.0801.1137",
       "title": "Hotfix: cotagem engenheirada de trilho no Layout de Corte manual (38/204/41, sem repetição, cotas externas).",
       "description": "Hotfix: cotagem engenheirada de trilho no Layout de Corte manual (38/204/41, sem repetição, cotas externas).",
-      "publishedAt": "2026-08-01T10:37:30.587Z",
+      "publishedAt": "2026-08-01T11:40:50+01:00",
       "type": "update",
       "author": "pimo-pro",
       "icon": "update",
       "commit": "fc085064"
+    },
+    {
+      "version": "v1.1.2-layout-corte-manual-rail",
+      "title": "Hotfix: cotagem engenheirada de trilho no Layout de Corte manual (38/204/41, sem repetição, cotas externas).",
+      "description": "Hotfix: cotagem engenheirada de trilho no Layout de Corte manual (38/204/41, sem repetição, cotas externas).",
+      "publishedAt": "2026-08-01T11:35:41+01:00",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "update",
+      "commit": "fc08506"
     },
     {
       "version": "v-ref-layout-corte-manual-0731",
