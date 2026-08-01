@@ -1,6 +1,16 @@
 {
-  "updatedAt": "2026-08-01T19:54:37.859Z",
+  "updatedAt": "2026-08-01T19:58:01.496Z",
   "news": [
+    {
+      "version": "v6.0801.2057",
+      "title": "fix: remove unused SupervisorAlertItem import blocking industrial build.",
+      "description": "fix: remove unused SupervisorAlertItem import blocking industrial build.",
+      "publishedAt": "2026-08-01T19:58:01.037Z",
+      "type": "fix",
+      "author": "pimo-pro",
+      "icon": "fix",
+      "commit": "6642e6fd"
+    },
     {
       "version": "v6.0801.2054",
       "title": "fix: remove unused SupervisorAlertItem import blocking industrial build.",
