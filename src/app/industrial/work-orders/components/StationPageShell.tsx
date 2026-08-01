@@ -55,7 +55,15 @@ export default function StationPageShell({ station }: StationPageShellProps) {
           codeInput={page.codeInput}
           onCodeInputChange={page.setCodeInput}
           onCodeSubmit={page.handleCodeSubmit}
+          codeInputRef={page.codeInputRef}
           selectedTask={page.selectedTask}
+          selectedTaskIds={page.selectedTaskIds}
+          selectedTasks={page.selectedTasks}
+          onToggleTaskSelection={page.toggleTaskSelection}
+          onRemoveFromSelection={page.removeFromSelection}
+          onClearSelection={page.clearSelection}
+          onBulkAction={(action) => void page.handleBulkAction(action)}
+          actionFeedback={page.actionFeedback}
           confirmLabel={page.config.confirmLabel}
           busy={page.busy}
           error={page.error}
@@ -84,17 +92,10 @@ export default function StationPageShell({ station }: StationPageShellProps) {
           selectedPieceId={page.selectedPieceId}
           toolMode={page.toolMode}
           onSelectPiece={(pieceId) => {
-            page.setSelectedPieceId(pieceId);
-            const task = page.tasks.find(
-              (t) =>
-                t.pieceId === pieceId &&
-                (t.status === 'pending' || t.status === 'in_progress'),
-            );
-            if (task) page.selectTask(task);
+            page.togglePieceOnCanvas(pieceId);
           }}
           onClearSelection={() => {
-            page.setSelectedPieceId(null);
-            page.selectTask(null);
+            page.clearSelection();
           }}
           notifications={page.notifications}
           notificationsOpen={page.notificationsOpen}

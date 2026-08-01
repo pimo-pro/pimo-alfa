@@ -1,4 +1,4 @@
-import type { CSSProperties, FormEvent, ReactNode } from 'react';
+import type { CSSProperties, FormEvent, ReactNode, Ref } from 'react';
 
 import type { IndustrialWorkOrderTask } from '@/industrial/work-orders/types';
 import {
@@ -16,7 +16,7 @@ import {
   industrialVisionSecondaryStyle,
 } from '@/industrial/ui/layouts/industrialStyles';
 
-import type { StationListSection } from './stationTypes';
+import type { StationActionFeedback, StationBulkAction, StationListSection } from './stationTypes';
 import StationToolbar from './StationToolbar';
 import type { StationToolMode } from './stationTypes';
 
@@ -51,7 +51,15 @@ interface StationPanelProps {
   codeInput: string;
   onCodeInputChange: (value: string) => void;
   onCodeSubmit: (event: FormEvent) => void;
+  codeInputRef?: Ref<HTMLInputElement>;
   selectedTask: IndustrialWorkOrderTask | null;
+  selectedTaskIds: string[];
+  selectedTasks: IndustrialWorkOrderTask[];
+  onToggleTaskSelection: (taskId: string) => void;
+  onRemoveFromSelection: (taskId: string) => void;
+  onClearSelection: () => void;
+  onBulkAction: (action: StationBulkAction) => void;
+  actionFeedback?: StationActionFeedback | null;
   confirmLabel: string;
   rejectLabel?: string;
   busy?: boolean;
@@ -217,7 +225,15 @@ export default function StationPanel({
   codeInput,
   onCodeInputChange,
   onCodeSubmit,
+  codeInputRef,
   selectedTask,
+  selectedTaskIds,
+  selectedTasks,
+  onToggleTaskSelection,
+  onRemoveFromSelection,
+  onClearSelection,
+  onBulkAction,
+  actionFeedback,
   confirmLabel,
   rejectLabel = 'Rejeitar',
   busy = false,
@@ -235,9 +251,10 @@ export default function StationPanel({
 }: StationPanelProps) {
   ensureIndustrialInteractionStyles();
 
+  const hasSelection = selectedTaskIds.length > 0;
   const qrVisual: 'válido' | 'inválido' | 'pendente' = error
     ? 'inválido'
-    : selectedTask
+    : hasSelection || selectedTask
       ? 'válido'
       : 'pendente';
   const qrColor = qrVisual === 'válido' ? '#16a34a' : qrVisual === 'inválido' ? '#f87171' : '#f59e0b';
@@ -285,7 +302,7 @@ export default function StationPanel({
           ? 'peça aguardando estação'
           : null;
   const alerts: string[] = [];
-  if (!selectedTask && !codeInput.trim()) alerts.push('peça sem QR');
+  if (!selectedTask && !hasSelection && !codeInput.trim()) alerts.push('peça sem QR');
   if (selectedTask?.status === 'rejected') alerts.push('peça bloqueada');
   if (selectedTask && flowIdx < 0) alerts.push('peça sem etapa definida');
   if (!hasData) alerts.push('peça sem dados');
@@ -458,6 +475,8 @@ export default function StationPanel({
   }
   if (showErro) alerts.push('erro');
 
+  const selectionCount = selectedTaskIds.length;
+
   return (
     <section
       className={INDUSTRIAL_PANEL_MOTION_CLASS}
@@ -509,14 +528,21 @@ export default function StationPanel({
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
-          <h3 style={industrialSectionTitleStyle}>QR / Código</h3>
-          <span style={chipStyle(true, qrColor)}>QR {qrVisual}</span>
+          <h3 style={industrialSectionTitleStyle}>Leitura QR / Barcode</h3>
+          <span style={chipStyle(true, qrColor)}>
+            {selectionCount > 0 ? `${selectionCount} seleccionada(s)` : `QR ${qrVisual}`}
+          </span>
         </div>
+        <p style={{ margin: 0, fontSize: 11, color: '#94a3b8', lineHeight: 1.4 }}>
+          Introduza códigos um a um (Enter adiciona automaticamente) ou cole vários separados por linha/vírgula.
+        </p>
         <div style={{ display: 'flex', gap: 6 }}>
           <input
+            ref={codeInputRef}
             value={codeInput}
             onChange={(e) => onCodeInputChange(e.target.value)}
-            placeholder="PC-piece-id"
+            placeholder="Código da peça · Enter = adicionar"
+            autoComplete="off"
             style={{
               flex: 1,
               padding: '8px 10px',
@@ -1047,7 +1073,72 @@ export default function StationPanel({
         </div>
       </div>
 
-      {selectedTask ? (
+      {hasSelection ? (
+        <div
+          style={{
+            display: 'grid',
+            gap: 8,
+            borderLeft: '2px solid rgba(34,197,94,0.55)',
+            paddingLeft: 8,
+            ...industrialVisionActiveStyle,
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+            <h3 style={{ ...industrialSectionTitleStyle, margin: 0 }}>
+              Peças seleccionadas ({selectionCount})
+            </h3>
+            <button type="button" onClick={onClearSelection} style={industrialActionBtnStyle}>
+              Limpar
+            </button>
+          </div>
+          <ul style={{ margin: 0, padding: 0, display: 'grid', gap: 4, maxHeight: 160, overflow: 'auto' }}>
+            {selectedTasks.map((task) => (
+              <li
+                key={task.id}
+                style={{
+                  ...industrialListItemStyle,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: 8,
+                }}
+              >
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, color: '#f1f5f9', fontSize: 12 }}>{task.pieceId}</div>
+                  <div style={{ color: '#94a3b8', fontSize: 11 }}>
+                    {task.operationType} · {STATUS_LABEL[task.status]}
+                    {task.display?.nqrCode ? ` · ${task.display.nqrCode}` : ''}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onRemoveFromSelection(task.id)}
+                  style={industrialActionBtnStyle}
+                  title="Remover da selecção"
+                >
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <p
+          className={INDUSTRIAL_VISION_SECONDARY_CLASS}
+          style={{
+            margin: 0,
+            fontSize: 12,
+            fontWeight: 400,
+            color: '#a3b2c2',
+            lineHeight: 1.5,
+            ...industrialVisionSecondaryStyle,
+          }}
+        >
+          Leia códigos ou marque checkboxes para seleccionar peças.
+        </p>
+      )}
+
+      {selectedTask && !hasSelection ? (
         <dl
           className={INDUSTRIAL_VISION_ACTIVE_CLASS}
           style={{ margin: 0, display: 'grid', gap: 6, fontSize: 12, ...industrialVisionActiveStyle }}
@@ -1068,30 +1159,16 @@ export default function StationPanel({
             </dd>
           </div>
         </dl>
-      ) : (
-        <p
-          className={INDUSTRIAL_VISION_SECONDARY_CLASS}
-          style={{
-            margin: 0,
-            fontSize: 12,
-            fontWeight: 400,
-            color: '#a3b2c2',
-            lineHeight: 1.5,
-            ...industrialVisionSecondaryStyle,
-          }}
-        >
-          Leia o QR para seleccionar a tarefa.
-        </p>
-      )}
+      ) : null}
 
       {sections.map((section) => (
         <div
           key={section.title}
-          className={selectedTask ? INDUSTRIAL_VISION_SECONDARY_CLASS : undefined}
+          className={hasSelection || selectedTask ? INDUSTRIAL_VISION_SECONDARY_CLASS : undefined}
           style={{
             display: 'grid',
             gap: 6,
-            ...(selectedTask ? industrialVisionSecondaryStyle : {}),
+            ...(hasSelection || selectedTask ? industrialVisionSecondaryStyle : {}),
             borderLeft: '2px solid rgba(59,130,246,0.25)',
             paddingLeft: 8,
             transition: 'all 140ms ease-out',
@@ -1102,32 +1179,58 @@ export default function StationPanel({
             {section.items.length === 0 ? (
               <li style={{ fontSize: 12, color: '#a3b2c2', lineHeight: 1.5 }}>Sem itens · dados pendentes.</li>
             ) : (
-              section.items.map((item, index) => (
-                <li
-                  key={item.id}
-                  className={INDUSTRIAL_LIST_ITEM_CLASS}
-                  style={{
-                    ...industrialListItemStyle,
-                    animationDelay: `${index * 30}ms`,
-                    ...(selectedTask?.pieceId && item.pieceId === selectedTask.pieceId
-                      ? {
-                          boxShadow: '0 0 0 2px rgba(59,130,246,0.45)',
-                          outline: '2px solid rgba(59,130,246,0.55)',
-                          background: 'rgba(255,255,255,0.06)',
-                          transform: 'translateY(-2px)',
-                        }
-                      : {}),
-                  }}
-                  data-active={
-                    selectedTask?.pieceId && item.pieceId === selectedTask.pieceId ? 'true' : undefined
-                  }
-                >
-                  <div style={{ fontWeight: 600, color: '#f1f5f9' }}>{item.primary}</div>
-                  {item.secondary ? (
-                    <div style={{ color: '#cbd5e1', marginTop: 2, lineHeight: 1.5 }}>{item.secondary}</div>
-                  ) : null}
-                </li>
-              ))
+              section.items.map((item, index) => {
+                const taskId = item.taskId;
+                const selectable = Boolean(taskId);
+                const checked = taskId ? selectedTaskIds.includes(taskId) : false;
+                const focused =
+                  (taskId && selectedTask?.id === taskId) ||
+                  (item.pieceId && selectedTask?.pieceId === item.pieceId);
+
+                return (
+                  <li
+                    key={item.id}
+                    className={INDUSTRIAL_LIST_ITEM_CLASS}
+                    style={{
+                      ...industrialListItemStyle,
+                      animationDelay: `${index * 30}ms`,
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: 8,
+                      cursor: selectable ? 'pointer' : 'default',
+                      ...(checked || focused
+                        ? {
+                            boxShadow: '0 0 0 2px rgba(59,130,246,0.45)',
+                            outline: '2px solid rgba(59,130,246,0.55)',
+                            background: 'rgba(255,255,255,0.06)',
+                            transform: 'translateY(-2px)',
+                          }
+                        : {}),
+                    }}
+                    data-active={checked || focused ? 'true' : undefined}
+                    onClick={() => {
+                      if (taskId) onToggleTaskSelection(taskId);
+                    }}
+                  >
+                    {selectable ? (
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => onToggleTaskSelection(taskId!)}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ marginTop: 2, flexShrink: 0 }}
+                        aria-label={`Seleccionar ${item.primary}`}
+                      />
+                    ) : null}
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ fontWeight: 600, color: '#f1f5f9' }}>{item.primary}</div>
+                      {item.secondary ? (
+                        <div style={{ color: '#cbd5e1', marginTop: 2, lineHeight: 1.5 }}>{item.secondary}</div>
+                      ) : null}
+                    </div>
+                  </li>
+                );
+              })
             )}
           </ul>
         </div>
@@ -1137,34 +1240,63 @@ export default function StationPanel({
 
       {error ? <p style={{ margin: 0, color: '#f87171', fontSize: 12 }}>{error}</p> : null}
 
+      {actionFeedback ? (
+        <p
+          style={{
+            margin: 0,
+            color: actionFeedback.ok ? '#16a34a' : '#f87171',
+            fontSize: 12,
+            fontWeight: 600,
+            padding: '8px 10px',
+            borderRadius: 6,
+            background: actionFeedback.ok ? 'rgba(22,163,74,0.12)' : 'rgba(248,113,113,0.12)',
+            border: `1px solid ${actionFeedback.ok ? 'rgba(22,163,74,0.35)' : 'rgba(248,113,113,0.35)'}`,
+          }}
+        >
+          {actionFeedback.message}
+        </p>
+      ) : null}
+
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <button
           type="button"
-          disabled={!selectedTask || busy}
-          onClick={onConfirm}
+          disabled={!hasSelection || busy}
+          onClick={() => onBulkAction('start')}
           style={{
             ...industrialConfirmBtnStyle,
-            opacity: !selectedTask ? 0.4 : 1,
+            background: '#0369a1',
+            opacity: !hasSelection ? 0.4 : 1,
             cursor: busy ? 'wait' : 'pointer',
           }}
         >
-          {confirmLabel}
+          Iniciar
         </button>
-        {onReject ? (
-          <button
-            type="button"
-            disabled={!selectedTask || busy}
-            onClick={onReject}
-            style={{
-              ...industrialActionBtnStyle,
-              padding: '10px 18px',
-              cursor: busy ? 'wait' : 'pointer',
-              opacity: !selectedTask ? 0.4 : 1,
-            }}
-          >
-            {rejectLabel}
-          </button>
-        ) : null}
+        <button
+          type="button"
+          disabled={!hasSelection || busy}
+          onClick={onConfirm}
+          style={{
+            ...industrialConfirmBtnStyle,
+            opacity: !hasSelection ? 0.4 : 1,
+            cursor: busy ? 'wait' : 'pointer',
+          }}
+          title={confirmLabel}
+        >
+          Concluir
+        </button>
+        <button
+          type="button"
+          disabled={!hasSelection || busy}
+          onClick={() => (onReject ? onReject() : onBulkAction('reject'))}
+          style={{
+            ...industrialActionBtnStyle,
+            padding: '10px 18px',
+            cursor: busy ? 'wait' : 'pointer',
+            opacity: !hasSelection ? 0.4 : 1,
+          }}
+        >
+          {rejectLabel}
+        </button>
       </div>
     </section>
   );

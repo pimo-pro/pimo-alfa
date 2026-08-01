@@ -10,9 +10,12 @@ import {
   finishTask,
   logTaskEvent,
   rejectTask,
+  startTask,
 } from '@/industrial/api/workOrderActions';
 import type { IndustrialStation, IndustrialWorkOrder, IndustrialWorkOrderTask } from '@/industrial/work-orders/types';
 import type {
+  StationActionFeedback,
+  StationBulkAction,
   StationChatConversation,
   StationNotification,
   StationToolMode,
@@ -110,6 +113,19 @@ function initialConversations(station: IndustrialStation, enableSupervisor: bool
   return base;
 }
 
+const STATUS_LABEL: Record<IndustrialWorkOrderTask['status'], string> = {
+  pending: 'Pendente',
+  in_progress: 'Em execução',
+  completed: 'Concluído',
+  rejected: 'Rejeitado',
+};
+
+const ACTION_LABEL: Record<StationBulkAction, string> = {
+  start: 'Iniciar',
+  complete: 'Concluir',
+  reject: 'Rejeitar',
+};
+
 export function useStationPage(station: IndustrialStation) {
   useIndustrialPageState();
   const { user } = useAuth();
@@ -122,7 +138,9 @@ export function useStationPage(station: IndustrialStation) {
   const [error, setError] = useState<string | null>(null);
   const [codeInput, setCodeInput] = useState('');
   const [selectedTask, setSelectedTask] = useState<IndustrialWorkOrderTask | null>(null);
+  const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
   const [selectedPieceId, setSelectedPieceId] = useState<string | null>(null);
+  const [actionFeedback, setActionFeedback] = useState<StationActionFeedback | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [toolMode, setToolMode] = useState<StationToolMode>('select');
   const [snapEnabled, setSnapEnabled] = useState(true);
@@ -138,6 +156,7 @@ export function useStationPage(station: IndustrialStation) {
   const [eventLog, setEventLog] = useState<Array<{ id: string; type: string; at: string }>>([]);
   const reloadRef = useRef<() => Promise<void>>(async () => undefined);
   const reloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const codeInputRef = useRef<HTMLInputElement | null>(null);
 
   const scheduleReload = useCallback(() => {
     if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current);
@@ -166,6 +185,7 @@ export function useStationPage(station: IndustrialStation) {
         if (!current) return null;
         return taskRows.find((t) => t.id === current.id) ?? null;
       });
+      setSelectedTaskIds((prev) => prev.filter((id) => taskRows.some((t) => t.id === id)));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar estação.');
     } finally {
@@ -189,9 +209,19 @@ export function useStationPage(station: IndustrialStation) {
     [station, tasks, orders],
   );
 
+  const selectedTasks = useMemo(() => {
+    const byId = new Map(tasks.map((t) => [t.id, t]));
+    return selectedTaskIds.map((id) => byId.get(id)).filter((t): t is IndustrialWorkOrderTask => Boolean(t));
+  }, [selectedTaskIds, tasks]);
+
+  const selectedPieceIds = useMemo(
+    () => Array.from(new Set(selectedTasks.map((t) => t.pieceId))),
+    [selectedTasks],
+  );
+
   const canvasPieces = useMemo(
-    () => buildCanvasPieces(tasks, orders, selectedPieceId),
-    [tasks, orders, selectedPieceId, realtime.canvasRevision],
+    () => buildCanvasPieces(tasks, orders, selectedPieceIds.length > 0 ? selectedPieceIds : selectedPieceId),
+    [tasks, orders, selectedPieceIds, selectedPieceId, realtime.canvasRevision],
   );
 
   const notifications = useMemo(() => {
@@ -220,13 +250,14 @@ export function useStationPage(station: IndustrialStation) {
       return (
         activeTasks.find((t) => t.pieceId === pieceId) ??
         activeTasks.find((t) => t.pieceId.includes(pieceId) || pieceId.includes(t.pieceId)) ??
+        activeTasks.find((t) => t.display?.nqrCode === trimmed || t.display?.nqrCode === pieceId) ??
         null
       );
     },
     [activeTasks],
   );
 
-  const selectTask = useCallback(
+  const focusTask = useCallback(
     (task: IndustrialWorkOrderTask | null) => {
       setSelectedTask(task);
       setSelectedPieceId(task?.pieceId ?? null);
@@ -237,59 +268,234 @@ export function useStationPage(station: IndustrialStation) {
     [user?.id],
   );
 
+  /** Compat: selecção única (substitui lista). */
+  const selectTask = useCallback(
+    (task: IndustrialWorkOrderTask | null) => {
+      if (!task) {
+        setSelectedTaskIds([]);
+        focusTask(null);
+        return;
+      }
+      setSelectedTaskIds([task.id]);
+      focusTask(task);
+    },
+    [focusTask],
+  );
+
+  const addTaskToSelection = useCallback(
+    (task: IndustrialWorkOrderTask) => {
+      setSelectedTaskIds((prev) => (prev.includes(task.id) ? prev : [...prev, task.id]));
+      focusTask(task);
+      setError(null);
+      setActionFeedback(null);
+    },
+    [focusTask],
+  );
+
+  const toggleTaskSelection = useCallback(
+    (taskId: string) => {
+      const task = tasks.find((t) => t.id === taskId);
+      if (!task) return;
+
+      setSelectedTaskIds((prev) => {
+        if (prev.includes(taskId)) {
+          const next = prev.filter((id) => id !== taskId);
+          const lastId = next[next.length - 1];
+          const last = lastId ? tasks.find((t) => t.id === lastId) ?? null : null;
+          focusTask(last);
+          return next;
+        }
+        focusTask(task);
+        return [...prev, taskId];
+      });
+      setError(null);
+      setActionFeedback(null);
+    },
+    [focusTask, tasks],
+  );
+
+  const removeFromSelection = useCallback(
+    (taskId: string) => {
+      setSelectedTaskIds((prev) => {
+        const next = prev.filter((id) => id !== taskId);
+        const lastId = next[next.length - 1];
+        const last = lastId ? tasks.find((t) => t.id === lastId) ?? null : null;
+        focusTask(last);
+        return next;
+      });
+    },
+    [focusTask, tasks],
+  );
+
+  const clearSelection = useCallback(() => {
+    setSelectedTaskIds([]);
+    focusTask(null);
+    setActionFeedback(null);
+  }, [focusTask]);
+
+  const addCodeToSelection = useCallback(
+    (raw?: string) => {
+      setError(null);
+      setActionFeedback(null);
+      const code = (raw ?? codeInput).trim();
+      if (!code) {
+        setError('Introduza um código QR ou barcode.');
+        return false;
+      }
+
+      // Suporta colagem de vários códigos (linhas / vírgulas / espaços).
+      const parts = code
+        .split(/[\n\r,;\t]+/)
+        .map((p) => p.trim())
+        .filter(Boolean);
+
+      if (parts.length > 1) {
+        let added = 0;
+        let last: IndustrialWorkOrderTask | null = null;
+        const missing: string[] = [];
+        for (const part of parts) {
+          const match = resolveTaskFromCode(part);
+          if (!match) {
+            missing.push(part);
+            continue;
+          }
+          setSelectedTaskIds((prev) => (prev.includes(match.id) ? prev : [...prev, match.id]));
+          last = match;
+          added += 1;
+        }
+        if (last) focusTask(last);
+        setCodeInput('');
+        if (added === 0) {
+          setError('Nenhuma tarefa activa encontrada para os códigos.');
+          return false;
+        }
+        if (missing.length > 0) {
+          setError(`${added} adicionada(s); não encontradas: ${missing.slice(0, 3).join(', ')}${missing.length > 3 ? '…' : ''}`);
+        }
+        requestAnimationFrame(() => codeInputRef.current?.focus());
+        return true;
+      }
+
+      const match = resolveTaskFromCode(code);
+      if (!match) {
+        setError('Nenhuma tarefa activa encontrada para este código.');
+        return false;
+      }
+      addTaskToSelection(match);
+      setCodeInput('');
+      requestAnimationFrame(() => codeInputRef.current?.focus());
+      return true;
+    },
+    [addTaskToSelection, codeInput, focusTask, resolveTaskFromCode],
+  );
+
   const handleCodeSubmit = useCallback(
     (event: FormEvent) => {
       event.preventDefault();
-      setError(null);
-      const match = resolveTaskFromCode(codeInput);
-      if (!match) {
-        setError('Nenhuma tarefa activa encontrada para este código.');
-        return;
-      }
-      selectTask(match);
+      addCodeToSelection();
     },
-    [codeInput, resolveTaskFromCode, selectTask],
+    [addCodeToSelection],
   );
 
+  const handleBulkAction = useCallback(
+    async (action: StationBulkAction) => {
+      if (selectedTaskIds.length === 0) {
+        setError('Seleccione pelo menos uma peça (QR ou checkbox).');
+        setActionFeedback({ ok: false, message: 'Nenhuma peça seleccionada.' });
+        return;
+      }
+
+      setBusy(true);
+      setError(null);
+      setActionFeedback(null);
+
+      const targets = selectedTaskIds
+        .map((id) => tasks.find((t) => t.id === id))
+        .filter((t): t is IndustrialWorkOrderTask => Boolean(t));
+
+      let okCount = 0;
+      const failures: string[] = [];
+
+      for (const task of targets) {
+        try {
+          if (action === 'start') {
+            await startTask(task.id, user?.id);
+            await logTaskEvent(task.id, 'station_started', { station, bulk: true }, user?.id);
+          } else if (action === 'complete') {
+            await finishTask(task.id, user?.id);
+            await logTaskEvent(task.id, 'station_confirmed', { station, bulk: true }, user?.id);
+          } else {
+            await rejectTask(task.id, 'Rejeitado em grupo na estação', user?.id);
+            await logTaskEvent(task.id, 'station_rejected', { station, bulk: true }, user?.id);
+          }
+          okCount += 1;
+          setEventLog((prev) => [
+            {
+              id: `${Date.now()}-${task.id}`,
+              type: `${action}:${task.pieceId}`,
+              at: new Date().toISOString(),
+            },
+            ...prev,
+          ]);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Falha';
+          failures.push(`${task.pieceId}: ${msg}`);
+        }
+      }
+
+      const label = ACTION_LABEL[action];
+      if (failures.length === 0) {
+        setActionFeedback({
+          ok: true,
+          message: `${label}: ${okCount} peça(s) actualizada(s).`,
+        });
+        setSelectedTaskIds([]);
+        focusTask(null);
+        setCodeInput('');
+      } else if (okCount > 0) {
+        setActionFeedback({
+          ok: false,
+          message: `${label}: ${okCount} ok, ${failures.length} falha(s). ${failures[0]}`,
+        });
+        setError(failures.slice(0, 2).join(' · '));
+        // Manter apenas as que falharam na selecção.
+        const failedPieceHints = new Set(failures.map((f) => f.split(':')[0]));
+        setSelectedTaskIds((prev) =>
+          prev.filter((id) => {
+            const t = tasks.find((row) => row.id === id);
+            return t ? failedPieceHints.has(t.pieceId) : false;
+          }),
+        );
+      } else {
+        setActionFeedback({
+          ok: false,
+          message: `${label} falhou: ${failures[0] ?? 'erro desconhecido'}`,
+        });
+        setError(failures[0] ?? `${label} falhou.`);
+      }
+
+      try {
+        await reload();
+      } finally {
+        setBusy(false);
+        requestAnimationFrame(() => codeInputRef.current?.focus());
+      }
+    },
+    [focusTask, reload, selectedTaskIds, station, tasks, user?.id],
+  );
+
+  /** Compat legado: concluir a peça em foco / seleccionadas. */
   const handleConfirm = useCallback(async () => {
-    if (!selectedTask) {
-      setError('Seleccione uma tarefa via QR/código.');
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    try {
-      await finishTask(selectedTask.id, user?.id);
-      await logTaskEvent(selectedTask.id, 'station_confirmed', { station }, user?.id);
-      setEventLog((prev) => [
-        { id: `${Date.now()}`, type: `confirmed:${selectedTask.pieceId}`, at: new Date().toISOString() },
-        ...prev,
-      ]);
-      setCodeInput('');
-      selectTask(null);
-      await reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falha ao confirmar execução.');
-    } finally {
-      setBusy(false);
-    }
-  }, [selectedTask, user?.id, station, selectTask, reload]);
+    await handleBulkAction('complete');
+  }, [handleBulkAction]);
 
   const handleReject = useCallback(async () => {
-    if (!selectedTask) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await rejectTask(selectedTask.id, 'Rejeitado na estação', user?.id);
-      setCodeInput('');
-      selectTask(null);
-      await reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falha ao rejeitar.');
-    } finally {
-      setBusy(false);
-    }
-  }, [selectedTask, user?.id, selectTask, reload]);
+    await handleBulkAction('reject');
+  }, [handleBulkAction]);
+
+  const handleStart = useCallback(async () => {
+    await handleBulkAction('start');
+  }, [handleBulkAction]);
 
   const handleSendChatMessage = useCallback(
     (body: string, eventAttachment?: string) => {
@@ -336,6 +542,18 @@ export function useStationPage(station: IndustrialStation) {
     [activeConversationId, selectedTask, user?.id, station, realtime],
   );
 
+  const togglePieceOnCanvas = useCallback(
+    (pieceId: string) => {
+      const task = activeTasks.find((t) => t.pieceId === pieceId);
+      if (!task) {
+        setSelectedPieceId(pieceId);
+        return;
+      }
+      toggleTaskSelection(task.id);
+    },
+    [activeTasks, toggleTaskSelection],
+  );
+
   return {
     config,
     title: getStationPageTitle(station),
@@ -347,9 +565,15 @@ export function useStationPage(station: IndustrialStation) {
     error,
     codeInput,
     setCodeInput,
+    codeInputRef,
     selectedTask,
+    selectedTaskIds,
+    selectedTasks,
     selectedPieceId,
+    selectedPieceIds,
     setSelectedPieceId,
+    actionFeedback,
+    statusLabel: STATUS_LABEL,
     sidebarOpen,
     setSidebarOpen,
     toolMode,
@@ -372,11 +596,19 @@ export function useStationPage(station: IndustrialStation) {
     tasks,
     orders,
     handleCodeSubmit,
+    addCodeToSelection,
     handleConfirm,
     handleReject,
+    handleStart,
+    handleBulkAction,
     handleSendChatMessage,
     reload,
     selectTask,
+    addTaskToSelection,
+    toggleTaskSelection,
+    removeFromSelection,
+    clearSelection,
+    togglePieceOnCanvas,
     stationOnline: realtime.stationOnline,
     realtimeConnected: realtime.connected,
     canvasRevision: realtime.canvasRevision,

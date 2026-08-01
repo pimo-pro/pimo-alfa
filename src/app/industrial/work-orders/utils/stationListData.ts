@@ -33,7 +33,9 @@ function taskItems(tasks: IndustrialWorkOrderTask[], orders: IndustrialWorkOrder
     const display = getWorkOrderPieceDisplay(task, order?.projectId ?? '');
     return {
       id: task.id,
+      taskId: task.id,
       pieceId: task.pieceId,
+      status: task.status,
       primary: pieceLabel(task, orders),
       secondary: `${display.nqrCode} · ${task.operationType} · ${task.status}`,
     };
@@ -92,7 +94,9 @@ export function buildStationListSections(
           items: Array.from(sheets.entries()).flatMap(([sheet, sheetTasks]) =>
             sheetTasks.map((task) => ({
               id: `${sheet}-${task.id}`,
+              taskId: task.id,
               pieceId: task.pieceId,
+              status: task.status,
               primary: pieceLabel(task, orders),
               secondary: `Chapa: ${sheet}`,
             })),
@@ -110,7 +114,9 @@ export function buildStationListSections(
             const hasTxml = Boolean(piece?.metadata?.txml ?? piece?.metadata?.drillFile);
             return {
               id: task.id,
+              taskId: task.id,
               pieceId: task.pieceId,
+              status: task.status,
               primary: pieceLabel(task, orders),
               secondary: hasTxml ? 'TXML disponível' : 'TXML pendente',
             };
@@ -128,7 +134,9 @@ export function buildStationListSections(
             const edges = piece?.metadata?.edges ?? piece?.metadata?.orlas;
             return {
               id: task.id,
+              taskId: task.id,
               pieceId: task.pieceId,
+              status: task.status,
               primary: pieceLabel(task, orders),
               secondary: edges ? `Bordas: ${String(edges)}` : '4 bordas (padrão)',
             };
@@ -170,7 +178,9 @@ export function buildStationListSections(
             const piece = pieceById(orders, task.pieceId);
             return {
               id: task.id,
+              taskId: task.id,
               pieceId: task.pieceId,
+              status: task.status,
               primary: pieceLabel(task, orders),
               secondary: `${piece?.dimensions.widthMm ?? '—'}×${piece?.dimensions.heightMm ?? '—'} mm`,
             };
@@ -187,7 +197,7 @@ export function buildStationListSections(
 export function buildCanvasPieces(
   tasks: IndustrialWorkOrderTask[],
   orders: IndustrialWorkOrder[],
-  selectedPieceId: string | null,
+  selectedPieceId: string | null | string[],
 ): Array<{
   id: string;
   label: string;
@@ -197,6 +207,13 @@ export function buildCanvasPieces(
   color?: string;
   highlighted?: boolean;
 }> {
+  const selectedSet = new Set(
+    Array.isArray(selectedPieceId)
+      ? selectedPieceId
+      : selectedPieceId
+        ? [selectedPieceId]
+        : [],
+  );
   const active = tasks.filter((t) => t.status === 'pending' || t.status === 'in_progress');
   const uniquePieceIds = Array.from(new Set(active.map((t) => t.pieceId)));
 
@@ -204,14 +221,15 @@ export function buildCanvasPieces(
     const task = active.find((t) => t.pieceId === pieceId);
     const piece = pieceById(orders, pieceId);
     const label = task ? pieceLabel(task, orders) : piece?.name ?? pieceId;
+    const selected = selectedSet.has(pieceId);
     return {
       id: pieceId,
       label,
       widthMm: piece?.dimensions.widthMm ?? 600,
       heightMm: piece?.dimensions.heightMm ?? 400,
       thicknessMm: piece?.dimensions.thicknessMm ?? 18,
-      color: pieceId === selectedPieceId ? '#38bdf8' : '#8b9cb3',
-      highlighted: pieceId === selectedPieceId,
+      color: selected ? '#38bdf8' : '#8b9cb3',
+      highlighted: selected,
     };
   });
 }

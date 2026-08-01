@@ -1,4 +1,4 @@
-import type { IndustrialStation } from '@/industrial/work-orders/types';
+import type { IndustrialStation, IndustrialWorkOrderTask } from '@/industrial/work-orders/types';
 
 export type StationToolMode = 'select' | 'move' | 'rotate';
 
@@ -7,6 +7,16 @@ export interface StationListItem {
   primary: string;
   secondary?: string;
   pieceId?: string;
+  /** ID da tarefa WO — permite checkbox / selecção em grupo. */
+  taskId?: string;
+  status?: IndustrialWorkOrderTask['status'];
+}
+
+export type StationBulkAction = 'start' | 'complete' | 'reject';
+
+export interface StationActionFeedback {
+  ok: boolean;
+  message: string;
 }
 
 export interface StationListSection {
