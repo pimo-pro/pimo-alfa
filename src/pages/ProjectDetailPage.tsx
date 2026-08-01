@@ -79,6 +79,14 @@ export default function ProjectDetailPage() {
               >
                 Ver work orders
               </Link>
+              {id ? (
+                <Link
+                  to={`/relatorio-final/${id}`}
+                  style={{ alignSelf: "center", color: "#2563eb" }}
+                >
+                  Relatório Final
+                </Link>
+              ) : null}
             </div>
             {message ? <p style={{ margin: 0, color: "#16a34a" }}>{message}</p> : null}
             {error ? <p style={{ margin: 0, color: "#dc2626" }}>{error}</p> : null}

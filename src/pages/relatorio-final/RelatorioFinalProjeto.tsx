@@ -1,0 +1,243 @@
+import { useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import Button from "@/components/ui/Button";
+import Loader from "@/components/ui/Loader";
+import PageContainer from "@/components/ui/PageContainer";
+import { emptyQualidade, exportProjectReportPdf, type ReportStyle } from "@/core/projectReport";
+import { printHideClass, reportPageShell, reportSection, reportSectionTitle } from "./reportStyles";
+import { useProjectReport } from "./useProjectReport";
+import InfoGeraisBlock from "./components/InfoGeraisBlock";
+import PainelGraficoBlock from "./components/PainelGraficoBlock";
+import EstadoProjetoBlock from "./components/EstadoProjetoBlock";
+import MateriaisBlock from "./components/MateriaisBlock";
+import FinanceiroBlock from "./components/FinanceiroBlock";
+import NotasBlock from "./components/NotasBlock";
+import QualidadeBlock from "./components/QualidadeBlock";
+import HistoricoModal from "./components/HistoricoModal";
+
+export default function RelatorioFinalProjeto() {
+  const { projectId } = useParams<{ projectId: string }>();
+  const {
+    report,
+    loading,
+    saving,
+    error,
+    dirty,
+    saveMsg,
+    updateReport,
+    changeStyle,
+    save,
+  } = useProjectReport(projectId);
+  const [histOpen, setHistOpen] = useState(false);
+  const [pdfMsg, setPdfMsg] = useState<string | null>(null);
+
+  if (loading) {
+    return (
+      <PageContainer>
+        <Loader label="A carregar relatorio final..." />
+      </PageContainer>
+    );
+  }
+
+  if (error || !report) {
+    return (
+      <PageContainer>
+        <p style={{ color: "var(--pi-btn-danger-bg, #dc2626)" }}>
+          {error ?? "Relatorio indisponivel."}
+        </p>
+        <Link to={projectId ? `/projects/${projectId}` : "/projects"}>Voltar ao projeto</Link>
+      </PageContainer>
+    );
+  }
+
+  const style: ReportStyle = report.reportStyle;
+
+  const handleExportPdf = () => {
+    try {
+      exportProjectReportPdf(report);
+      setPdfMsg("PDF exportado.");
+    } catch (err) {
+      setPdfMsg(err instanceof Error ? err.message : "Falha ao exportar PDF.");
+    }
+  };
+
+  return (
+    <PageContainer>
+      <style>{`
+        @media print {
+          .${printHideClass} { display: none !important; }
+          body { background: #fff !important; }
+        }
+      `}</style>
+
+      <div style={reportPageShell(style)}>
+        <header
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            marginBottom: 4,
+          }}
+        >
+          <div>
+            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700 }}>
+              Relatorio Final do Projeto
+            </h1>
+            <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--text-muted)" }}>
+              Documento isolado - nao altera o fluxo industrial.
+              {dirty ? " - Alteracoes por guardar" : ""}
+            </p>
+          </div>
+          <div className={printHideClass} style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            <Button
+              type="button"
+              variant={style === "classic" ? "primary" : "secondary"}
+              onClick={() => changeStyle("classic")}
+            >
+              Estilo classico
+            </Button>
+            <Button
+              type="button"
+              variant={style === "cards" ? "primary" : "secondary"}
+              onClick={() => changeStyle("cards")}
+            >
+              Estilo cards
+            </Button>
+            <Button type="button" variant="secondary" onClick={() => setHistOpen(true)}>
+              Historico
+            </Button>
+            <Button type="button" variant="secondary" onClick={() => window.print()}>
+              Imprimir
+            </Button>
+            <Button type="button" variant="secondary" onClick={handleExportPdf}>
+              Exportar PDF
+            </Button>
+            <Button type="button" variant="primary" disabled={saving} onClick={() => void save()}>
+              {saving ? "A guardar..." : "Guardar alteracoes"}
+            </Button>
+            <Button type="button" variant="ghost" disabled title="Em breve">
+              Enviar por email
+            </Button>
+            <Link to={`/projects/${report.projectId}`} style={{ alignSelf: "center", fontSize: 13 }}>
+              Voltar
+            </Link>
+          </div>
+        </header>
+
+        {saveMsg || pdfMsg ? (
+          <p className={printHideClass} style={{ margin: 0, color: "var(--pi-btn-confirm-bg, #16a34a)" }}>
+            {saveMsg ?? pdfMsg}
+          </p>
+        ) : null}
+
+        <InfoGeraisBlock
+          style={style}
+          value={report.gerais}
+          onChange={(gerais, path) => updateReport((r) => ({ ...r, gerais }), path)}
+        />
+
+        <PainelGraficoBlock
+          style={style}
+          value={report.metricas}
+          onChange={(metricas) => updateReport((r) => ({ ...r, metricas }), "metricas")}
+        />
+
+        <EstadoProjetoBlock
+          style={style}
+          design={report.design}
+          producao={report.producao}
+          montagem={report.montagem}
+          onDesign={(design) => updateReport((r) => ({ ...r, design }), "design")}
+          onProducao={(producao, path) =>
+            updateReport((r) => ({ ...r, producao }), path ?? "producao")
+          }
+          onMontagem={(montagem, path) =>
+            updateReport((r) => ({ ...r, montagem }), path ?? "montagem")
+          }
+        />
+
+        <MateriaisBlock
+          style={style}
+          value={report.materiais}
+          onChange={(materiais) => updateReport((r) => ({ ...r, materiais }), "materiais")}
+        />
+
+        <FinanceiroBlock
+          style={style}
+          value={report.financeiro}
+          onChange={(financeiro) => updateReport((r) => ({ ...r, financeiro }), "financeiro")}
+        />
+
+        <NotasBlock
+          style={style}
+          value={report.notas ?? []}
+          onChange={(notas) => updateReport((r) => ({ ...r, notas }), "notas")}
+        />
+
+        <QualidadeBlock
+          style={style}
+          value={report.qualidade ?? emptyQualidade()}
+          onChange={(qualidade) => updateReport((r) => ({ ...r, qualidade }), "qualidade")}
+        />
+
+        <section style={reportSection(style)}>
+          <h2 style={reportSectionTitle}>9. Resumo final (Total do projeto)</h2>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+              gap: 12,
+            }}
+          >
+            <div>
+              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Caixas</div>
+              <div style={{ fontSize: 22, fontWeight: 700 }}>{report.producao.caixas.length}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Pecas</div>
+              <div style={{ fontSize: 22, fontWeight: 700 }}>{report.producao.pecas.length}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Materiais / ferragens</div>
+              <div style={{ fontSize: 22, fontWeight: 700 }}>{report.materiais.length}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Qualidade</div>
+              <div style={{ fontSize: 22, fontWeight: 700 }}>
+                {(report.qualidade ?? emptyQualidade()).rating} / 5
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Subtotal</div>
+              <div style={{ fontSize: 22, fontWeight: 700 }}>
+                {report.financeiro.subtotal.toFixed(2)} EUR
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                IVA ({report.financeiro.ivaPct}%)
+              </div>
+              <div style={{ fontSize: 22, fontWeight: 700 }}>
+                {report.financeiro.ivaValor.toFixed(2)} EUR
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Total do projeto</div>
+              <div style={{ fontSize: 26, fontWeight: 800, color: "var(--blue-light, #2563eb)" }}>
+                {report.financeiro.totalProjeto.toFixed(2)} EUR
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <HistoricoModal
+        open={histOpen}
+        history={report.history ?? []}
+        onClose={() => setHistOpen(false)}
+      />
+    </PageContainer>
+  );
+}

@@ -89,6 +89,7 @@ const Documentacao = lazy(() => import("./pages/Documentacao"));
 const AdminPanel = lazy(() => import("./pages/AdminPanel"));
 const V4Page = lazy(() => import("./pages/V4Page"));
 const NestingV3RoutePage = lazy(() => import("./app/nesting-v3/NestingV3RoutePage"));
+const RelatorioFinalProjeto = lazy(() => import("./pages/RelatorioFinalProjeto"));
 const DevPimoTest = import.meta.env.DEV
   ? lazy(() => import("./__dev__/DevPimoTest"))
   : null;
@@ -462,6 +463,14 @@ export default function App() {
             />
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/projects/:id" element={<ProjectDetailPage />} />
+            <Route
+              path="/relatorio-final/:projectId"
+              element={
+                <Suspense fallback={<PageContainer><Card>A carregar relatorio...</Card></PageContainer>}>
+                  <RelatorioFinalProjeto />
+                </Suspense>
+              }
+            />
             <Route
               path="/admin/users"
               element={

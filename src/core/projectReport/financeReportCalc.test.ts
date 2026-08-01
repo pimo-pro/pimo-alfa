@@ -1,0 +1,60 @@
+/**
+ * Testes unitários dos cálculos do Relatório Final (isolados do industrial).
+ */
+import { describe, expect, it } from "vitest";
+import { ensureFinanceiroShape, recalcFinanceiro, updateFinanceiroLinha } from "./financeReportCalc";
+
+describe("financeReportCalc", () => {
+  it("recalcula linha por quantidade × preço", () => {
+    const fin = ensureFinanceiroShape(null, { paineis: 100 });
+    const next = updateFinanceiroLinha(fin, "paineis", {
+      quantidade: 2,
+      precoUnitario: 15,
+    });
+    const paineis = next.linhas.find((l) => l.key === "paineis");
+    expect(paineis?.total).toBe(30);
+  });
+
+  it("mantém Total = subtotal + IVA 23%", () => {
+    const fin = ensureFinanceiroShape(null, { paineis: 100, portas: 0 });
+    const next = recalcFinanceiro({
+      ...fin,
+      ivaPct: 23,
+      linhas: fin.linhas.map((l) =>
+        l.key === "paineis" ? { ...l, quantidade: 1, precoUnitario: 100, total: 100 } : l
+      ),
+    });
+    expect(next.subtotal).toBe(100);
+    expect(next.ivaValor).toBe(23);
+    expect(next.totalProjeto).toBe(123);
+    const totalRow = next.linhas.find((l) => l.key === "total");
+    expect(totalRow?.total).toBe(123);
+  });
+
+  it("agrega detalhe na linha", () => {
+    const fin = ensureFinanceiroShape(null);
+    const next = updateFinanceiroLinha(fin, "ferragens", {
+      detalhe: [
+        {
+          id: "a",
+          tipo: "Dobradiça",
+          dimensoes: "",
+          quantidade: 10,
+          precoUnitario: 2,
+          total: 0,
+        },
+        {
+          id: "b",
+          tipo: "Corrediça",
+          dimensoes: "",
+          quantidade: 4,
+          precoUnitario: 5,
+          total: 0,
+        },
+      ],
+    });
+    const row = next.linhas.find((l) => l.key === "ferragens");
+    expect(row?.total).toBe(40);
+    expect(row?.quantidade).toBe(14);
+  });
+});
