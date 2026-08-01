@@ -1,7 +1,7 @@
 /**
- * Identidade pùblica vs IDs internos de projecto.
- * Display / URLs ? slug (Antunes_Novo_Cozinha)
- * Persistùncia ? local-* / pimo-* / UUID (nunca como display)
+ * Identidade publica vs IDs internos de projecto.
+ * Display / URLs -> slug (Antunes_Novo_Cozinha)
+ * Persistencia -> local-* / pimo-* / UUID (nunca como display)
  */
 
 import {
@@ -16,12 +16,13 @@ function projectCodeFromName(projectName: string): string {
   return (sanitizeIndustrialSegment(projectName) || "PROJETO").toUpperCase();
 }
 
-export const PROJECT_DISPLAY_FALLBACK = "ù";
+/** Em dash UTF-8 (nunca ID interno). */
+export const PROJECT_DISPLAY_FALLBACK = "\u2014";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-/** ID interno (API pimo-*, local-*, UUID) ù nunca usar como nome/display. */
+/** ID interno (API pimo-*, local-*, UUID) ó nunca usar como nome/display. */
 export function isInternalProjectId(value: string | null | undefined): boolean {
   const v = String(value ?? "").trim();
   if (!v) return false;
@@ -31,7 +32,7 @@ export function isInternalProjectId(value: string | null | undefined): boolean {
   return false;
 }
 
-/** Alias canùnico pedido na unificaùùo. */
+/** Alias canonico pedido na unificacao. */
 export function normalizeProjectName(name: string): string {
   return toProjetosPageSlug(name);
 }
@@ -42,7 +43,7 @@ export type ProjectIdentity = {
   projectCode: string;
   /** id local offline */
   localId: string;
-  /** id remoto API (pimo-ù) se existir */
+  /** id remoto API (pimo-...) se existir */
   remoteId: string | null;
   /** chave preferida para WOs / storage legado */
   persistenceId: string;
@@ -86,7 +87,6 @@ export function resolveProjectIdentity(key: string | null | undefined): ProjectI
   const offline = findOfflineProjectByAnyKey(raw);
   if (offline) return identityFromOffline(offline);
   if (isInternalProjectId(raw)) return null;
-  // Slug/nome sem registo offline ù identidade pùblica mùnima
   const name = projectNameFromPageSlug(raw);
   return {
     name,
@@ -140,7 +140,7 @@ export function buildWorkOrdersListPath(nameOrSlug?: string): string {
   return `/industrial/work-orders?project=${encodeURIComponent(code)}`;
 }
 
-/** Parece UUID de work order Supabase (nùo slug de projecto). */
+/** Parece UUID de work order Supabase (nao slug de projecto). */
 export function looksLikeWorkOrderUuid(value: string | null | undefined): boolean {
   return UUID_RE.test(String(value ?? "").trim());
 }

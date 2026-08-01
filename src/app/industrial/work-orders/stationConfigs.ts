@@ -35,5 +35,5 @@ export function getStationConfig(station: IndustrialStation): StationPageConfig 
 }
 
 export function getStationPageTitle(station: IndustrialStation): string {
-  return `Estação · ${STATION_LABELS[station]}`;
+  return `Esta\u00e7\u00e3o \u00b7 ${STATION_LABELS[station]}`;
 }

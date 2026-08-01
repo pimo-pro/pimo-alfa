@@ -1,5 +1,10 @@
-﻿import { Link, useLocation } from 'react-router-dom';
+﻿import { useMemo } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 
+import {
+  extractIndustrialProjectSlug,
+  industrialRailHref,
+} from '@/chrome/industrialProjectNav';
 import { INDUSTRIAL_STATIONS, STATION_LABELS, type IndustrialStation } from '@/industrial/work-orders/types';
 import {
   INDUSTRIAL_CONTROL_CLASS,
@@ -11,6 +16,8 @@ import { industrialUi, useIndustrialTone } from '@/industrial/ui/layouts/industr
 
 interface StationSidebarProps {
   activeStation: IndustrialStation;
+  /** Slug do projecto aberto — preserva nas tabs SUP/NES/DRI/... */
+  projectSlug?: string | null;
   notificationCount?: number;
   onToggleNotifications?: () => void;
   onToggleChat?: () => void;
@@ -35,6 +42,7 @@ const STATION_RAIL_LABEL: Record<IndustrialStation, string> = {
 
 export default function StationSidebar({
   activeStation,
+  projectSlug: projectSlugProp = null,
   notificationCount = 0,
   onToggleNotifications,
   onToggleChat,
@@ -47,6 +55,12 @@ export default function StationSidebar({
   const btn = (active: boolean) =>
     tone === 'light' ? industrialBtnStyleLight(active) : industrialBtnStyle(active);
 
+  const projectSlug = useMemo(() => {
+    const fromProp = projectSlugProp?.trim() || null;
+    if (fromProp) return fromProp;
+    return extractIndustrialProjectSlug(location.pathname);
+  }, [projectSlugProp, location.pathname]);
+
   return (
     <nav
       style={{
@@ -57,12 +71,20 @@ export default function StationSidebar({
         color: ui.textStrong,
         lineHeight: 1.5,
       }}
-      aria-label="Navegação de estações"
+      aria-label="Navegacao de estacoes"
       data-station-tone={tone}
     >
       {INDUSTRIAL_STATIONS.map((station) => {
-        const path = `/industrial/work-orders/${station}`;
-        const active = station === activeStation || location.pathname === path;
+        const path = industrialRailHref(station, projectSlug);
+        const active =
+          station === activeStation ||
+          location.pathname === path ||
+          (projectSlug
+            ? location.pathname.startsWith(`/industrial/work-orders/${station}/`)
+            : location.pathname === `/industrial/work-orders/${station}`) ||
+          (station === 'warehouse' &&
+            (location.pathname === '/industrial/supervisor' ||
+              location.pathname.startsWith('/industrial/supervisor/')));
         return (
           <Link
             key={station}
@@ -92,7 +114,7 @@ export default function StationSidebar({
         <button
           type="button"
           className={INDUSTRIAL_CONTROL_CLASS}
-          title="Notificações"
+          title="Notificacoes"
           onClick={onToggleNotifications}
           style={{
             ...btn(false),
@@ -118,6 +140,7 @@ export default function StationSidebar({
                 fontSize: 9,
                 display: 'grid',
                 placeItems: 'center',
+                padding: '0 3px',
               }}
             >
               {notificationCount > 9 ? '9+' : notificationCount}
@@ -130,38 +153,20 @@ export default function StationSidebar({
         <button
           type="button"
           className={INDUSTRIAL_CONTROL_CLASS}
-          title="Chat industrial"
+          title="Chat"
           onClick={onToggleChat}
+          data-active={chatOpen ? 'true' : undefined}
           style={{
-            ...btn(chatOpen),
+            ...btn(Boolean(chatOpen)),
             width: 40,
             height: 40,
             padding: 0,
             ...RAIL_LABEL_STYLE,
           }}
-          data-active={chatOpen ? 'true' : undefined}
         >
           CHT
         </button>
       ) : null}
-
-      <Link
-        to="/industrial/work-orders"
-        title="Ordens de trabalho"
-        className={INDUSTRIAL_CONTROL_CLASS}
-        style={{
-          ...btn(false),
-          width: 40,
-          height: 40,
-          display: 'grid',
-          placeItems: 'center',
-          textDecoration: 'none',
-          padding: 0,
-          ...RAIL_LABEL_STYLE,
-        }}
-      >
-        WOS
-      </Link>
     </nav>
   );
 }

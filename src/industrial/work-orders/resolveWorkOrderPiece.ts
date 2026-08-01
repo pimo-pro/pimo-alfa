@@ -295,7 +295,13 @@ export function resolveWorkOrderProjectDisplay(projectId: string): string {
   const ctx = resolveProjectCutlist(projectId);
   if (ctx) return projectCodeFromName(ctx.projectName);
   const display = resolveProjectDisplayName(projectId);
-  if (!display || display === '—' || display.startsWith('pimo') || display.startsWith('local')) {
+  if (
+    !display ||
+    display === '\u2014' ||
+    display === '-' ||
+    display.startsWith('pimo') ||
+    display.startsWith('local')
+  ) {
     return 'PROJETO';
   }
   return projectCodeFromName(display);

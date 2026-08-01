@@ -1,14 +1,20 @@
 import { getStationPageTitle } from '@/app/industrial/work-orders/stationConfigs';
+import { looksLikeWorkOrderUuid } from '@/core/projects/projectIdentity';
+import { normalizeProjetosPageSlug } from '@/app/PROJETOS/projetosPageSlug';
 import {
   INDUSTRIAL_STATIONS,
   STATION_LABELS,
   type IndustrialStation,
 } from '@/industrial/work-orders/types';
 
+const DOT = '\u00b7';
+
 export type TrakPageLabelInfo = {
   label: string;
   station?: IndustrialStation;
   workOrderId?: string;
+  /** Slug publico do projecto (se presente na rota). */
+  projectSlug?: string;
 };
 
 function isStation(value: string | undefined): value is IndustrialStation {
@@ -16,11 +22,11 @@ function isStation(value: string | undefined): value is IndustrialStation {
 }
 
 export function orderPageLabel(station: IndustrialStation): string {
-  return `Ordem · ${STATION_LABELS[station]}`;
+  return `Ordem ${DOT} ${STATION_LABELS[station]}`;
 }
 
 /**
- * Nome da página TRK a partir do pathname (stationName / ordemName).
+ * Nome da pagina TRK a partir do pathname (stationName / ordemName / projectSlug).
  */
 export function resolveTrakPageLabel(pathname: string): TrakPageLabelInfo {
   const path = pathname.replace(/\/+$/, '') || '/';
@@ -35,19 +41,38 @@ export function resolveTrakPageLabel(pathname: string): TrakPageLabelInfo {
   }
 
   if (parts[1] === 'supervisor') {
-    return { label: getStationPageTitle('warehouse'), station: 'warehouse' };
+    const projectSlug = parts[2] ? normalizeProjetosPageSlug(decodeURIComponent(parts[2])) : undefined;
+    return {
+      label: getStationPageTitle('warehouse'),
+      station: 'warehouse',
+      projectSlug: projectSlug || undefined,
+    };
   }
 
   if (parts[1] === 'operador') {
-    return { label: 'Estação · Operador' };
+    return { label: `Esta\u00e7\u00e3o ${DOT} Operador` };
   }
 
   if (parts[1] === 'work-orders') {
     if (parts[2] === 'order' && parts[3]) {
-      return { label: 'Ordem · …', workOrderId: parts[3] };
+      const key = decodeURIComponent(parts[3]);
+      if (looksLikeWorkOrderUuid(key)) {
+        return { label: `Ordem ${DOT} \u2026`, workOrderId: key };
+      }
+      return {
+        label: `Ordens ${DOT} Projecto`,
+        projectSlug: normalizeProjetosPageSlug(key),
+      };
     }
     if (isStation(parts[2])) {
-      return { label: getStationPageTitle(parts[2]), station: parts[2] };
+      const projectSlug = parts[3]
+        ? normalizeProjetosPageSlug(decodeURIComponent(parts[3]))
+        : undefined;
+      return {
+        label: getStationPageTitle(parts[2]),
+        station: parts[2],
+        projectSlug: projectSlug || undefined,
+      };
     }
     return { label: 'Ordens de trabalho' };
   }
@@ -61,16 +86,16 @@ export function resolveTrakPageLabel(pathname: string): TrakPageLabelInfo {
       return { label: getStationPageTitle(parts[2]), station: parts[2] };
     }
     if (parts[2] === 'cnc') {
-      return { label: 'Operações · CNC' };
+      return { label: `Opera\u00e7\u00f5es ${DOT} CNC` };
     }
     if (parts[2]) {
-      return { label: `Operações · ${parts[2]}` };
+      return { label: `Opera\u00e7\u00f5es ${DOT} ${parts[2]}` };
     }
-    return { label: 'Operações' };
+    return { label: 'Opera\u00e7\u00f5es' };
   }
 
   if (parts[1] === 'piece') {
-    return { label: 'Peça' };
+    return { label: 'Pe\u00e7a' };
   }
 
   const known: Record<string, string> = {
@@ -82,5 +107,5 @@ export function resolveTrakPageLabel(pathname: string): TrakPageLabelInfo {
     'release-notes': 'Release notes',
   };
 
-  return { label: known[parts[1]] ?? `Industrial · ${parts[1]}` };
+  return { label: known[parts[1]] ?? `Industrial ${DOT} ${parts[1]}` };
 }

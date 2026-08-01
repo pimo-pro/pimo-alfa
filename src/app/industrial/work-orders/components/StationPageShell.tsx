@@ -1,5 +1,12 @@
-import { Link } from 'react-router-dom';
+import { useMemo } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 
+import {
+  extractIndustrialProjectSlug,
+  industrialRailHref,
+  industrialSupervisorHref,
+} from '@/chrome/industrialProjectNav';
+import { resolveProjectIdentity } from '@/core/projects/projectIdentity';
 import StationCanvas from '@/industrial/ui/components/StationCanvas';
 import StationPanel from '@/industrial/ui/components/StationPanel';
 import StationSidebar from '@/industrial/ui/components/StationSidebar';
@@ -13,7 +20,7 @@ import StationHistorySidebar from './StationHistorySidebar';
 
 interface StationPageShellProps {
   station: IndustrialStation;
-  /** Página Ordem · Estação — filtra à work order e título "Ordem · …". */
+  /** Pagina Ordem - Estacao — filtra a work order. */
   workOrderId?: string | null;
   /** Slug do projecto — filtra ordens/tarefas por projectCode. */
   projectSlug?: string | null;
@@ -24,9 +31,21 @@ export default function StationPageShell({
   workOrderId = null,
   projectSlug = null,
 }: StationPageShellProps) {
+  const location = useLocation();
   const page = useStationPage(station, { workOrderId, projectSlug });
   const tone = useIndustrialTone();
   const ui = industrialUi(tone);
+
+  const resolvedProjectSlug = useMemo(() => {
+    if (projectSlug?.trim()) return projectSlug.trim();
+    const fromUrl = extractIndustrialProjectSlug(location.pathname);
+    if (fromUrl) return fromUrl;
+    const order = page.orders[0];
+    if (order?.projectId) {
+      return resolveProjectIdentity(order.projectId)?.slug ?? null;
+    }
+    return null;
+  }, [projectSlug, location.pathname, page.orders]);
 
   if (page.loading && page.tasks.length === 0) {
     return (
@@ -35,7 +54,11 @@ export default function StationPageShell({
         description={page.description}
         sidebarOpen={false}
         leftLeft={<div />}
-        left={<div style={{ color: ui.muted, fontSize: 13 }}>A carregar estação…</div>}
+        left={
+          <div style={{ color: ui.muted, fontSize: 13 }}>
+            {'A carregar esta\u00e7\u00e3o\u2026'}
+          </div>
+        }
         right={<div />}
       />
     );
@@ -49,6 +72,7 @@ export default function StationPageShell({
       leftLeft={
         <StationSidebar
           activeStation={station}
+          projectSlug={resolvedProjectSlug}
           notificationCount={page.notifications.length}
           onToggleNotifications={() => page.setNotificationsOpen(!page.notificationsOpen)}
           onToggleChat={() => page.setChatOpen(!page.chatOpen)}
@@ -91,12 +115,15 @@ export default function StationPageShell({
           extra={
             <div style={{ display: 'grid', gap: 6 }}>
               {workOrderId ? (
-                <Link to={`/industrial/work-orders/${station}`} style={{ fontSize: 12, color: ui.link }}>
-                  Ver toda a estação
+                <Link
+                  to={industrialRailHref(station, resolvedProjectSlug)}
+                  style={{ fontSize: 12, color: ui.link }}
+                >
+                  {'Ver toda a esta\u00e7\u00e3o'}
                 </Link>
               ) : null}
               <Link
-                to={`/industrial/supervisor?station=${station}`}
+                to={industrialSupervisorHref(resolvedProjectSlug)}
                 style={{ fontSize: 12, color: ui.link }}
               >
                 Ver no Supervisor

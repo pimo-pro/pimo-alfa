@@ -368,11 +368,9 @@ function ProtectedLayout() {
 }
 
 function AppChromeLayout() {
-  const { pathname } = useLocation();
-  const chrome = resolveAppChrome(pathname);
   return (
     <div className="ui-app-frame">
-      {chrome.showProHeader ? <Header /> : null}
+      <Header />
       <main className="ui-app-frame__content">
         <Outlet />
       </main>
