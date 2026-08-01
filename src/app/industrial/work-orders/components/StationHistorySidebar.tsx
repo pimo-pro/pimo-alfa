@@ -1,12 +1,12 @@
-import type { ReactNode } from 'react';
+﻿import type { ReactNode } from 'react';
 
 import { getWorkOrderPieceDisplay } from '@/industrial/work-orders/resolveWorkOrderPiece';
 import type { IndustrialWorkOrder, IndustrialWorkOrderTask } from '@/industrial/work-orders/types';
 import {
   INDUSTRIAL_LIST_ITEM_CLASS,
   ensureIndustrialInteractionStyles,
-  industrialListItemStyle,
-  industrialSectionTitleStyle,
+  industrialListItemStyleLight,
+  industrialSectionTitleStyleLight,
 } from '@/industrial/ui/layouts/industrialStyles';
 
 interface StationHistorySidebarProps {
@@ -18,7 +18,7 @@ interface StationHistorySidebarProps {
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section style={{ display: 'grid', gap: 6 }}>
-      <h3 style={industrialSectionTitleStyle}>{title}</h3>
+      <h3 style={industrialSectionTitleStyleLight}>{title}</h3>
       {children}
     </section>
   );
@@ -37,7 +37,7 @@ export default function StationHistorySidebar({ tasks, orders, eventLog }: Stati
     return (
       <>
         <div style={{ fontWeight: 600, fontSize: 12 }}>{display.fullIndustrialName}</div>
-        <div style={{ color: '#94a3b8', marginTop: 2, fontSize: 10, fontFamily: 'monospace' }}>
+        <div style={{ color: '#64748b', marginTop: 2, fontSize: 10, fontFamily: 'monospace' }}>
           {display.nqrCode} · {task.status}
         </div>
       </>
@@ -63,7 +63,7 @@ export default function StationHistorySidebar({ tasks, orders, eventLog }: Stati
               <li
                 key={task.id}
                 className={INDUSTRIAL_LIST_ITEM_CLASS}
-                style={{ ...industrialListItemStyle, animationDelay: `${index * 30}ms` }}
+                style={{ ...industrialListItemStyleLight, animationDelay: `${index * 30}ms` }}
               >
                 {renderTask(task)}
               </li>
@@ -80,7 +80,7 @@ export default function StationHistorySidebar({ tasks, orders, eventLog }: Stati
               <li
                 key={task.id}
                 className={INDUSTRIAL_LIST_ITEM_CLASS}
-                style={{ ...industrialListItemStyle, animationDelay: `${index * 30}ms` }}
+                style={{ ...industrialListItemStyleLight, animationDelay: `${index * 30}ms` }}
               >
                 {renderTask(task)}
               </li>
@@ -98,7 +98,7 @@ export default function StationHistorySidebar({ tasks, orders, eventLog }: Stati
               <li
                 key={event.id}
                 className={INDUSTRIAL_LIST_ITEM_CLASS}
-                style={{ ...industrialListItemStyle, animationDelay: `${index * 30}ms` }}
+                style={{ ...industrialListItemStyleLight, animationDelay: `${index * 30}ms` }}
               >
                 <div style={{ fontWeight: 600 }}>{event.type}</div>
                 <div style={{ color: '#94a3b8', marginTop: 2 }}>

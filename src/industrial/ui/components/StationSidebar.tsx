@@ -1,10 +1,10 @@
-import { Link, useLocation } from 'react-router-dom';
+﻿import { Link, useLocation } from 'react-router-dom';
 
 import { INDUSTRIAL_STATIONS, STATION_LABELS, type IndustrialStation } from '@/industrial/work-orders/types';
 import {
   INDUSTRIAL_CONTROL_CLASS,
   ensureIndustrialInteractionStyles,
-  industrialBtnStyle,
+  industrialBtnStyleLight,
 } from '@/industrial/ui/layouts/industrialStyles';
 
 interface StationSidebarProps {
@@ -48,7 +48,7 @@ export default function StationSidebar({
         gap: 8,
         justifyItems: 'center',
         alignContent: 'start',
-        color: '#f1f5f9',
+        color: '#1e1e1e',
         lineHeight: 1.5,
       }}
       aria-label="Navegação de estações"
@@ -64,7 +64,7 @@ export default function StationSidebar({
             className={INDUSTRIAL_CONTROL_CLASS}
             data-active={active ? 'true' : undefined}
             style={{
-              ...industrialBtnStyle(active),
+              ...industrialBtnStyleLight(active),
               width: 40,
               height: 40,
               display: 'grid',
@@ -88,7 +88,7 @@ export default function StationSidebar({
           title="Notificações"
           onClick={onToggleNotifications}
           style={{
-            ...industrialBtnStyle(false),
+            ...industrialBtnStyleLight(false),
             width: 40,
             height: 40,
             padding: 0,
@@ -126,7 +126,7 @@ export default function StationSidebar({
           title="Chat industrial"
           onClick={onToggleChat}
           style={{
-            ...industrialBtnStyle(chatOpen),
+            ...industrialBtnStyleLight(chatOpen),
             width: 40,
             height: 40,
             padding: 0,
@@ -143,7 +143,7 @@ export default function StationSidebar({
         title="Ordens de trabalho"
         className={INDUSTRIAL_CONTROL_CLASS}
         style={{
-          ...industrialBtnStyle(false),
+          ...industrialBtnStyleLight(false),
           width: 40,
           height: 40,
           display: 'grid',

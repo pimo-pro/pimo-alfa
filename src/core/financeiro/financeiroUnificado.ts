@@ -364,8 +364,9 @@ export function computeFinanceiroUnificado(
     cutlist,
     wasteM2,
     serragemM2,
-    // 18% × custo real da linha Painéis (pricing.json desperdicio.percentual).
-    custoPaineisEur: custosComputed.paineis,
+    // 18% × material de chapas (carcaça + portas; pricing.json desperdicio.percentual).
+    // Portas são folhas nas mesmas chapas — entram na base do desperdício, não só Painéis.
+    custoPaineisEur: custosComputed.paineis + custosComputed.portas,
   });
   custosComputed.desperdicio = despSerr.precoDesperdicio;
   custosComputed.serragem = despSerr.precoSerragem;

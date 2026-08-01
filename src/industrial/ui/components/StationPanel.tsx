@@ -1,4 +1,4 @@
-import type { CSSProperties, FormEvent, ReactNode, Ref } from 'react';
+﻿import type { CSSProperties, FormEvent, ReactNode, Ref } from 'react';
 
 import type { IndustrialWorkOrderTask } from '@/industrial/work-orders/types';
 import {
@@ -7,11 +7,11 @@ import {
   INDUSTRIAL_VISION_ACTIVE_CLASS,
   INDUSTRIAL_VISION_SECONDARY_CLASS,
   ensureIndustrialInteractionStyles,
-  industrialActionBtnStyle,
+  industrialActionBtnStyleLight,
   industrialConfirmBtnStyle,
-  industrialListItemStyle,
+  industrialListItemStyleLight,
   industrialPanelDepthStyle,
-  industrialSectionTitleStyle,
+  industrialSectionTitleStyleLight,
   industrialVisionActiveStyle,
   industrialVisionSecondaryStyle,
 } from '@/industrial/ui/layouts/industrialStyles';
@@ -74,6 +74,8 @@ interface StationPanelProps {
   onToggleSidebar?: () => void;
   sidebarOpen?: boolean;
   extra?: ReactNode;
+  /** Tema claro (Ordens/Estações). Default light. */
+  tone?: 'light' | 'dark';
 }
 
 const STATUS_LABEL: Record<IndustrialWorkOrderTask['status'], string> = {
@@ -110,9 +112,9 @@ function chipStyle(active: boolean, color?: string): CSSProperties {
     fontSize: 11,
     fontWeight: 600,
     lineHeight: 1.5,
-    border: `1px solid ${active ? color ?? 'rgba(59,130,246,0.55)' : 'var(--border, #334155)'}`,
-    background: active ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.03)',
-    color: active ? '#f1f5f9' : '#a3b2c2',
+    border: `1px solid ${active ? color ?? 'rgba(59,130,246,0.55)' : '#cbd5e1'}`,
+    background: active ? '#f1f5f9' : 'rgba(255,255,255,0.03)',
+    color: active ? '#1e1e1e' : '#475569',
     boxShadow: active ? `0 0 0 2px ${color ?? 'rgba(59,130,246,0.45)'}` : undefined,
     opacity: active ? 1 : 0.85,
     transition: 'all 140ms ease-out',
@@ -248,7 +250,9 @@ export default function StationPanel({
   onToggleSidebar,
   sidebarOpen,
   extra,
+  tone: _tone = 'light',
 }: StationPanelProps) {
+  void _tone;
   ensureIndustrialInteractionStyles();
 
   const hasSelection = selectedTaskIds.length > 0;
@@ -484,7 +488,7 @@ export default function StationPanel({
         display: 'grid',
         gap: 14,
         alignContent: 'start',
-        color: '#f1f5f9',
+        color: '#1e1e1e',
         lineHeight: 1.5,
         ...industrialPanelDepthStyle,
         borderRadius: 8,
@@ -499,9 +503,9 @@ export default function StationPanel({
           ...(selectedTask ? industrialVisionActiveStyle : industrialVisionSecondaryStyle),
         }}
       >
-        <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: '#f1f5f9', lineHeight: 1.5 }}>{title}</h2>
+        <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: '#1e1e1e', lineHeight: 1.5 }}>{title}</h2>
         {description ? (
-          <div style={{ fontSize: 12, fontWeight: 400, color: '#a3b2c2', lineHeight: 1.5 }}>{description}</div>
+          <div style={{ fontSize: 12, fontWeight: 400, color: '#475569', lineHeight: 1.5 }}>{description}</div>
         ) : null}
         {busy ? <div style={{ fontSize: 11, color: '#38bdf8', lineHeight: 1.5 }}>A processar…</div> : null}
       </div>
@@ -528,12 +532,12 @@ export default function StationPanel({
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
-          <h3 style={industrialSectionTitleStyle}>Leitura QR / Barcode</h3>
+          <h3 style={industrialSectionTitleStyleLight}>Leitura QR / Barcode</h3>
           <span style={chipStyle(true, qrColor)}>
             {selectionCount > 0 ? `${selectionCount} seleccionada(s)` : `QR ${qrVisual}`}
           </span>
         </div>
-        <p style={{ margin: 0, fontSize: 11, color: '#94a3b8', lineHeight: 1.4 }}>
+        <p style={{ margin: 0, fontSize: 11, color: '#64748b', lineHeight: 1.4 }}>
           Introduza códigos um a um (Enter adiciona automaticamente) ou cole vários separados por linha/vírgula.
         </p>
         <div style={{ display: 'flex', gap: 6 }}>
@@ -547,9 +551,9 @@ export default function StationPanel({
               flex: 1,
               padding: '8px 10px',
               borderRadius: 6,
-              border: `1px solid ${qrVisual === 'inválido' ? '#f87171' : qrVisual === 'válido' ? 'rgba(59,130,246,0.55)' : 'var(--border, #334155)'}`,
-              background: 'rgba(255,255,255,0.04)',
-              color: 'var(--text-main, #f1f5f9)',
+              border: `1px solid ${qrVisual === 'inválido' ? '#f87171' : qrVisual === 'válido' ? 'rgba(59,130,246,0.55)' : '#cbd5e1'}`,
+              background: '#f8fafc',
+              color: '#1e1e1e',
               fontSize: 12,
               boxShadow: qrVisual === 'válido' ? '0 0 0 2px rgba(59,130,246,0.45)' : undefined,
               outline: qrVisual === 'válido' ? '2px solid rgba(59,130,246,0.55)' : undefined,
@@ -586,7 +590,7 @@ export default function StationPanel({
       </div>
 
       <div style={{ display: 'grid', gap: 8 }}>
-        <div style={industrialSectionTitleStyle}>Work Order Timeline</div>
+        <div style={industrialSectionTitleStyleLight}>Work Order Timeline</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {FLOW_STAGES.map((stage, stageIdx) => {
             const stateLabel = timelineState(op, selectedTask?.status, stageIdx);
@@ -610,7 +614,7 @@ export default function StationPanel({
           })}
         </div>
         <div style={{ display: 'grid', gap: 4 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#a3b2c2' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#475569' }}>
             <span>Progresso WO</span>
             <span>{progressPct}%</span>
           </div>
@@ -618,8 +622,8 @@ export default function StationPanel({
             style={{
               height: 8,
               borderRadius: 999,
-              background: 'rgba(255,255,255,0.06)',
-              border: '1px solid var(--border, #334155)',
+              background: '#f1f5f9',
+              border: '1px solid #cbd5e1',
               overflow: 'hidden',
             }}
           >
@@ -634,12 +638,12 @@ export default function StationPanel({
           </div>
         </div>
         {currentStage ? (
-          <div style={{ fontSize: 12, color: '#cbd5e1' }}>
-            Estação responsável: <strong style={{ color: '#f1f5f9' }}>{currentStage.label}</strong>
+          <div style={{ fontSize: 12, color: '#334155' }}>
+            Estação responsável: <strong style={{ color: '#1e1e1e' }}>{currentStage.label}</strong>
             {selectedTask ? ` · peça ${selectedTask.pieceId}` : ''}
           </div>
         ) : (
-          <div style={{ fontSize: 12, color: '#a3b2c2' }}>Sem estação/etapa definida para a peça actual.</div>
+          <div style={{ fontSize: 12, color: '#475569' }}>Sem estação/etapa definida para a peça actual.</div>
         )}
       </div>
 
@@ -654,7 +658,7 @@ export default function StationPanel({
       ) : null}
 
       <div style={{ display: 'grid', gap: 8 }}>
-        <div style={industrialSectionTitleStyle}>Productivity Engine</div>
+        <div style={industrialSectionTitleStyleLight}>Productivity Engine</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           <span style={chipStyle(true)} title="Estimativa visual">
             tempo peça {formatEstMin(TOTAL_EST_MIN)}
@@ -687,7 +691,7 @@ export default function StationPanel({
           </span>
         </div>
         <div style={{ display: 'grid', gap: 4 }}>
-          <div style={industrialSectionTitleStyle}>Productivity Timeline</div>
+          <div style={industrialSectionTitleStyleLight}>Productivity Timeline</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {FLOW_STAGES.map((stage, stageIdx) => (
               <span
@@ -705,15 +709,15 @@ export default function StationPanel({
               </span>
             ))}
           </div>
-          <div style={{ fontSize: 12, color: '#cbd5e1' }}>
-            Tempo total estimado: <strong style={{ color: '#f1f5f9' }}>{formatEstMin(TOTAL_EST_MIN)}</strong>
+          <div style={{ fontSize: 12, color: '#334155' }}>
+            Tempo total estimado: <strong style={{ color: '#1e1e1e' }}>{formatEstMin(TOTAL_EST_MIN)}</strong>
             {currentStage ? ` · etapa actual ${currentStage.label} (${formatEstMin(stageEstMin)})` : ''}
           </div>
         </div>
       </div>
 
       <div style={{ display: 'grid', gap: 8 }}>
-        <div style={industrialSectionTitleStyle}>Cost Engine</div>
+        <div style={industrialSectionTitleStyleLight}>Cost Engine</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           <span style={chipStyle(true)} title="Estimativa visual">
             custo total {formatEur(TOTAL_COST_EUR)}
@@ -744,7 +748,7 @@ export default function StationPanel({
       </div>
 
       <div style={{ display: 'grid', gap: 8 }}>
-        <div style={industrialSectionTitleStyle}>Real Execution Engine</div>
+        <div style={industrialSectionTitleStyleLight}>Real Execution Engine</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           <span style={chipStyle(Boolean(currentStage), currentStage?.color)}>
             etapa actual {currentStage?.short ?? '—'}
@@ -758,8 +762,8 @@ export default function StationPanel({
           {execSignal ? <span style={chipStyle(true, '#f59e0b')}>{execSignal}</span> : null}
         </div>
         <div style={{ display: 'grid', gap: 4 }}>
-          <div style={industrialSectionTitleStyle}>Execution Timeline</div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#a3b2c2' }}>
+          <div style={industrialSectionTitleStyleLight}>Execution Timeline</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#475569' }}>
             <span>tempo real estimado {formatEstMin(stageEstMin)}</span>
             <span>decorrido {elapsedMin != null ? formatEstMin(elapsedMin) : '—'}</span>
           </div>
@@ -767,8 +771,8 @@ export default function StationPanel({
             style={{
               height: 8,
               borderRadius: 999,
-              background: 'rgba(255,255,255,0.06)',
-              border: '1px solid var(--border, #334155)',
+              background: '#f1f5f9',
+              border: '1px solid #cbd5e1',
               overflow: 'hidden',
             }}
           >
@@ -785,7 +789,7 @@ export default function StationPanel({
       </div>
 
       <div style={{ display: 'grid', gap: 8 }}>
-        <div style={industrialSectionTitleStyle}>Real Data Engine</div>
+        <div style={industrialSectionTitleStyleLight}>Real Data Engine</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {(
             [
@@ -814,7 +818,7 @@ export default function StationPanel({
       </div>
 
       <div style={{ display: 'grid', gap: 8 }}>
-        <div style={industrialSectionTitleStyle}>Full Production Engine</div>
+        <div style={industrialSectionTitleStyleLight}>Full Production Engine</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {(
             [
@@ -831,8 +835,8 @@ export default function StationPanel({
           {productionSignal ? <span style={chipStyle(true, '#f59e0b')}>{productionSignal}</span> : null}
         </div>
         <div style={{ display: 'grid', gap: 4 }}>
-          <div style={industrialSectionTitleStyle}>Production Timeline</div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#a3b2c2' }}>
+          <div style={industrialSectionTitleStyleLight}>Production Timeline</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#475569' }}>
             <span>tempo estimado produção {formatEstMin(TOTAL_EST_MIN)}</span>
             <span>decorrido {elapsedMin != null ? formatEstMin(elapsedMin) : '—'}</span>
           </div>
@@ -840,8 +844,8 @@ export default function StationPanel({
             style={{
               height: 8,
               borderRadius: 999,
-              background: 'rgba(255,255,255,0.06)',
-              border: '1px solid var(--border, #334155)',
+              background: '#f1f5f9',
+              border: '1px solid #cbd5e1',
               overflow: 'hidden',
             }}
           >
@@ -858,7 +862,7 @@ export default function StationPanel({
       </div>
 
       <div style={{ display: 'grid', gap: 8 }}>
-        <div style={industrialSectionTitleStyle}>Real Integration Engine</div>
+        <div style={industrialSectionTitleStyleLight}>Real Integration Engine</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           <span style={chipStyle(Boolean(selectedTask && currentStage), '#38bdf8')}>
             peça → estação {selectedTask && currentStage ? currentStage.short : '—'}
@@ -888,8 +892,8 @@ export default function StationPanel({
           ))}
         </div>
         <div style={{ display: 'grid', gap: 4 }}>
-          <div style={industrialSectionTitleStyle}>Integration Timeline</div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#a3b2c2' }}>
+          <div style={industrialSectionTitleStyleLight}>Integration Timeline</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#475569' }}>
             <span>tempo estimado integração {formatEstMin(stageEstMin)}</span>
             <span>decorrido {elapsedMin != null ? formatEstMin(elapsedMin) : '—'}</span>
           </div>
@@ -897,8 +901,8 @@ export default function StationPanel({
             style={{
               height: 8,
               borderRadius: 999,
-              background: 'rgba(255,255,255,0.06)',
-              border: '1px solid var(--border, #334155)',
+              background: '#f1f5f9',
+              border: '1px solid #cbd5e1',
               overflow: 'hidden',
             }}
           >
@@ -915,7 +919,7 @@ export default function StationPanel({
       </div>
 
       <div style={{ display: 'grid', gap: 8 }}>
-        <div style={industrialSectionTitleStyle}>Full Industrial Runtime</div>
+        <div style={industrialSectionTitleStyleLight}>Full Industrial Runtime</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {(
             [
@@ -932,8 +936,8 @@ export default function StationPanel({
           {runtimeSignal ? <span style={chipStyle(true, '#f59e0b')}>{runtimeSignal}</span> : null}
         </div>
         <div style={{ display: 'grid', gap: 4 }}>
-          <div style={industrialSectionTitleStyle}>Runtime Timeline</div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#a3b2c2' }}>
+          <div style={industrialSectionTitleStyleLight}>Runtime Timeline</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#475569' }}>
             <span>tempo estimado runtime {formatEstMin(TOTAL_EST_MIN)}</span>
             <span>decorrido runtime {elapsedMin != null ? formatEstMin(elapsedMin) : '—'}</span>
           </div>
@@ -941,8 +945,8 @@ export default function StationPanel({
             style={{
               height: 8,
               borderRadius: 999,
-              background: 'rgba(255,255,255,0.06)',
-              border: '1px solid var(--border, #334155)',
+              background: '#f1f5f9',
+              border: '1px solid #cbd5e1',
               overflow: 'hidden',
             }}
           >
@@ -959,7 +963,7 @@ export default function StationPanel({
       </div>
 
       <div style={{ display: 'grid', gap: 8 }}>
-        <div style={industrialSectionTitleStyle}>Real Operations Engine</div>
+        <div style={industrialSectionTitleStyleLight}>Real Operations Engine</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {(
             [
@@ -976,8 +980,8 @@ export default function StationPanel({
           {operationsSignal ? <span style={chipStyle(true, '#f59e0b')}>{operationsSignal}</span> : null}
         </div>
         <div style={{ display: 'grid', gap: 4 }}>
-          <div style={industrialSectionTitleStyle}>Operations Timeline</div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#a3b2c2' }}>
+          <div style={industrialSectionTitleStyleLight}>Operations Timeline</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#475569' }}>
             <span>tempo estimado {formatEstMin(stageEstMin)}</span>
             <span>decorrido {elapsedMin != null ? formatEstMin(elapsedMin) : '—'}</span>
           </div>
@@ -985,8 +989,8 @@ export default function StationPanel({
             style={{
               height: 8,
               borderRadius: 999,
-              background: 'rgba(255,255,255,0.06)',
-              border: '1px solid var(--border, #334155)',
+              background: '#f1f5f9',
+              border: '1px solid #cbd5e1',
               overflow: 'hidden',
             }}
           >
@@ -1003,7 +1007,7 @@ export default function StationPanel({
       </div>
 
       <div style={{ display: 'grid', gap: 8 }}>
-        <div style={industrialSectionTitleStyle}>Industrial Performance Engine</div>
+        <div style={industrialSectionTitleStyleLight}>Industrial Performance Engine</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           <span style={chipStyle(true, efficiencyPct >= 70 ? '#16a34a' : efficiencyPct >= 40 ? '#f59e0b' : '#f87171')}>
             eficiência {efficiencyPct}%
@@ -1040,8 +1044,8 @@ export default function StationPanel({
           </span>
         </div>
         <div style={{ display: 'grid', gap: 4 }}>
-          <div style={industrialSectionTitleStyle}>Performance Timeline</div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#a3b2c2' }}>
+          <div style={industrialSectionTitleStyleLight}>Performance Timeline</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#475569' }}>
             <span>tempo estimado {formatEstMin(stageEstMin)}</span>
             <span>tempo real {elapsedMin != null ? formatEstMin(elapsedMin) : '—'}</span>
           </div>
@@ -1049,8 +1053,8 @@ export default function StationPanel({
             style={{
               height: 8,
               borderRadius: 999,
-              background: 'rgba(255,255,255,0.06)',
-              border: '1px solid var(--border, #334155)',
+              background: '#f1f5f9',
+              border: '1px solid #cbd5e1',
               overflow: 'hidden',
             }}
           >
@@ -1067,8 +1071,8 @@ export default function StationPanel({
       </div>
 
       <div style={{ display: 'grid', gap: 6 }}>
-        <div style={industrialSectionTitleStyle}>Final Consolidation · local</div>
-        <div style={{ fontSize: 12, color: '#cbd5e1' }}>
+        <div style={industrialSectionTitleStyleLight}>Final Consolidation · local</div>
+        <div style={{ fontSize: 12, color: '#334155' }}>
           Runtime {runtimeFlow} · integração {integrationState} · produção {productionFlow} · dados {realDataState}
         </div>
       </div>
@@ -1084,10 +1088,10 @@ export default function StationPanel({
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-            <h3 style={{ ...industrialSectionTitleStyle, margin: 0 }}>
+            <h3 style={{ ...industrialSectionTitleStyleLight, margin: 0 }}>
               Peças seleccionadas ({selectionCount})
             </h3>
-            <button type="button" onClick={onClearSelection} style={industrialActionBtnStyle}>
+            <button type="button" onClick={onClearSelection} style={industrialActionBtnStyleLight}>
               Limpar
             </button>
           </div>
@@ -1096,7 +1100,7 @@ export default function StationPanel({
               <li
                 key={task.id}
                 style={{
-                  ...industrialListItemStyle,
+                  ...industrialListItemStyleLight,
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
@@ -1104,8 +1108,8 @@ export default function StationPanel({
                 }}
               >
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, color: '#f1f5f9', fontSize: 12 }}>{task.pieceId}</div>
-                  <div style={{ color: '#94a3b8', fontSize: 11 }}>
+                  <div style={{ fontWeight: 600, color: '#1e1e1e', fontSize: 12 }}>{task.pieceId}</div>
+                  <div style={{ color: '#64748b', fontSize: 11 }}>
                     {task.operationType} · {STATUS_LABEL[task.status]}
                     {task.display?.nqrCode ? ` · ${task.display.nqrCode}` : ''}
                   </div>
@@ -1113,7 +1117,7 @@ export default function StationPanel({
                 <button
                   type="button"
                   onClick={() => onRemoveFromSelection(task.id)}
-                  style={industrialActionBtnStyle}
+                  style={industrialActionBtnStyleLight}
                   title="Remover da selecção"
                 >
                   ×
@@ -1129,7 +1133,7 @@ export default function StationPanel({
             margin: 0,
             fontSize: 12,
             fontWeight: 400,
-            color: '#a3b2c2',
+            color: '#475569',
             lineHeight: 1.5,
             ...industrialVisionSecondaryStyle,
           }}
@@ -1144,16 +1148,16 @@ export default function StationPanel({
           style={{ margin: 0, display: 'grid', gap: 6, fontSize: 12, ...industrialVisionActiveStyle }}
         >
           <div>
-            <dt style={{ color: '#a3b2c2' }}>Peça seleccionada</dt>
-            <dd style={{ margin: 0, color: '#f1f5f9' }}>{selectedTask.pieceId}</dd>
+            <dt style={{ color: '#475569' }}>Peça seleccionada</dt>
+            <dd style={{ margin: 0, color: '#1e1e1e' }}>{selectedTask.pieceId}</dd>
           </div>
           <div>
-            <dt style={{ color: '#a3b2c2' }}>Operação</dt>
-            <dd style={{ margin: 0, color: '#f1f5f9' }}>{selectedTask.operationType}</dd>
+            <dt style={{ color: '#475569' }}>Operação</dt>
+            <dd style={{ margin: 0, color: '#1e1e1e' }}>{selectedTask.operationType}</dd>
           </div>
           <div>
-            <dt style={{ color: '#a3b2c2' }}>Estado</dt>
-            <dd style={{ margin: 0, color: '#f1f5f9' }}>
+            <dt style={{ color: '#475569' }}>Estado</dt>
+            <dd style={{ margin: 0, color: '#1e1e1e' }}>
               {STATUS_LABEL[selectedTask.status]}
               {execVisual ? ` · ${execVisual.label}` : ''}
             </dd>
@@ -1174,10 +1178,10 @@ export default function StationPanel({
             transition: 'all 140ms ease-out',
           }}
         >
-          <h3 style={industrialSectionTitleStyle}>{section.title}</h3>
+          <h3 style={industrialSectionTitleStyleLight}>{section.title}</h3>
           <ul style={{ margin: 0, padding: 0, display: 'grid', gap: 4 }}>
             {section.items.length === 0 ? (
-              <li style={{ fontSize: 12, color: '#a3b2c2', lineHeight: 1.5 }}>Sem itens · dados pendentes.</li>
+              <li style={{ fontSize: 12, color: '#475569', lineHeight: 1.5 }}>Sem itens · dados pendentes.</li>
             ) : (
               section.items.map((item, index) => {
                 const taskId = item.taskId;
@@ -1192,7 +1196,7 @@ export default function StationPanel({
                     key={item.id}
                     className={INDUSTRIAL_LIST_ITEM_CLASS}
                     style={{
-                      ...industrialListItemStyle,
+                      ...industrialListItemStyleLight,
                       animationDelay: `${index * 30}ms`,
                       display: 'flex',
                       alignItems: 'flex-start',
@@ -1202,7 +1206,7 @@ export default function StationPanel({
                         ? {
                             boxShadow: '0 0 0 2px rgba(59,130,246,0.45)',
                             outline: '2px solid rgba(59,130,246,0.55)',
-                            background: 'rgba(255,255,255,0.06)',
+                            background: '#f1f5f9',
                             transform: 'translateY(-2px)',
                           }
                         : {}),
@@ -1223,9 +1227,9 @@ export default function StationPanel({
                       />
                     ) : null}
                     <div style={{ minWidth: 0, flex: 1 }}>
-                      <div style={{ fontWeight: 600, color: '#f1f5f9' }}>{item.primary}</div>
+                      <div style={{ fontWeight: 600, color: '#1e1e1e' }}>{item.primary}</div>
                       {item.secondary ? (
-                        <div style={{ color: '#cbd5e1', marginTop: 2, lineHeight: 1.5 }}>{item.secondary}</div>
+                        <div style={{ color: '#334155', marginTop: 2, lineHeight: 1.5 }}>{item.secondary}</div>
                       ) : null}
                     </div>
                   </li>
@@ -1289,7 +1293,7 @@ export default function StationPanel({
           disabled={!hasSelection || busy}
           onClick={() => (onReject ? onReject() : onBulkAction('reject'))}
           style={{
-            ...industrialActionBtnStyle,
+            ...industrialActionBtnStyleLight,
             padding: '10px 18px',
             cursor: busy ? 'wait' : 'pointer',
             opacity: !hasSelection ? 0.4 : 1,

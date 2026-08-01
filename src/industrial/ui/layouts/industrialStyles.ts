@@ -122,7 +122,7 @@ if (typeof document !== 'undefined') {
   ensureIndustrialInteractionStyles();
 }
 
-/** Estilos partilhados — espelham PieceMainView. */
+/** Estilos partilhados — espelham PieceMainView (tema escuro / Operador). */
 export const industrialPanelStyle: CSSProperties = {
   border: '1px solid var(--border, #334155)',
   borderRadius: 8,
@@ -134,6 +134,23 @@ export const industrialPanelStyle: CSSProperties = {
   WebkitBackdropFilter: 'blur(2px)',
   transition: 'all 140ms ease-out',
 };
+
+/** Painéis Ordens/Estações — fundo claro + texto escuro (#1e1e1e). */
+export const industrialPanelStyleLight: CSSProperties = {
+  border: '1px solid #e2e8f0',
+  borderRadius: 8,
+  background: '#ffffff',
+  padding: 16,
+  minHeight: 0,
+  color: '#1e1e1e',
+  boxShadow: '0 1px 3px rgba(15, 23, 42, 0.08)',
+  transition: 'all 140ms ease-out',
+};
+
+export const industrialLightText = '#1e1e1e';
+export const industrialLightMuted = '#475569';
+export const industrialLightBorder = '#cbd5e1';
+export const industrialLightSurface = '#f8fafc';
 
 export const industrialCanvasShellStyle: CSSProperties = {
   position: 'relative',
@@ -155,6 +172,12 @@ export const industrialSectionTitleStyle: CSSProperties = {
   lineHeight: 1.5,
 };
 
+/** Títulos de secção — Ordens/Estações (fundo claro). */
+export const industrialSectionTitleStyleLight: CSSProperties = {
+  ...industrialSectionTitleStyle,
+  color: '#475569',
+};
+
 export const industrialListItemStyle: CSSProperties = {
   listStyle: 'none',
   padding: '6px 6px',
@@ -166,6 +189,13 @@ export const industrialListItemStyle: CSSProperties = {
   color: '#f1f5f9',
   lineHeight: 1.5,
   transition: 'all 140ms ease-out',
+};
+
+export const industrialListItemStyleLight: CSSProperties = {
+  ...industrialListItemStyle,
+  background: '#f8fafc',
+  border: '1px solid #e2e8f0',
+  color: '#1e1e1e',
 };
 
 export function industrialBtnStyle(active = false): CSSProperties {
@@ -189,6 +219,27 @@ export function industrialBtnStyle(active = false): CSSProperties {
   };
 }
 
+export function industrialBtnStyleLight(active = false): CSSProperties {
+  return {
+    padding: '6px 10px',
+    fontSize: 12,
+    borderRadius: 'var(--pi-btn-radius, 6px)',
+    border: '1px solid #cbd5e1',
+    background: active ? 'rgba(37, 99, 235, 0.12)' : '#f8fafc',
+    color: '#1e1e1e',
+    cursor: 'pointer',
+    outline: 'none',
+    transition: 'all 140ms ease-out',
+    lineHeight: 1.5,
+    ...(active
+      ? {
+          boxShadow: '0 0 0 2px rgba(37,99,235,0.35)',
+          transform: 'translateY(-2px)',
+        }
+      : {}),
+  };
+}
+
 export const industrialActionBtnStyle: CSSProperties = {
   padding: '5px 8px',
   fontSize: 11,
@@ -200,6 +251,13 @@ export const industrialActionBtnStyle: CSSProperties = {
   outline: 'none',
   transition: 'all 140ms ease-out',
   lineHeight: 1.5,
+};
+
+export const industrialActionBtnStyleLight: CSSProperties = {
+  ...industrialActionBtnStyle,
+  border: '1px solid #cbd5e1',
+  background: '#f1f5f9',
+  color: '#1e1e1e',
 };
 
 /** "Confirmar" mantem o verde semantico no Pi (--pi-btn-confirm-bg) — nao vira Prussian. */

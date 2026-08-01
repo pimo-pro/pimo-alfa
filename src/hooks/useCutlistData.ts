@@ -4,10 +4,17 @@
  *
  * FASE 2: quando `drawersLayer` existe, painéis de gaveta vêm de `cutlistComPrecoFromBox`
  * (pipeline moderno, alinhado com CNC). Caso contrário, fallback legado (`gerarModeloIndustrial`).
+ *
+ * Custos (opção 1): material das portas conta 1× na linha Portas (cutlist);
+ * Painéis = carcaça (exclui portas/gavetas/remates). Não somar `modelo.portas.custo` em cima.
  */
 
 import { useMemo } from "react";
 import { useProject } from "../context/useProject";
+import {
+  isCarcassPanelForAdminCost,
+  isDoorPieceForAdminCost,
+} from "../core/financeiro/cutlistAdminCostPartition";
 import { gerarModeloIndustrial } from "../core/manufacturing/boxManufacturing";
 import { cutlistComPrecoFromBox } from "../core/manufacturing/cutlistFromBoxes";
 import { gerarFerragensIndustriais, agruparPorComponente } from "../core/industriais/ferragensIndustriais";
@@ -28,6 +35,8 @@ import {
   PARAFUSO_4X35_PRECO,
   quantidadeParafuso4x35PorRemate,
 } from "../core/ferragens/freeagemParafusos";
+
+export { isCarcassPanelForAdminCost, isDoorPieceForAdminCost } from "../core/financeiro/cutlistAdminCostPartition";
 
 export type PainelRow = {
   key: string;
@@ -159,6 +168,49 @@ function sumCutlistAreaMm2(items: CutListItemComPreco[]): number {
   );
 }
 
+function buildPortaRowsFromCutlist(
+  boxNome: string,
+  doorItems: CutListItemComPreco[],
+  portasMeta: Array<{ dobradicas: number }>
+): PortaRow[] {
+  return doorItems.map((item, index) => ({
+    key: `${item.boxId ?? "box"}-${item.id}`,
+    boxNome,
+    tipo: item.tipo,
+    largura_mm: item.dimensoes.largura,
+    altura_mm: item.dimensoes.altura,
+    espessura_mm: item.espessura,
+    dobradicas: portasMeta[index]?.dobradicas ?? 0,
+    custo: item.precoTotal,
+  }));
+}
+
+function buildPortaRowsFromDoorPanels(
+  boxId: string,
+  boxNome: string,
+  doorPanels: Array<{
+    id: string;
+    tipo: string;
+    largura_mm: number;
+    altura_mm: number;
+    espessura_mm: number;
+    custo: number;
+  }>,
+  portasMeta: Array<{ dobradicas: number }>
+): PortaRow[] {
+  return doorPanels.map((panel, index) => ({
+    key: `${boxId}-${panel.id}`,
+    boxNome,
+    tipo: panel.tipo,
+    largura_mm: panel.largura_mm,
+    altura_mm: panel.altura_mm,
+    espessura_mm: panel.espessura_mm,
+    dobradicas: portasMeta[index]?.dobradicas ?? 0,
+    // Material 1× a partir do painel/cutlist — não usar gerarPortas.custo em cima.
+    custo: panel.custo,
+  }));
+}
+
 export function useCutlistData() {
   const { project } = useProject();
   const { componentTypes } = useComponentTypes();
@@ -236,12 +288,22 @@ export function useCutlistData() {
         const modernCutlist = cutlistComPrecoFromBox(box, project.rules, project.materialId);
         totalAreaMm2 += sumCutlistAreaMm2(modernCutlist);
 
+        const doorItems = modernCutlist.filter((item) => isDoorPieceForAdminCost(item.tipo));
         for (const item of modernCutlist) {
+          // Painéis = carcaça; portas/gavetas/remates têm buckets próprios.
+          if (!isCarcassPanelForAdminCost(item.tipo)) continue;
           totalPaineisQty += item.quantidade;
           custoTotalPaineis += item.precoTotal;
           allPaineis.push(
             cutlistItemToPainelRow(item, boxNome, profundidadeExternaMm, profundidadeInternaUtilMm)
           );
+        }
+
+        const portaRows = buildPortaRowsFromCutlist(boxNome, doorItems, modelo.portas);
+        for (const porta of portaRows) {
+          totalPortasQty += 1;
+          custoTotalPortas += porta.custo;
+          allPortas.push(porta);
         }
 
         const gavetaRows = buildGavetaRowsFromModernCutlist(box, boxNome, modernCutlist);
@@ -252,7 +314,9 @@ export function useCutlistData() {
         }
       } else {
         totalAreaMm2 += modelo.cutlist.areaTotal_mm2;
+        const doorPanels = modelo.paineis.filter((p) => isDoorPieceForAdminCost(p.tipo));
         modelo.paineis.forEach((p) => {
+          if (!isCarcassPanelForAdminCost(p.tipo)) return;
           totalPaineisQty += p.quantidade;
           custoTotalPaineis += p.custo;
           allPaineis.push({
@@ -263,18 +327,20 @@ export function useCutlistData() {
             boxProfundidadeInternaUtilMm: profundidadeInternaUtilMm,
           });
         });
+
+        const portaRows = buildPortaRowsFromDoorPanels(box.id, boxNome, doorPanels, modelo.portas);
+        for (const porta of portaRows) {
+          totalPortasQty += 1;
+          custoTotalPortas += porta.custo;
+          allPortas.push(porta);
+        }
+
         modelo.gavetas.forEach((p) => {
           totalGavetasQty += 1;
           custoTotalGavetas += p.custo;
           allGavetas.push({ ...p, key: `${box.id}-${p.id}`, boxNome });
         });
       }
-
-      modelo.portas.forEach((p) => {
-        totalPortasQty += 1;
-        custoTotalPortas += p.custo;
-        allPortas.push({ ...p, key: `${box.id}-${p.id}`, boxNome });
-      });
 
       modelo.ferragens.forEach((f) => {
         const precoUnitario = resolveFerragemPrecoUnitario(f.tipo);

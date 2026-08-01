@@ -1,28 +1,28 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
-import { useAuth } from '@/auth/useAuth';
-import { fetchWorkOrderDetail, finishTask, rejectTask, startTask } from '@/industrial/api/workOrderActions';
-import { resolveOrderProjectCode } from '@/industrial/work-orders/resolveWorkOrderPiece';
+import { fetchWorkOrderDetail } from '@/industrial/api/workOrderActions';
 import { IndustrialLayout, useIndustrialPageState } from '@/industrial/ui/components';
-import type { IndustrialWorkOrder, IndustrialWorkOrderTask } from '@/industrial/work-orders/types';
-import { STATION_LABELS } from '@/industrial/work-orders/types';
+import type { IndustrialWorkOrder } from '@/industrial/work-orders/types';
+import { INDUSTRIAL_STATIONS, type IndustrialStation } from '@/industrial/work-orders/types';
 
-import QrScannerPanel from './components/QrScannerPanel';
-import TaskExecutionList from './components/TaskExecutionList';
-import WorkOrderSummaryCard from './components/WorkOrderSummaryCard';
+import StationPageShell from './components/StationPageShell';
 
+function isStation(value: string | undefined): value is IndustrialStation {
+  return !!value && (INDUSTRIAL_STATIONS as readonly string[]).includes(value);
+}
+
+/**
+ * Página "Ordem · Estação" — usa o mesmo shell industrial das estações
+ * (StationPageShell → StationPanel → useStationPage) com filtro à work order.
+ */
 export default function WorkOrderExecutionPage() {
   useIndustrialPageState();
   const { workOrderId } = useParams<{ workOrderId: string }>();
-  const { user } = useAuth();
 
   const [order, setOrder] = useState<IndustrialWorkOrder | null>(null);
-  const [tasks, setTasks] = useState<IndustrialWorkOrderTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [busyTaskId, setBusyTaskId] = useState<string | null>(null);
-  const [highlightPieceId, setHighlightPieceId] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     if (!workOrderId) return;
@@ -31,7 +31,6 @@ export default function WorkOrderExecutionPage() {
     try {
       const detail = await fetchWorkOrderDetail(workOrderId);
       setOrder(detail.order);
-      setTasks(detail.tasks);
       if (!detail.order) setError('Ordem de trabalho não encontrada.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar ordem.');
@@ -44,65 +43,34 @@ export default function WorkOrderExecutionPage() {
     void reload();
   }, [reload]);
 
-  const runTaskAction = async (
-    task: IndustrialWorkOrderTask,
-    action: 'start' | 'complete' | 'reject',
-  ) => {
-    setBusyTaskId(task.id);
-    setError(null);
-    try {
-      if (action === 'start') await startTask(task.id, user?.id);
-      else if (action === 'complete') await finishTask(task.id, user?.id);
-      else await rejectTask(task.id, 'Rejeitado na ordem', user?.id);
-      await reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falha na execução da tarefa.');
-    } finally {
-      setBusyTaskId(null);
-    }
-  };
-
   if (!workOrderId) {
     return (
-      <IndustrialLayout title="Ordem de trabalho" description="Identificador em falta.">
-        <p>Ordem inválida.</p>
+      <IndustrialLayout tone="light" title="Ordem de trabalho" description="Identificador em falta.">
+        <p style={{ color: '#1e1e1e' }}>Ordem inválida.</p>
       </IndustrialLayout>
     );
   }
 
-  const projectCode = order ? resolveOrderProjectCode(order, tasks) : '—';
+  if (loading && !order) {
+    return (
+      <IndustrialLayout tone="light" title="Ordem de trabalho" description="A carregar…">
+        <p style={{ color: '#475569' }}>A carregar ordem…</p>
+      </IndustrialLayout>
+    );
+  }
 
-  return (
-    <IndustrialLayout
-      title={order ? `Ordem · ${STATION_LABELS[order.station]}` : 'Ordem de trabalho'}
-      description={order ? `Projecto ${projectCode} · Estado ${order.status}` : 'Execução operacional'}
-    >
-      <div style={{ marginBottom: 12 }}>
-        <Link to="/industrial/work-orders" style={{ fontSize: 13, color: '#2563eb' }}>
-          ← Voltar à lista
-        </Link>
-      </div>
-
-      {loading ? <p style={{ color: '#64748b' }}>A carregar…</p> : null}
-      {error ? <p style={{ color: '#dc2626' }}>{error}</p> : null}
-
-      {order ? (
-        <div style={{ display: 'grid', gap: 16 }}>
-          <WorkOrderSummaryCard order={order} tasks={tasks} />
-
-          <QrScannerPanel onPieceScanned={setHighlightPieceId} />
-
-          <TaskExecutionList
-            tasks={tasks}
-            projectId={order.projectId}
-            busyTaskId={busyTaskId}
-            highlightPieceId={highlightPieceId}
-            onStart={(task) => void runTaskAction(task, 'start')}
-            onComplete={(task) => void runTaskAction(task, 'complete')}
-            onReject={(task) => void runTaskAction(task, 'reject')}
-          />
+  if (error || !order || !isStation(order.station)) {
+    return (
+      <IndustrialLayout tone="light" title="Ordem de trabalho" description="Execução operacional">
+        <div style={{ marginBottom: 12 }}>
+          <Link to="/industrial/work-orders" style={{ fontSize: 13, color: '#1d4ed8' }}>
+            ← Voltar à lista
+          </Link>
         </div>
-      ) : null}
-    </IndustrialLayout>
-  );
+        <p style={{ color: '#dc2626' }}>{error ?? 'Ordem de trabalho não encontrada.'}</p>
+      </IndustrialLayout>
+    );
+  }
+
+  return <StationPageShell station={order.station} workOrderId={order.id} />;
 }

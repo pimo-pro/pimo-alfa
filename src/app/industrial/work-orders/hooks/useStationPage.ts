@@ -13,6 +13,7 @@ import {
   startTask,
 } from '@/industrial/api/workOrderActions';
 import type { IndustrialStation, IndustrialWorkOrder, IndustrialWorkOrderTask } from '@/industrial/work-orders/types';
+import { STATION_LABELS } from '@/industrial/work-orders/types';
 import type {
   StationActionFeedback,
   StationBulkAction,
@@ -126,10 +127,16 @@ const ACTION_LABEL: Record<StationBulkAction, string> = {
   reject: 'Rejeitar',
 };
 
-export function useStationPage(station: IndustrialStation) {
+export type UseStationPageOptions = {
+  /** Quando definido, filtra ordens/tarefas à work order (página Ordem · Estação). */
+  workOrderId?: string | null;
+};
+
+export function useStationPage(station: IndustrialStation, options: UseStationPageOptions = {}) {
   useIndustrialPageState();
   const { user } = useAuth();
   const config = getStationConfig(station);
+  const workOrderId = options.workOrderId?.trim() || null;
 
   const [orders, setOrders] = useState<IndustrialWorkOrder[]>([]);
   const [tasks, setTasks] = useState<IndustrialWorkOrderTask[]>([]);
@@ -179,19 +186,25 @@ export function useStationPage(station: IndustrialStation) {
         fetchWorkOrders({ station }),
         fetchStationTasks(station),
       ]);
-      setOrders(orderRows);
-      setTasks(taskRows);
+      const filteredOrders = workOrderId
+        ? orderRows.filter((order) => order.id === workOrderId)
+        : orderRows;
+      const filteredTasks = workOrderId
+        ? taskRows.filter((task) => task.workOrderId === workOrderId)
+        : taskRows;
+      setOrders(filteredOrders);
+      setTasks(filteredTasks);
       setSelectedTask((current) => {
         if (!current) return null;
-        return taskRows.find((t) => t.id === current.id) ?? null;
+        return filteredTasks.find((t) => t.id === current.id) ?? null;
       });
-      setSelectedTaskIds((prev) => prev.filter((id) => taskRows.some((t) => t.id === id)));
+      setSelectedTaskIds((prev) => prev.filter((id) => filteredTasks.some((t) => t.id === id)));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar estação.');
     } finally {
       setLoading(false);
     }
-  }, [station]);
+  }, [station, workOrderId]);
 
   reloadRef.current = reload;
 
@@ -554,9 +567,14 @@ export function useStationPage(station: IndustrialStation) {
     [activeTasks, toggleTaskSelection],
   );
 
+  const title = workOrderId
+    ? `Ordem · ${STATION_LABELS[station]}`
+    : getStationPageTitle(station);
+
   return {
     config,
-    title: getStationPageTitle(station),
+    title,
+    workOrderId,
     description: loading
       ? 'A carregar fila de trabalho…'
       : `${activeTasks.length} tarefa(s) activa(s) · ${orders.length} ordem(ns) · ${realtime.stationOnline ? 'online' : 'offline'}`,

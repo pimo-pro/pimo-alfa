@@ -58,6 +58,7 @@ import {
   resolveIndustrialBoxId,
 } from "../industrial/industrialValidation";
 import { buildIndustrialPieceId, IndustrialError } from "../industrial/IndustrialError";
+import { isIndustrialDoorPanelTipo } from "../doors/industrialDoorPanels";
 
 type PainelIndustrial = {
   id: string;
@@ -221,11 +222,20 @@ const getDimensoesInternas = (box: BoxModule, espessura: number, _rules: RulesCo
 export function gerarModeloIndustrial(box: BoxModule, rules: RulesConfig): ModeloIndustrial {
   const paineis = gerarPaineis(box, rules);
   const ferragens = gerarFerragens(box, rules);
-  const portas = gerarPortas(box, rules);
+  const portasRaw = gerarPortas(box, rules);
   const gavetas = gerarGavetas(box, rules);
-  const custoTotalPaineis = paineis.reduce((total, painel) => total + painel.custo, 0);
+
+  // Opção 1: material das portas 1× (painéis porta_*); Painéis totais = só carcaça.
+  // `gerarPortas.custo` recalcula o mesmo material — alinhar e não somar em duplicado.
+  const paineisPorta = paineis.filter((painel) => isIndustrialDoorPanelTipo(painel.tipo));
+  const paineisCarcaca = paineis.filter((painel) => !isIndustrialDoorPanelTipo(painel.tipo));
+  const portas = portasRaw.map((porta, index) => ({
+    ...porta,
+    custo: paineisPorta[index]?.custo ?? 0,
+  }));
+  const custoTotalPaineis = paineisCarcaca.reduce((total, painel) => total + painel.custo, 0);
   const custoTotalFerragens = calcularCustoFerragens(ferragens);
-  const custoTotalPortas = portas.reduce((total, porta) => total + porta.custo, 0);
+  const custoTotalPortas = paineisPorta.reduce((total, painel) => total + painel.custo, 0);
   const custoTotalGavetas = gavetas.reduce((total, gaveta) => total + gaveta.custo, 0);
   return {
     dimensoes: box.dimensoes,

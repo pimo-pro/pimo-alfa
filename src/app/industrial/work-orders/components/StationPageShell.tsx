@@ -12,19 +12,22 @@ import StationHistorySidebar from './StationHistorySidebar';
 
 interface StationPageShellProps {
   station: IndustrialStation;
+  /** Página Ordem · Estação — filtra à work order e título "Ordem · …". */
+  workOrderId?: string | null;
 }
 
-export default function StationPageShell({ station }: StationPageShellProps) {
-  const page = useStationPage(station);
+export default function StationPageShell({ station, workOrderId = null }: StationPageShellProps) {
+  const page = useStationPage(station, { workOrderId });
 
   if (page.loading && page.tasks.length === 0) {
     return (
       <IndustrialThreeColumnLayout
+        tone="light"
         title={page.title}
         description={page.description}
         sidebarOpen={false}
         leftLeft={<div />}
-        left={<div style={{ color: '#94a3b8', fontSize: 13 }}>A carregar estação…</div>}
+        left={<div style={{ color: '#475569', fontSize: 13 }}>A carregar estação…</div>}
         right={<div />}
       />
     );
@@ -32,6 +35,7 @@ export default function StationPageShell({ station }: StationPageShellProps) {
 
   return (
     <IndustrialThreeColumnLayout
+      tone="light"
       title={page.title}
       description={page.description}
       sidebarOpen={page.sidebarOpen}
@@ -49,6 +53,7 @@ export default function StationPageShell({ station }: StationPageShellProps) {
       }
       left={
         <StationPanel
+          tone="light"
           title={page.config.panelTitle}
           description={page.description}
           sections={page.sections}
@@ -77,12 +82,19 @@ export default function StationPageShell({ station }: StationPageShellProps) {
           onToggleSidebar={() => page.setSidebarOpen(!page.sidebarOpen)}
           sidebarOpen={page.sidebarOpen}
           extra={
-            <Link
-              to={`/industrial/supervisor?station=${station}`}
-              style={{ fontSize: 12, color: '#60a5fa' }}
-            >
-              Ver no Supervisor
-            </Link>
+            <div style={{ display: 'grid', gap: 6 }}>
+              {workOrderId ? (
+                <Link to={`/industrial/work-orders/${station}`} style={{ fontSize: 12, color: '#1d4ed8' }}>
+                  Ver toda a estação
+                </Link>
+              ) : null}
+              <Link
+                to={`/industrial/supervisor?station=${station}`}
+                style={{ fontSize: 12, color: '#1d4ed8' }}
+              >
+                Ver no Supervisor
+              </Link>
+            </div>
           }
         />
       }

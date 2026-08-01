@@ -115,6 +115,7 @@ export default function IndustrialWorkOrdersRoute() {
 
   return (
     <IndustrialLayout
+      tone="light"
       title="Ordens de Trabalho"
       description="Gestão e execução das work orders industriais por estação."
     >

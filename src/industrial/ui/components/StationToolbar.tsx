@@ -1,8 +1,8 @@
-import type { StationToolMode } from './stationTypes';
+﻿import type { StationToolMode } from './stationTypes';
 import {
   INDUSTRIAL_CONTROL_CLASS,
   ensureIndustrialInteractionStyles,
-  industrialBtnStyle,
+  industrialBtnStyleLight,
 } from '@/industrial/ui/layouts/industrialStyles';
 
 interface StationToolbarProps {
@@ -32,7 +32,7 @@ export default function StationToolbar({
         type="button"
         className={INDUSTRIAL_CONTROL_CLASS}
         onClick={() => onToolMode('move')}
-        style={industrialBtnStyle(toolMode === 'move')}
+        style={industrialBtnStyleLight(toolMode === 'move')}
       >
         Mover
       </button>
@@ -40,7 +40,7 @@ export default function StationToolbar({
         type="button"
         className={INDUSTRIAL_CONTROL_CLASS}
         onClick={() => onToolMode('rotate')}
-        style={industrialBtnStyle(toolMode === 'rotate')}
+        style={industrialBtnStyleLight(toolMode === 'rotate')}
       >
         Rodar
       </button>
@@ -48,12 +48,12 @@ export default function StationToolbar({
         type="button"
         className={INDUSTRIAL_CONTROL_CLASS}
         onClick={onToggleSnap}
-        style={industrialBtnStyle(snapEnabled)}
+        style={industrialBtnStyleLight(snapEnabled)}
       >
         Snap
       </button>
       {onReload ? (
-        <button type="button" className={INDUSTRIAL_CONTROL_CLASS} onClick={onReload} style={industrialBtnStyle(false)}>
+        <button type="button" className={INDUSTRIAL_CONTROL_CLASS} onClick={onReload} style={industrialBtnStyleLight(false)}>
           Actualizar
         </button>
       ) : null}
@@ -63,7 +63,7 @@ export default function StationToolbar({
           className={INDUSTRIAL_CONTROL_CLASS}
           title="Ocultar/mostrar histórico"
           onClick={onToggleSidebar}
-          style={industrialBtnStyle(sidebarOpen)}
+          style={industrialBtnStyleLight(sidebarOpen)}
         >
           Histórico
         </button>
