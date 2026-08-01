@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import { loadSupervisorDashboardSnapshot } from '@/industrial/persistence/supervisor/loadSupervisorData';
-import type { SupervisorAlertItem, SupervisorDashboardSnapshot } from '@/industrial/persistence/supervisor/types';
+import type { SupervisorDashboardSnapshot } from '@/industrial/persistence/supervisor/types';
 import { useIndustrialRealtime } from '@/industrial/realtime';
 import { INDUSTRIAL_STATIONS, type IndustrialStation } from '@/industrial/work-orders/types';
 import { useIndustrialPageState } from '@/industrial/ui/components';

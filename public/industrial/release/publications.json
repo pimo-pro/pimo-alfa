@@ -2,6 +2,18 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-08-01T19:47:13.830Z",
+      "author": "pimo-pro",
+      "commitMessage": "Industrial UI: tema global nas Ordens/Estacoes; remover Finalization Layer falsa (estacoes, supervisor, operador).",
+      "version": "v6.0801.2047"
+    },
+    {
+      "publishedAt": "2026-08-01T19:45:37.859Z",
+      "author": "pimo-pro",
+      "commitMessage": "Industrial UI: tema global nas Ordens/Estacoes; remover Finalization Layer falsa (estacoes, supervisor, operador).",
+      "version": "v6.0801.2045"
+    },
+    {
       "publishedAt": "2026-08-01T18:14:49.818Z",
       "author": "pimo-pro",
       "commitMessage": "Publicação PIMO — Sistema Industrial",

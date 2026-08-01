@@ -1,11 +1,31 @@
 {
-  "updatedAt": "2026-08-01T18:14:51.773Z",
+  "updatedAt": "2026-08-01T19:47:15.870Z",
   "news": [
+    {
+      "version": "v6.0801.2047",
+      "title": "Industrial UI: tema global nas Ordens/Estacoes; remover Finalization Layer falsa (estacoes, supervisor, operador).",
+      "description": "Industrial UI: tema global nas Ordens/Estacoes; remover Finalization Layer falsa (estacoes, supervisor, operador).",
+      "publishedAt": "2026-08-01T19:47:15.503Z",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "update",
+      "commit": "e341c732"
+    },
+    {
+      "version": "v6.0801.2045",
+      "title": "Industrial UI: tema global nas Ordens/Estacoes; remover Finalization Layer falsa (estacoes, supervisor, operador).",
+      "description": "Industrial UI: tema global nas Ordens/Estacoes; remover Finalization Layer falsa (estacoes, supervisor, operador).",
+      "publishedAt": "2026-08-01T19:45:38.961Z",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "update",
+      "commit": "e341c732"
+    },
     {
       "version": "v6.0801.1914",
       "title": "Ordem: StationPageShell + QR bulk/ações em grupo; contraste light; Portas sem double-count material.",
       "description": "Ordem: StationPageShell + QR bulk/ações em grupo; contraste light; Portas sem double-count material.",
-      "publishedAt": "2026-08-01T18:14:51.352Z",
+      "publishedAt": "2026-08-01T19:17:53+01:00",
       "type": "update",
       "author": "pimo-pro",
       "icon": "update",
@@ -15,7 +35,7 @@
       "version": "v6.0801.1911",
       "title": "Ordem: StationPageShell + QR bulk/ações em grupo; contraste light; Portas sem double-count material.",
       "description": "Ordem: StationPageShell + QR bulk/ações em grupo; contraste light; Portas sem double-count material.",
-      "publishedAt": "2026-08-01T18:11:30.420Z",
+      "publishedAt": "2026-08-01T19:14:34+01:00",
       "type": "update",
       "author": "pimo-pro",
       "icon": "update",
