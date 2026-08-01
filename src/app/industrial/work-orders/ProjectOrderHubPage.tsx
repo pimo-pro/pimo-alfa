@@ -117,8 +117,8 @@ export default function ProjectOrderHubPage() {
             style={{
               padding: '6px 10px',
               borderRadius: 6,
-              border: `1px solid ${ui.border}`,
-              background: ui.surface,
+              border: `1px solid ${ui.panelBorder}`,
+              background: ui.panelBg,
               color: ui.text,
               textDecoration: 'none',
               fontSize: 12,
@@ -138,10 +138,10 @@ export default function ProjectOrderHubPage() {
               key={station}
               id={`station-${station}`}
               style={{
-                border: `1px solid ${ui.border}`,
+                border: `1px solid ${ui.panelBorder}`,
                 borderRadius: 10,
                 padding: 14,
-                background: ui.surface,
+                background: ui.panelBg,
               }}
             >
               <div
