@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-08-01T18:11:29.334Z",
+      "author": "pimo-pro",
+      "commitMessage": "Ordem: StationPageShell + QR bulk/ações em grupo; contraste light; Portas sem double-count material.",
+      "version": "v6.0801.1911"
+    },
+    {
       "publishedAt": "2026-08-01T17:39:02.787Z",
       "author": "pimo-pro",
       "commitMessage": "Publicação PIMO — Sistema Industrial",
