@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-08-01T20:54:18.300Z",
+      "author": "pimo-pro",
+      "commitMessage": "TopBar-TRK · chrome por módulo · cabeçalho industrial unificado",
+      "version": "v6.0801.2154"
+    },
+    {
       "publishedAt": "2026-08-01T19:57:59.226Z",
       "author": "pimo-pro",
       "commitMessage": "Publicação PIMO — Sistema Industrial",

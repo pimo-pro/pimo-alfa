@@ -1,11 +1,21 @@
 {
-  "updatedAt": "2026-08-01T19:58:01.496Z",
+  "updatedAt": "2026-08-01T20:54:19.805Z",
   "news": [
+    {
+      "version": "v6.0801.2154",
+      "title": "TopBar-TRK · Cabeçalho industrial unificado",
+      "description": "TopBar-TRK · Cabeçalho industrial unificado\n\nReestruturação do chrome por módulo. Páginas industriais passam a usar o novo TopBarTrak com título dinâmico, indicadores reais (tarefas activas, ordens, online/offline) e sessão do utilizador. Remoção do Navbar antigo nas rotas TRK.",
+      "publishedAt": "2026-08-01T20:54:19.421Z",
+      "type": "feature",
+      "author": "pimo-pro",
+      "icon": "feature",
+      "commit": "ecc653c9"
+    },
     {
       "version": "v6.0801.2057",
       "title": "fix: remove unused SupervisorAlertItem import blocking industrial build.",
       "description": "fix: remove unused SupervisorAlertItem import blocking industrial build.",
-      "publishedAt": "2026-08-01T19:58:01.037Z",
+      "publishedAt": "2026-08-01T21:01:03+01:00",
       "type": "fix",
       "author": "pimo-pro",
       "icon": "fix",
@@ -15,7 +25,7 @@
       "version": "v6.0801.2054",
       "title": "fix: remove unused SupervisorAlertItem import blocking industrial build.",
       "description": "fix: remove unused SupervisorAlertItem import blocking industrial build.",
-      "publishedAt": "2026-08-01T19:54:37.671Z",
+      "publishedAt": "2026-08-01T20:57:48+01:00",
       "type": "fix",
       "author": "pimo-pro",
       "icon": "fix",
