@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-08-03T19:52:54.964Z",
+      "author": "pimo-pro",
+      "commitMessage": "Industrial: Elevação real do gaveta inferior — 18,5 mm acima do FUNDO, pairing preservado",
+      "version": "v6.0803.2052"
+    },
+    {
       "publishedAt": "2026-08-03T18:46:15.705Z",
       "author": "pimo-pro",
       "commitMessage": "Industrial: Unificação geométrica das gavetas — laterais/costas/frentes iguais, corpo inferior 18,5 mm, folga superior ≥33 mm, pairing dos furos preservado",

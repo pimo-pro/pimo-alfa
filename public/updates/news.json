@@ -1,11 +1,21 @@
 {
-  "updatedAt": "2026-08-03T18:46:17.918Z",
+  "updatedAt": "2026-08-03T19:52:56.823Z",
   "news": [
+    {
+      "version": "v6.0803.2052",
+      "title": "Industrial: Elevação real do gaveta inferior",
+      "description": "Industrial: Elevação real do gaveta inferior\n\nCorpo a T+18,5 mm (18,5 mm acima do topo do FUNDO). Frente Y=0. Pairing dos furos preservado. Viewer e merge SSOT corrigidos.",
+      "publishedAt": "2026-08-03T19:52:56.821Z",
+      "type": "fix",
+      "author": "pimo-pro",
+      "icon": "fix",
+      "commit": "93583d3"
+    },
     {
       "version": "v6.0803.1946",
       "title": "Industrial: Unificação geométrica das gavetas",
       "description": "Industrial: Unificação geométrica das gavetas\n\nLaterais/costas/frentes iguais (sideH = h−64,5). Corpo inferior 18,5 mm. Folga superior ≥33 mm (elev 12,5). Pairing dos furos preservado. Gap 4 mm; piso 41 mm intacto.",
-      "publishedAt": "2026-08-03T18:46:17.915Z",
+      "publishedAt": "2026-08-03T19:50:48+01:00",
       "type": "fix",
       "author": "pimo-pro",
       "icon": "fix",
