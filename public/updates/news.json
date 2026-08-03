@@ -1,11 +1,21 @@
 {
-  "updatedAt": "2026-08-03T16:33:33.443Z",
+  "updatedAt": "2026-08-03T18:46:17.918Z",
   "news": [
+    {
+      "version": "v6.0803.1946",
+      "title": "Industrial: Unificação geométrica das gavetas",
+      "description": "Industrial: Unificação geométrica das gavetas\n\nLaterais/costas/frentes iguais (sideH = h−64,5). Corpo inferior 18,5 mm. Folga superior ≥33 mm (elev 12,5). Pairing dos furos preservado. Gap 4 mm; piso 41 mm intacto.",
+      "publishedAt": "2026-08-03T18:46:17.915Z",
+      "type": "fix",
+      "author": "pimo-pro",
+      "icon": "fix",
+      "commit": "3cf4823"
+    },
     {
       "version": "v6.0803.1733",
       "title": "Industrial: Correção geométrica gavetas 2/3 alinhada ao modelo SolidWorks — contrato 41 mm preservado",
       "description": "Industrial: Correção geométrica gavetas 2/3 alinhada ao modelo SolidWorks — contrato 41 mm preservado",
-      "publishedAt": "2026-08-03T16:33:32.520Z",
+      "publishedAt": "2026-08-03T17:37:46+01:00",
       "type": "update",
       "author": "pimo-pro",
       "icon": "update",
