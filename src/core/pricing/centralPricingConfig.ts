@@ -219,6 +219,34 @@ function mapMarketToLegacy(src: CentralPricingFile): {
     densidadePadraoKgM3: 750,
   };
 
+  const enableMaoDeObraCentral =
+    num(mao.montagem_caixa_m2, 0) > 0 || num(mao.montagem_gaveta, 0) > 0;
+  const custosIndustriaisMerged = {
+    // desperdício monetizado em % do custo de painéis (pricing.json desperdicio.percentual).
+    desperdicioEurPorM2: 0,
+    serragemEurPorM2: serragem,
+    custoChapaReal: 0,
+    custoOperacoesEspeciais: 0,
+    valorHoraMaquina: enableMaoDeObraCentral ? 35 : 0,
+    custoLogisticaPorKg: num(portes.local_kg, 3.5),
+    custoMontagemPorPeca: num(mao.montagem_gaveta, 22),
+    materialCostMode: "por_peca" as const,
+    enableDesperdicio: despPct > 0,
+    enableSerragem: serragem > 0,
+    enableLogistica: logistica > 0 || num(portes.local_kg, 0) > 0,
+    enableMaoDeObra: enableMaoDeObraCentral,
+    ...(typeof src.orcamentos === "object" && src.orcamentos && "custosIndustriais" in src.orcamentos
+      ? (src.orcamentos as { custosIndustriais?: object }).custosIndustriais
+      : {}),
+  };
+  // MO activa ⇒ valorHoraMaquina > 0 (spread legado não pode deixar 0).
+  if (
+    custosIndustriaisMerged.enableMaoDeObra === true &&
+    !(Number(custosIndustriaisMerged.valorHoraMaquina) > 0)
+  ) {
+    custosIndustriaisMerged.valorHoraMaquina = 35;
+  }
+
   const orcamentos = normalizeOrcamentosSettings({
     ...(src.orcamentos && typeof src.orcamentos === "object" ? src.orcamentos : {}),
     perfuracoes: {
@@ -229,24 +257,7 @@ function mapMarketToLegacy(src: CentralPricingFile): {
         ? (src.orcamentos as { perfuracoes?: object }).perfuracoes
         : {}),
     },
-    custosIndustriais: {
-      // desperdício monetizado em % do custo de painéis (pricing.json desperdicio.percentual).
-      desperdicioEurPorM2: 0,
-      serragemEurPorM2: serragem,
-      custoChapaReal: 0,
-      custoOperacoesEspeciais: 0,
-      valorHoraMaquina: 0,
-      custoLogisticaPorKg: num(portes.local_kg, 3.5),
-      custoMontagemPorPeca: num(mao.montagem_gaveta, 22),
-      materialCostMode: "por_peca",
-      enableDesperdicio: despPct > 0,
-      enableSerragem: serragem > 0,
-      enableLogistica: logistica > 0 || num(portes.local_kg, 0) > 0,
-      enableMaoDeObra: num(mao.montagem_caixa_m2, 0) > 0 || num(mao.montagem_gaveta, 0) > 0,
-      ...(typeof src.orcamentos === "object" && src.orcamentos && "custosIndustriais" in src.orcamentos
-        ? (src.orcamentos as { custosIndustriais?: object }).custosIndustriais
-        : {}),
-    },
+    custosIndustriais: custosIndustriaisMerged,
     operacoesAvancadas: {
       precoRasgoGaveta: num(operacoes.rasgo_cnc_metro, 0.275),
       ...(typeof src.orcamentos === "object" && src.orcamentos && "operacoesAvancadas" in src.orcamentos

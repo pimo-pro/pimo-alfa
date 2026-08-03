@@ -18,7 +18,7 @@ import {
   validateSettings,
   type SettingsSchema,
 } from "../core/settings/settingsService";
-import { mergeOrcamentosSettings } from "../core/orcamentos";
+import { isOrcamentosDay1IndustrialStub, mergeOrcamentosSettings } from "../core/orcamentos";
 import {
   loadCentralPricing,
   orcamentosDefaultsFromCentral,
@@ -89,12 +89,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       if (!token) {
         try {
           const resolved = resolveUserSettingsPipeline(null, globalPartial);
+          const centralOrc = orcamentosDefaultsFromCentral();
           const withPricing = {
             ...resolved,
-            orcamentos: mergeOrcamentosSettings(
-              orcamentosDefaultsFromCentral(),
-              resolved.orcamentos ?? {}
-            ),
+            orcamentos: isOrcamentosDay1IndustrialStub(resolved.orcamentos)
+              ? centralOrc
+              : mergeOrcamentosSettings(centralOrc, resolved.orcamentos ?? {}),
             financeiroAdmin: normalizeFinanceiroAdminSettings(
               resolved.financeiroAdmin ?? financeiroAdminDefaultsFromCentral()
             ),
@@ -129,12 +129,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
       try {
         const resolved = resolveUserSettingsPipeline(online, globalPartial);
+        const centralOrc = orcamentosDefaultsFromCentral();
         const withPricing = {
           ...resolved,
-          orcamentos: mergeOrcamentosSettings(
-            orcamentosDefaultsFromCentral(),
-            resolved.orcamentos ?? {}
-          ),
+          orcamentos: isOrcamentosDay1IndustrialStub(resolved.orcamentos)
+            ? centralOrc
+            : mergeOrcamentosSettings(centralOrc, resolved.orcamentos ?? {}),
           financeiroAdmin: normalizeFinanceiroAdminSettings(
             resolved.financeiroAdmin ?? financeiroAdminDefaultsFromCentral()
           ),

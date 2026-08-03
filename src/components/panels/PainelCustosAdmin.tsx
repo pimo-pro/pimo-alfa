@@ -1,31 +1,49 @@
 import { useMemo } from "react";
 import { useProject } from "../../context/useProject";
-import { useCutlistData } from "../../hooks/useCutlistData";
+import { useMaterials } from "../../hooks/useMaterials";
 import { useAuth } from "../../auth/useAuth";
 import { hasFullAccess } from "../../auth/rbac";
 import { canShowSectionPrices } from "../../admin/industrialSectionsConfig";
 import Panel from "../ui/Panel";
+import {
+  computeFinanceiroUnificado,
+  financeiroCustoRows,
+} from "../../core/financeiro";
 import { formatCurrency } from "../../utils/formatting";
 
 export default function PainelCustosAdmin() {
   const { project } = useProject();
-  const data = useCutlistData();
+  const { materials } = useMaterials();
   const { hasPermission } = useAuth();
   const isAdmin = hasFullAccess(hasPermission);
   const showPrices = canShowSectionPrices("totaisProjeto", isAdmin);
 
+  const snap = useMemo(
+    () =>
+      computeFinanceiroUnificado(
+        {
+          boxes: project.boxes,
+          rules: project.rules,
+          materialId: project.materialId,
+          projectName: project.projectName,
+          remates: project.remates,
+          rodapes: project.rodapes,
+          extractedPartsByBoxId: project.extractedPartsByBoxId,
+          industrialPieceEdits: project.industrialPieceEdits,
+          ferragemOrla: project.ferragemOrla,
+          orlaPresets: project.orlaPresets,
+          financeiroOverrides: project.financeiroOverrides,
+          financeiroAdminSettings: project.financeiroAdminSettings,
+        },
+        materials
+      ),
+    [project, materials]
+  );
+
   const rows = useMemo(() => {
     if (!showPrices) return [];
-    return [
-      ["Painéis", formatCurrency(data.custoTotalPaineis)],
-      ["Portas", formatCurrency(data.custoTotalPortas)],
-      ["Gavetas", formatCurrency(data.custoTotalGavetas)],
-      ["Ferragens", formatCurrency(data.custoTotalFerragens)],
-      ["Orla", formatCurrency(data.custoTotalOrla)],
-      ["Remates", formatCurrency(data.custoTotalRemates)],
-      ["Total projeto", formatCurrency(data.custoTotal)],
-    ] as const;
-  }, [data, showPrices]);
+    return financeiroCustoRows(snap);
+  }, [snap, showPrices]);
 
   if (!isAdmin) {
     return (
@@ -47,14 +65,14 @@ export default function PainelCustosAdmin() {
     <div className="bottom-info-hub__card">
       <h3 className="bottom-info-hub__card-title">Custos do projeto (ADMIN)</h3>
       <div className="data-list">
-        {rows.map(([label, value]) => (
+        {rows.map((row) => (
           <div
-            key={label}
-            className={`data-list__row${label === "Total projeto" ? " data-list__row--total" : ""}`}
+            key={row.label}
+            className={`data-list__row${row.total ? " data-list__row--total" : ""}`}
           >
-            <span className="data-list__label">{label}</span>
-            <span className={`data-list__value${label === "Total projeto" ? " data-list__value--accent" : ""}`}>
-              {value}
+            <span className="data-list__label">{row.label}</span>
+            <span className={`data-list__value${row.total ? " data-list__value--accent" : ""}`}>
+              {row.emBreve || row.valor == null ? "em breve" : formatCurrency(row.valor)}
             </span>
           </div>
         ))}

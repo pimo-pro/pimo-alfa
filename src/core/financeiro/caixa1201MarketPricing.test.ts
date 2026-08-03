@@ -114,12 +114,14 @@ describe("CAIXA 1201 — precos de mercado", () => {
     expect(c.operacoes, diag).toBeGreaterThan(2);
     expect(c.operacoes, diag).toBeLessThan(12);
     expect(c.operacoesAvancadas ?? 0, diag).toBeLessThan(3);
+    // Desperdício activo (SSOT pricing.json / orcamentosDefaultsFromCentral)
+    expect(c.desperdicio, diag).toBeGreaterThan(0);
     // ADM 5% (não 10%)
     expect(c.adm, diag).toBeGreaterThan(0);
     expect(c.adm / Math.max(1e-6, snap.subtotal), diag).toBeCloseTo(0.05, 2);
 
-    // Materiais+servicos tipicos: 100–280 (UI com IVA ~180–260)
+    // Com Desperdício/Serragem/MO activos + IVA 23%: faixa ~200–360
     expect(total, diag).toBeGreaterThan(90);
-    expect(total, diag).toBeLessThan(280);
+    expect(total, diag).toBeLessThan(360);
   });
 });

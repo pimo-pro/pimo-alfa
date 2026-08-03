@@ -9,15 +9,13 @@ import {
   type PiTipoFrente,
 } from "../../data/moveisUnificados/pi/settings";
 import type { DrawerHeightMode } from "../drawers/drawerHeightModeTypes";
-import {
-  defaultOrcamentosSettings,
-  type OrcamentosSettings,
-} from "../orcamentos";
+import { type OrcamentosSettings } from "../orcamentos";
 import {
   defaultFinanceiroAdminSettings,
   type FinanceiroAdminSettings,
 } from "../financeiro/financeiroAdminRules";
 import { FINANCEIRO_IVA_DEFAULT_PCT } from "../financeiro/financeiroUnificadoTypes";
+import { orcamentosDefaultsFromCentral } from "../pricing/centralPricingConfig";
 
 export const SETTINGS_STORAGE_KEY = "pimo_system_settings_v1";
 export const SETTINGS_SCHEMA_VERSION = 2;
@@ -270,7 +268,8 @@ export const settingsDefaults: SettingsSchema = {
     multiplicadorBase: 1,
     valorHoraMaquina: 35,
   },
-  orcamentos: defaultOrcamentosSettings(),
+  /** Boot: tarifas + flags industriais a partir de pricing.json (não day-1 off). */
+  orcamentos: orcamentosDefaultsFromCentral(),
   financeiroAdmin: defaultFinanceiroAdminSettings(),
   ivaPctDefault: FINANCEIRO_IVA_DEFAULT_PCT,
   materiais: {

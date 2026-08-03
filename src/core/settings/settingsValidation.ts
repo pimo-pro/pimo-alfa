@@ -6,9 +6,10 @@ import { PI_MODEL_DEFAULT_SETTINGS, clampPiNumeroGavetas } from "../../data/move
 import { sanitizeOrlaRulesInput } from "../../3d/viewer-engine/orla/orlaVisualRules";
 import { SETTINGS_SCHEMA_VERSION, settingsDefaults, type SettingsSchema } from "./settingsSchema";
 import { clamp, deepMergeSettings, normalizeDepths, toNumber, type ValidationResult } from "./settingsMerge";
-import { normalizeOrcamentosSettings } from "../orcamentos";
+import { isOrcamentosDay1IndustrialStub, normalizeOrcamentosSettings } from "../orcamentos";
 import { normalizeFinanceiroAdminSettings } from "../financeiro/financeiroAdminRules";
 import { FINANCEIRO_IVA_DEFAULT_PCT } from "../financeiro/financeiroUnificadoTypes";
+import { orcamentosDefaultsFromCentral } from "../pricing/centralPricingConfig";
 
 const DRAWER_SLIDE_TYPES = [
   "Hettich Quadro V6 You M Silent System",
@@ -84,7 +85,27 @@ export function validateSettings(input: Partial<SettingsSchema> | SettingsSchema
       multiplicadorBase: clamp(toNumber(merged.precos.multiplicadorBase, settingsDefaults.precos.multiplicadorBase), 0.1, 100),
       valorHoraMaquina: clamp(toNumber(merged.precos.valorHoraMaquina, settingsDefaults.precos.valorHoraMaquina), 0, 10000),
     },
-    orcamentos: normalizeOrcamentosSettings(merged.orcamentos),
+    orcamentos: (() => {
+      const n = normalizeOrcamentosSettings(merged.orcamentos);
+      // Soft-migrate: stub day-1 → SSOT central (flags + tarifas).
+      if (isOrcamentosDay1IndustrialStub(n)) {
+        return orcamentosDefaultsFromCentral();
+      }
+      // MO activa ⇒ valorHoraMaquina > 0.
+      if (n.custosIndustriais.enableMaoDeObra && !(n.custosIndustriais.valorHoraMaquina > 0)) {
+        return {
+          ...n,
+          custosIndustriais: {
+            ...n.custosIndustriais,
+            valorHoraMaquina: Math.max(
+              settingsDefaults.precos.valorHoraMaquina,
+              35
+            ),
+          },
+        };
+      }
+      return n;
+    })(),
     financeiroAdmin: normalizeFinanceiroAdminSettings(
       (merged as SettingsSchema).financeiroAdmin ?? settingsDefaults.financeiroAdmin
     ),

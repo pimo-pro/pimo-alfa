@@ -212,3 +212,20 @@ export function mergeOrcamentosSettings(
     ferragens: { ...base.ferragens, ...ferr },
   });
 }
+
+/**
+ * Stub day-1 (pré-pricing.json): flags industriais off + tarifas 0.
+ * Usado no boot para substituir por `orcamentosDefaultsFromCentral()`.
+ */
+export function isOrcamentosDay1IndustrialStub(raw: unknown): boolean {
+  const o = normalizeOrcamentosSettings(raw);
+  const c = o.custosIndustriais;
+  return (
+    c.enableDesperdicio === false &&
+    c.enableSerragem === false &&
+    c.enableMaoDeObra === false &&
+    c.valorHoraMaquina === 0 &&
+    c.serragemEurPorM2 === 0 &&
+    o.perfuracoes.drillEurPorFuro === 0
+  );
+}

@@ -1,5 +1,6 @@
 import type { CutListItem, CutListItemComPreco } from "../types";
 import { listOfficialMaterials, resolveMaterial } from "../materials/materials.api";
+import { listMaterials } from "../materials/service";
 import {
   chapaEurM2FromCentral,
   materialFallbackEurM2FromCentral,
@@ -22,9 +23,46 @@ const PRECOS_MATERIAIS: PrecoMaterial[] = listOfficialMaterials()
   });
 
 /**
- * Obtém o preço por m² de um material e espessura específicos
+ * Preço €/m² do CRUD Gestão de Materiais (SSOT editável).
+ * null = material não encontrado no catálogo CRUD.
+ */
+function precoPorM2FromMaterialsCrud(material: string): number | null {
+  try {
+    const raw = String(material || "").trim();
+    if (!raw) return null;
+    const lower = raw.toLowerCase();
+    const resolved = resolveMaterial(raw);
+    const list = listMaterials();
+    const match = list.find((m) => {
+      const id = String(m.id || "").toLowerCase();
+      const label = String(m.label || "").trim().toLowerCase();
+      const industrial = String(m.industrialMaterialId || "").toLowerCase();
+      if (id === lower || label === lower) return true;
+      if (resolved) {
+        const canon = String(resolved.canonicalId || "").toLowerCase();
+        const rLabel = String(resolved.label || "").trim().toLowerCase();
+        const viewer = String(resolved.viewerMaterialId || "").toLowerCase();
+        if (id === canon || industrial === canon || label === rLabel) return true;
+        if (viewer && (id === viewer || industrial === viewer)) return true;
+      }
+      return false;
+    });
+    if (!match) return null;
+    const p = Number(match.precoPorM2);
+    return Number.isFinite(p) && p >= 0 ? p : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Obtém o preço por m² de um material e espessura específicos.
+ * Ordem SSOT: 1) CRUD Gestão de Materiais · 2) pricing.json · 3) seed oficial · 4) fallback.
  */
 export function getPrecoPorMaterial(material: string, espessura: number): number {
+  const fromCrud = precoPorM2FromMaterialsCrud(material);
+  if (fromCrud != null) return fromCrud;
+
   const resolved = resolveMaterial(material);
   const lookupKey =
     resolved?.canonicalId ||

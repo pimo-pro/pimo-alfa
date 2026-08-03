@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   defaultOrcamentosSettings,
+  isOrcamentosDay1IndustrialStub,
   mergeOrcamentosSettings,
   normalizeOrcamentosSettings,
 } from "./orcamentosSettings";
@@ -14,6 +15,22 @@ describe("orcamentosSettings (P3.9)", () => {
     expect(d.ferragens.enableUnificacao).toBe(false);
     expect(d.operacoesAvancadas.precoForo5mm).toBe(0);
     expect(d.operacoesAvancadas.precoMeQuadrilha).toBe(0);
+  });
+
+  it("isOrcamentosDay1IndustrialStub detecta stub day-1", () => {
+    expect(isOrcamentosDay1IndustrialStub(defaultOrcamentosSettings())).toBe(true);
+    expect(
+      isOrcamentosDay1IndustrialStub({
+        custosIndustriais: {
+          enableDesperdicio: true,
+          enableSerragem: true,
+          enableMaoDeObra: true,
+          valorHoraMaquina: 35,
+          serragemEurPorM2: 0.8,
+        },
+        perfuracoes: { drillEurPorFuro: 0.0225 },
+      })
+    ).toBe(false);
   });
 
   it("normalize fills missing operacoesAvancadas", () => {

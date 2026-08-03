@@ -19,6 +19,7 @@ export type {
 export {
   defaultOperacoesAvancadasSettings,
   defaultOrcamentosSettings,
+  isOrcamentosDay1IndustrialStub,
   mergeOrcamentosSettings,
   normalizeOperacoesAvancadasSettings,
   normalizeOrcamentosSettings,
