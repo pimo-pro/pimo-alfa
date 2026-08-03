@@ -148,10 +148,10 @@ export function generateDrawerGroup(config: DrawerGenerationConfig): DrawerGroup
     const stackRole = resolveDrawerStackRole(i, drawerCount);
     const perDrawerOverrides = {
       ...drawerOverrides?.[i],
-      // Elevação corpo por role: lowest/single 18,5 · middle 17 · highest 12,5.
+      // Elevação corpo: lowest/single = T+18,5 · middle 17 · highest 12,5.
       sideBaseElevationMm:
         drawerOverrides?.[i]?.sideBaseElevationMm ??
-        resolveDrawerBodyElevationForStackRoleMm(stackRole),
+        resolveDrawerBodyElevationForStackRoleMm(stackRole, boxThickness),
     };
     const effectiveDrawerType = perDrawerOverrides?.drawerType ?? drawerType;
 

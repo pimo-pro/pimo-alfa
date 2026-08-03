@@ -346,6 +346,10 @@ export function regenerateLayersForBox(
           metadata: {
             ...generatedDrawers[i].metadata,
             ...existing.metadata,
+            // Elevação corpo = SSOT industrial (nunca sobrescrever com metadata antiga).
+            sideBaseElevationMm:
+              generatedDrawers[i].metadata?.sideBaseElevationMm ??
+              existing.metadata?.sideBaseElevationMm,
           },
         };
         const frontOverride = existing.metadata?.frontHeightMm;

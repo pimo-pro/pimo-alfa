@@ -229,11 +229,13 @@ export function buildDrawerSpecs(
       backPosZ: Number.isFinite(item.backPosZ)
         ? (item.backPosZ as number) / 1000
         : undefined,
-      woodBodyHeightM: item.backHeight
-        ? Math.max(0.001, item.backHeight / 1000)
-        : item.leftSideHeight
-          ? Math.max(0.001, item.leftSideHeight / 1000)
-          : undefined,
+      woodBodyHeightM: item.leftSideHeight
+        ? Math.max(0.001, item.leftSideHeight / 1000)
+        : item.bodyHeight
+          ? Math.max(0.001, item.bodyHeight / 1000)
+          : item.backHeight
+            ? Math.max(0.001, item.backHeight / 1000)
+            : undefined,
       bodyCenterOffsetYM: Number.isFinite(item.bodyCenterOffsetY)
         ? (item.bodyCenterOffsetY as number) / 1000
         : resolveDrawerBodyCenterOffsetYMm(
@@ -488,7 +490,7 @@ function resolveSpecSideCenterYM(spec: DrawerSpec): number {
   );
 }
 
-const DRAWER_VIEWER_LAYOUT_REV = "door-parity-single-material";
+const DRAWER_VIEWER_LAYOUT_REV = "drawer-body-elev-18-5-industrial-sideh";
 
 export function getDrawerStructureFingerprint(
   spec: DrawerSpec,
@@ -689,6 +691,9 @@ export function createDrawerObject(
       sideThicknessMm: (spec.leftSideWidthM ?? spec.sideThicknessM ?? 0.016) * 1000,
       slideLengthMm,
       baseElevationMm: resolveSpecSideBaseElevationMm(spec),
+      sideHeightMm:
+        (spec.leftSideHeightM ?? spec.woodBodyHeightM ?? spec.bodyHeightM ?? 0) * 1000 ||
+        undefined,
     });
   }
 
@@ -877,13 +882,22 @@ export function createDrawerObject(
           sideThicknessMm: (spec.leftSideWidthM ?? spec.sideThicknessM ?? 0.016) * 1000,
           slideLengthMm: (spec.bodyDepthM ?? viewerBodyDepthM) * 1000,
           baseElevationMm: resolveSpecSideBaseElevationMm(spec),
+          sideHeightMm:
+            (spec.leftSideHeightM ?? spec.woodBodyHeightM ?? spec.bodyHeightM ?? 0) * 1000 ||
+            undefined,
         });
       }
       const viewerSideHeightM = woodSideLayout.sideHeightMm / 1000;
-      const viewerSidePosYM = woodSideLayout.sidePosYMm / 1000;
+      // Preferir posY industrial da layer (leftSidePosY / bodyCenterOffset) quando existe.
+      const viewerSidePosYM = Number.isFinite(spec.leftSidePosY)
+        ? (spec.leftSidePosY as number)
+        : Number.isFinite(spec.bodyCenterOffsetYM)
+          ? (spec.bodyCenterOffsetYM as number)
+          : woodSideLayout.sidePosYMm / 1000;
       const sideDepthM = (spec.leftSideDepthM ?? woodSideLayout.sideDepthMm / 1000);
+      const sidePosYMm = viewerSidePosYM * 1000;
       woodBottomBackLayout = resolveDrawerViewerWoodBottomBackLayoutMm({
-        sidePosYMm: woodSideLayout.sidePosYMm,
+        sidePosYMm,
         sideHeightMm: woodSideLayout.sideHeightMm,
         internalWidthMm: woodSideLayout.internalWidthMm,
         sideThicknessMm: (spec.leftSideWidthM ?? spec.sideThicknessM ?? 0.016) * 1000,

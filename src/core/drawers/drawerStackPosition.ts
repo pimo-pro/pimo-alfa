@@ -29,23 +29,28 @@ export function resolveDrawerStackRole(
 
 /**
  * Elevação do corpo vs base da frente (mm) para a gaveta inferior / única.
- * Com `frontBottom=0` → `drawerBodyBottom = 18,5` acima da base do módulo.
+ * Folga 18,5 mm acima da face superior do FUNDO → elev = T_fundo + 18,5.
+ * Com `frontBottom=0` e T=19 → bodyBottom = 37,5 mm (18,5 acima do topo do FUNDO).
  */
-export function resolveLowestDrawerBodyElevationFromFrontMm(): number {
-  return DRAWER_LOWEST_BODY_ABOVE_MODULE_BASE_MM;
+export function resolveLowestDrawerBodyElevationFromFrontMm(
+  boxFloorThicknessMm: number = 19
+): number {
+  const T = Math.max(0, Number(boxFloorThicknessMm) || 0);
+  return T + DRAWER_LOWEST_BODY_ABOVE_MODULE_BASE_MM;
 }
 
 /**
  * Elevação industrial do corpo vs frente por papel no stack.
- * lowest/single: 18,5 · middle: 17 · highest: 12,5 (folga CIMA ≥33 mm).
+ * lowest/single: T+18,5 · middle: 17 · highest: 12,5 (folga CIMA ≥33 mm).
  */
 export function resolveDrawerBodyElevationForStackRoleMm(
-  stackRole: DrawerStackRole
+  stackRole: DrawerStackRole,
+  boxFloorThicknessMm: number = 19
 ): number {
   switch (stackRole) {
     case "lowest":
     case "single":
-      return DRAWER_LOWEST_BODY_ABOVE_MODULE_BASE_MM;
+      return resolveLowestDrawerBodyElevationFromFrontMm(boxFloorThicknessMm);
     case "highest":
       return DRAWER_HIGHEST_BODY_ELEVATION_FROM_FRONT_MM;
     case "middle":

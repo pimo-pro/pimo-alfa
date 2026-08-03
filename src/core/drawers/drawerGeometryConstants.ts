@@ -21,11 +21,11 @@ export const DRAWER_SIDE_HEIGHT_RATIO = 1 - DRAWER_SIDE_TOP_CLEARANCE_RATIO;
 
 /**
  * Elevação da base das laterais/costa em relação à base da frente (mm).
- * Intervalo industrial: 12,5 (superior, folga CIMA ≥33) … 22.
+ * Intervalo: 12,5 (superior) … até T_fundo+18,5 (inferior, folga real sobre FUNDO).
  */
 export const DRAWER_SIDE_BASE_ELEVATION_MIN_MM = 12.5;
-export const DRAWER_SIDE_BASE_ELEVATION_MAX_MM = 22;
-/** Elevação corpo — gavetas intermédias. */
+export const DRAWER_SIDE_BASE_ELEVATION_MAX_MM = 60;
+/** Elevação corpo — gavetas intermédias (vs frente). */
 export const DRAWER_SIDE_BASE_ELEVATION_MM = 17;
 /**
  * Elevação corpo — gaveta superior (stackRole=highest).
@@ -40,12 +40,16 @@ export const DRAWER_HIGHEST_BODY_ELEVATION_FROM_FRONT_MM = 12.5;
 export const DRAWER_LOWEST_FRONT_BOTTOM_FROM_MODULE_BASE_MM = 0;
 
 /**
- * Gaveta inferior: corpo (laterais/fundo) 18,5 mm acima da base do módulo.
- * Com `frontBottom(lowest)=0`, isto é também a elevação das laterais vs base da frente.
- * Furos da frente: pairing `elev+15` / `elev+sideH−35` / rasgo `elev+sideH−13` (reposicionam com elev).
+ * Folga industrial do corpo da gaveta inferior acima da face superior do FUNDO (mm).
+ * A elevação vs frente (flush na base exterior) é `espessura_FUNDO + 18,5`.
+ * Ex.: T=19 → elev=37,5 → lateral 18,5 mm acima do topo do FUNDO (não encostada).
+ * Furos da frente: pairing `elev+15` / `elev+sideH−35` / rasgo `elev+sideH−13`.
  * Piso da corrediça (41 mm) é independente.
  */
 export const DRAWER_LOWEST_BODY_ABOVE_MODULE_BASE_MM = 18.5;
+/** @deprecated Alias semântico — usar DRAWER_LOWEST_BODY_ABOVE_MODULE_BASE_MM (folga sobre FUNDO). */
+export const DRAWER_LOWEST_CLEARANCE_ABOVE_FLOOR_PANEL_MM =
+  DRAWER_LOWEST_BODY_ABOVE_MODULE_BASE_MM;
 
 /**
  * Furação industrial da frente do gaveta inferior (`stackRole = "lowest"`).

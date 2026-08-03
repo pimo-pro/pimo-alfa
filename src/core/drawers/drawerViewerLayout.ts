@@ -49,21 +49,20 @@ export function resolveDrawerSideBaseElevationMm(
   return DRAWER_SIDE_BASE_ELEVATION_MM;
 }
 
-/** Altura do corpo madeira (laterais/costa). Com role: SSOT SolidWorks; sem role: 75% legado. */
+/** Altura do corpo madeira (laterais). SSOT industrial unificado: sideH = h − 64,5. */
 export function resolveDrawerWoodBodyHeightMm(
   frontHeightMm: number,
   stackRole?: import("./drawerStackPosition").DrawerStackRole
 ): number {
-  const frontH = Math.max(0, Number(frontHeightMm));
-  if (stackRole != null) {
-    return resolveDrawerWoodBodyHeightForStackRoleMm(frontH, stackRole);
-  }
-  return Math.max(1, frontH * DRAWER_SIDE_HEIGHT_RATIO);
+  return resolveDrawerWoodBodyHeightForStackRoleMm(
+    frontHeightMm,
+    stackRole ?? "middle"
+  );
 }
 
 /**
  * Offset Y do centro das laterais/costa.
- * Base da lateral = base da frente + elevação industrial (15–22 mm).
+ * Base da lateral = base da frente + elevação industrial (12,5–22 mm).
  */
 export function resolveDrawerBodyCenterOffsetYMm(
   frontHeightMm: number,
@@ -224,10 +223,17 @@ export function resolveDrawerViewerWoodSideLayoutMm(input: {
   sideThicknessMm: number;
   /** Comprimento nominal da corrediça (mm). */
   slideLengthMm: number;
-  /** Elevação da base das laterais vs frente (mm). Default 17; inferior 18,5; superior 12,5. */
+  /** Elevação da base das laterais vs frente (mm). Inferior 18,5; mid 17; superior 12,5. */
   baseElevationMm?: number;
+  /** Altura industrial das laterais (mm). Default = frontH − 64,5. */
+  sideHeightMm?: number;
 }): DrawerViewerWoodSideLayoutMm {
-  const sideHeightMm = resolveDrawerViewerSideHeightMm(input.frontHeightMm);
+  const sideHeightMm =
+    input.sideHeightMm != null &&
+    Number.isFinite(input.sideHeightMm) &&
+    input.sideHeightMm > 0
+      ? input.sideHeightMm
+      : resolveDrawerViewerSideHeightMm(input.frontHeightMm);
   const internalWidthMm = resolveDrawerViewerInternalWidthMm(input.bodyWidthMm);
   const slideLength = Math.max(0, Number(input.slideLengthMm));
   const sideDepthMm = resolveDrawerSideDepthMm(slideLength);

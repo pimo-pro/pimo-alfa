@@ -1,5 +1,5 @@
 /**
- * Stack dinâmico anti-sobreposição ? alturas/bottoms/slides a partir de H real.
+ * Stack din?mico anti-sobreposi??o ? alturas/bottoms/slides a partir de H real.
  * Laterais unificadas h?64,5; elev 18,5 / 17 / 12,5.
  */
 import { describe, expect, it } from "vitest";
@@ -24,11 +24,11 @@ import { DRAWER_SLIDE_OFFSET_FROM_BOTTOM_MM } from "../core/drawers/drilling/dra
 import { resolveEuropeanModuleRunnerLinesYMm } from "../core/drawers/drilling/DrawerDrillingRules";
 import { settingsDefaults } from "../core/settings/settingsSchema";
 
-describe("stack dinâmico anti-sobreposição", () => {
+describe("stack din?mico anti-sobreposi??o", () => {
   const H = 762;
   const T = 19;
 
-  it("fórmula equal: zero overlap, gaps 4, slides = bottom+41", () => {
+  it("f?rmula equal: zero overlap, gaps 4, slides = bottom+41", () => {
     const layout = resolveDynamicEqualDrawerStackLayout({
       count: 3,
       boxHeightMm: H,
@@ -97,10 +97,10 @@ describe("stack dinâmico anti-sobreposição", () => {
     const anti = assertNoDrawerFrontOverlap({ bottoms, tops });
     expect(anti.ok).toBe(true);
 
-    expect(layers[0]!.metadata?.sideBaseElevationMm).toBe(18.5);
+    expect(layers[0]!.metadata?.sideBaseElevationMm).toBe(19 + 18.5);
     expect(layers[1]!.metadata?.sideBaseElevationMm).toBe(17);
     expect(layers[2]!.metadata?.sideBaseElevationMm).toBe(12.5);
-    // Mesmas dimensões industriais
+    // Mesmas dimens?es industriais
     expect(layers[0]!.bodyHeight).toBeCloseTo(layers[1]!.bodyHeight!, 5);
     expect(layers[1]!.bodyHeight).toBeCloseTo(layers[2]!.bodyHeight!, 5);
     expect(heights[0]).toBeCloseTo(heights[1]!, 5);
@@ -110,7 +110,7 @@ describe("stack dinâmico anti-sobreposição", () => {
     const bodyH = layers[0]!.bodyHeight!;
     const offsetY = layers[0]!.bodyCenterOffsetY!;
     const bodyBottom = layers[0]!.posY! + offsetY - bodyH / 2;
-    expect(bodyBottom - moduleBase).toBeCloseTo(18.5, 5);
+    expect(bodyBottom - moduleBase).toBeCloseTo(19 + 18.5, 5);
 
     const bodyH2 = layers[2]!.bodyHeight!;
     const offsetY2 = layers[2]!.bodyCenterOffsetY!;
@@ -141,7 +141,7 @@ describe("stack dinâmico anti-sobreposição", () => {
     expect(fromBottom[2]).toBeCloseTo(551.667, 3);
   });
 
-  it("calculateDrawerHeights equal clássico (não SW fixo)", () => {
+  it("calculateDrawerHeights equal cl?ssico (n?o SW fixo)", () => {
     const heights = calculateDrawerHeights(3, H, "equal", undefined, {
       topPanelThicknessMm: T,
     });

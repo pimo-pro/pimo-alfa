@@ -370,7 +370,10 @@ export function calculateDrawerSpecs(
     overrides?.sideBaseElevationMm != null && Number.isFinite(overrides.sideBaseElevationMm)
       ? overrides.sideBaseElevationMm
       : dimensions.stackRole != null
-        ? resolveDrawerBodyElevationForStackRoleMm(dimensions.stackRole)
+        ? resolveDrawerBodyElevationForStackRoleMm(
+            dimensions.stackRole,
+            dimensions.boxThickness
+          )
         : DRAWER_SIDE_BASE_ELEVATION_MM;
   const bodyCenterOffsetY = resolveDrawerBodyCenterOffsetYMm(
     frontHeight,

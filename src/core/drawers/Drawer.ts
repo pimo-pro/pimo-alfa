@@ -168,13 +168,14 @@ export function createDrawer(
       },
       
       // ===== TRASEIRA =====
-      // Traseira no fundo do corpo, entre as laterais.
+      // Costa mais baixa 23 mm; topo alinhado com laterais (assenta no fundo).
       back: {
         width: specs.back.width,
         height: specs.back.height,
         depth: backThickness,
         positionX: 0,
-        positionY: bodyCenterOffsetY,
+        positionY:
+          bodyCenterOffsetY + (bodyHeight - specs.back.height) / 2,
         positionZ: resolveDrawerBackCenterZMm(
           combinedFrontThickness,
           woodSideDepth > 0 ? woodSideDepth : bodyDepth,

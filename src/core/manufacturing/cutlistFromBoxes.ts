@@ -624,7 +624,8 @@ export function cutlistComPrecoFromBox(
           drawerSideThicknessMm: drawerRules?.sideThicknessMm,
           drawerBottomThicknessMm: drawerRules?.bottomThicknessMm,
           drawerSideBaseElevationMm: resolveDrawerBodyElevationForStackRoleMm(
-            (stackRole as DrawerStackRole) || "middle"
+            (stackRole as DrawerStackRole) || "middle",
+            Number(box.espessura) || 19
           ),
           drawerStackRole: stackRole,
           isLowestDrawer:
