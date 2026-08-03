@@ -45,7 +45,7 @@ export function loadHubStats(): HubStatsSnapshot {
       {
         id: "loc",
         label: "Linhas de c\u00f3digo",
-        value: "297.871",
+        value: "345.100",
         hint: "Scan de c\u00f3digo",
         icon: "code",
         tone: "blue",
@@ -54,7 +54,7 @@ export function loadHubStats(): HubStatsSnapshot {
       {
         id: "files",
         label: "Arquivos",
-        value: "2.027",
+        value: "2.320",
         hint: "Scan de c\u00f3digo",
         icon: "files",
         tone: "blue",
