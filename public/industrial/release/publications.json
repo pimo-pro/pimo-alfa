@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-08-03T16:33:30.734Z",
+      "author": "pimo-pro",
+      "commitMessage": "Industrial: Correção geométrica gavetas 2/3 alinhada ao modelo SolidWorks — contrato 41 mm preservado",
+      "version": "v6.0803.1733"
+    },
+    {
       "publishedAt": "2026-08-03T15:48:41.706Z",
       "author": "pimo-pro",
       "commitMessage": "Industrial: Conclusão do plano de correção (Fases 1–4) — estabilidade financeira e SSOT consolidado",
