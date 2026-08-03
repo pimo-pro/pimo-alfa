@@ -10,6 +10,7 @@ import {
 } from "./industrialThicknessResolution";
 import { sanitizeIndustrialFileToken } from "./industrialNestingGroup";
 import { applyRotationGeometryToSheets } from "../cutlayout/utils/cutLayoutGeomRotation";
+import { isDrawerFrontPieceTipo } from "../drill/xmlMachineRouting";
 
 /** Opções de nesting alinhadas ao TCN: kerf = minSpacing (entre contornos) + 2×raio da fresa. */
 export function getDefaultCncLayoutOptions(sheet?: SheetDefinition): CutLayoutEngineOptions {
@@ -117,6 +118,22 @@ function applyDrillHoles(items: CutlistItemForPieces[]): CutlistItemForPieces[] 
   });
 }
 
+/**
+ * Frentes de gaveta: nesting/corte CNC mantém-se; furação TCN é proibida.
+ * Todos os furos/rasgos da frente ficam exclusivos da estação DRILL.
+ */
+export function stripDrawerFrontHolesForCnc(items: CutlistItemForPieces[]): CutlistItemForPieces[] {
+  return items.map((item) => {
+    const tipo = String((item as unknown as { tipo?: unknown }).tipo ?? "");
+    if (!isDrawerFrontPieceTipo(tipo)) return item;
+    const next = { ...item, drillHoles: [] as CutlistItemForPieces["drillHoles"] };
+    if ("holes" in next) {
+      (next as unknown as { holes?: unknown }).holes = [];
+    }
+    return next;
+  });
+}
+
 function applyCutlistMetadata(items: CutlistItemForPieces[]): CutlistItemForPieces[] {
   return items.map((item) => {
     const existing = (item as unknown as { metadata?: Record<string, unknown> }).metadata;
@@ -168,7 +185,9 @@ export function buildCncFromCutlistItems(
     if (items.length === 0) {
       return null;
     }
-    const industrialItems = applyCutlistMetadata(applyDrillHoles(applyIndustrialRules(items)));
+    const industrialItems = applyCutlistMetadata(
+      stripDrawerFrontHolesForCnc(applyDrillHoles(applyIndustrialRules(items)))
+    );
     const thicknessResolution = resolveIndustrialThicknesses(industrialItems, listMaterials());
     if (thicknessResolution.unresolved.length > 0) {
       throw new Error(

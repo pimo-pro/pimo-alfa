@@ -1,5 +1,12 @@
 # Novidades do Sistema
 
+### Atualização Industrial — Correções DRILL
+- Furos Ø4 substituídos por Ø5
+- Z centrado na espessura (T/2)
+- Laterais de módulo alinhadas ao XML golden
+- Gavetas protegidas (sem alterações)
+- Sistema DRILL/Export totalmente estabilizado
+
 ### Atualizacao - Layout de Corte PRO
 - Nome completo das pecas agora segue o padrao da etiqueta (Projeto_Caixa_Peca).
 - Miniatura das pecas redesenhada em landscape, sem bordas.

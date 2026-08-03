@@ -1,5 +1,5 @@
 /**
- * Golden reference — GAVETA 1/XML_COMPLITO (apenas DRILL).
+ * Golden reference ï¿½ GAVETA 1/XML_COMPLITO (apenas DRILL).
  */
 import { describe, expect, it } from "vitest";
 import { buildDrillStationXmlFilesForProject } from "./drillExport";
@@ -57,12 +57,12 @@ function xmlFor(
   });
 }
 
-describe("golden XML_COMPLITO — laterais", () => {
+describe("golden XML_COMPLITO ï¿½ laterais", () => {
   const L = 540;
   const W = 195.5;
   const T = 16;
 
-  it("LAT_DIR — TypeNo1 face + TypeNo2 aresta + 2 rasgos", () => {
+  it("LAT_DIR ï¿½ TypeNo1 face + TypeNo2 aresta + 2 rasgos", () => {
     const holes = computeDrawerLateralStructuralHoles({
       largura: L,
       altura: W,
@@ -100,7 +100,7 @@ describe("golden XML_COMPLITO — laterais", () => {
     expect((xml.match(/<CAD>/g) ?? []).length).toBe(6);
   });
 
-  it("LAT_ESQ — espelho (face X=T/2, aresta X=L)", () => {
+  it("LAT_ESQ ï¿½ espelho (face X=T/2, aresta X=L)", () => {
     const holes = computeDrawerLateralStructuralHoles({
       largura: L,
       altura: W,
@@ -119,7 +119,7 @@ describe("golden XML_COMPLITO — laterais", () => {
   });
 });
 
-describe("golden XML_COMPLITO — costa", () => {
+describe("golden XML_COMPLITO ï¿½ costa", () => {
   it("altura = lateral ? 23; Y=15/W-15; Depth 30; topo X=8", () => {
     const sideH = 195.5;
     const costaH = sideH - DRAWER_COSTA_HEIGHT_BELOW_LATERAL_MM;
@@ -151,14 +151,14 @@ describe("golden XML_COMPLITO — costa", () => {
   });
 });
 
-describe("golden XML_COMPLITO — frente inferior pairing laterais", () => {
+describe("golden XML_COMPLITO ï¿½ frente inferior pairing laterais", () => {
   const L = 798;
   const W = 260.67;
   const T = 19;
   const sideH = 195.5;
   const elev = 18.5;
 
-  it("rasgo W-56.5; cavilhas = elev+15 e elev+(sideH-35); X=33", () => {
+  it("legado fixed holes: rasgo W-56.5; cavilhas = elev+15 e elev+(sideH-35); X=33", () => {
     const holes = computeDrawerLowestFrenteExtFixedHoles({
       largura: L,
       altura: W,
@@ -184,6 +184,13 @@ describe("golden XML_COMPLITO — frente inferior pairing laterais", () => {
     expect(cav.every((h) => h.x === 33 || h.x === L - 33)).toBe(true);
     expect(cav.every((h) => h.topDrillable === true)).toBe(true);
     expect(Math.abs(upperY - lowerY)).toBeGreaterThan(50);
+  });
+
+  it("produÃ§Ã£o GAV_FRENTE_EXT_01: mesmo padrÃ£o das frentes 2/3 (rasgo elev+sideHâˆ’13)", () => {
+    const lowerY = elev + 15;
+    const upperY = elev + (sideH - 35);
+    const grooveY = elev + sideH - 13;
+    expect(grooveY - upperY).toBeCloseTo(22, 5);
 
     const xml = xmlFor(
       "gaveta_frente_ext",
@@ -202,9 +209,10 @@ describe("golden XML_COMPLITO — frente inferior pairing laterais", () => {
     expect(xml).toContain("<X1>33.00</X1>");
     expect(xml).toContain(`<Y1>${lowerY.toFixed(2)}</Y1>`);
     expect(xml).toContain(`<Y1>${upperY.toFixed(2)}</Y1>`);
-    expect(xml).toContain("<BeginX>12.00</BeginX>");
-    expect(xml).toContain(`<EndX>${(L - 12).toFixed(2)}</EndX>`);
-    expect(xml).toContain(`<BeginY>${(W - 56.5).toFixed(2)}</BeginY>`);
+    expect(xml).toContain("<BeginX>25.00</BeginX>");
+    expect(xml).toContain(`<EndX>${(L - 25).toFixed(2)}</EndX>`);
+    expect(xml).toContain(`<BeginY>${grooveY.toFixed(2)}</BeginY>`);
+    expect(xml).not.toContain(`<BeginY>${(W - 56.5).toFixed(2)}</BeginY>`);
     expect(xml).not.toContain("<TypeNo>2</TypeNo>");
   });
 });

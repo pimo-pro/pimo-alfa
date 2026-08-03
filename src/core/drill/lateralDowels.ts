@@ -14,11 +14,13 @@ export type LateralDowelHole = {
 };
 
 /**
- * Calcula os 4 furos de cavilha para uma peça lateral.
- * x1 = frontDistance (ex: 60mm)
- * x2 = panelLength - backDistance (ex: panelLength - 60mm)
- * edge "top" = borda superior (ligação a cima)
- * edge "bottom" = borda inferior (ligação a fundo)
+ * Calcula os 4 furos de cavilha para uma peça lateral de MÓDULO (cutlist frame).
+ * x1 = frontDistance (ex: 60mm) ao longo da **profundidade** (cutlist.largura)
+ * x2 = panelDepth - backDistance
+ * edge "top"/"bottom" = ligação a cima/fundo (eixo da **altura** no cutlist)
+ *
+ * No XML DRILL (golden módulo) estes furos são remapeados para:
+ *   PanelLength=altura, PanelWidth=profundidade, X∈{0,L}, Y=x_cutlist.
  */
 export function calcLateralDowelHoles(panelLengthMm: number): LateralDowelHole[] {
   const front = getDrillFrontDistance();

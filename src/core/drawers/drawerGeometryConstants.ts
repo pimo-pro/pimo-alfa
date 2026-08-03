@@ -39,9 +39,10 @@ export const DRAWER_LOWEST_BODY_ABOVE_MODULE_BASE_MM = 18.5;
 
 /**
  * Furação industrial da frente do gaveta inferior (`stackRole = "lowest"`).
- * Golden rasgo: Y = W−56.5, X inset = 12.
- * Cavilhas 10×13: pairing estrito com aresta dos laterais (Y = elev + 15 / elev + sideH−35);
- * X = overhang + T/2 (≈33 no exemplo XML_COMPLITO).
+ * Legado / referência XML_COMPLITO: Y = W−56.5, X inset = 12.
+ * Produção actual: mesmo padrão das frentes 2/3 via `computeDrawerFrenteExtStructuralHoles`
+ * (rasgo elev+sideH−13; cavilhas elev+15 / elev+sideH−35).
+ * `computeDrawerLowestFrenteExtFixedHoles` mantém o golden legado para regressão.
  * `DRAWER_LOWEST_FRONT_DOWEL_FROM_TOP_MM` (73.5) é legado — não usar para gerar furos.
  */
 export const DRAWER_LOWEST_FRONT_GROOVE_FROM_TOP_MM = 56.5;

@@ -379,7 +379,7 @@ export const defaultRulesConfig: RulesConfig = {
           cima: true,
           fundo: true,
         },
-        diametro: 4,
+        diametro: 5,
         profundidade: 19,
         profundidadeIgualEspessura: true,
       },

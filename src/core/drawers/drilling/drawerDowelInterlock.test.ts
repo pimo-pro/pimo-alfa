@@ -30,7 +30,7 @@ import {
 import { cutlistComPrecoFromBox } from "../../manufacturing/cutlistFromBoxes";
 import { isDrawerPieceTipo } from "../../../services/drawerCutlistAdapter";
 
-describe("drawerDowelInterlock — profundidade e centro (golden)", () => {
+describe("drawerDowelInterlock ï¿½ profundidade e centro (golden)", () => {
   it("clamp aresta legado: 16?14, 19?17 (export usa Depth 30 fixed)", () => {
     expect(clampDrawerEdgeDowelDepthMm(16)).toBe(14);
     expect(clampDrawerEdgeDowelDepthMm(19)).toBe(17);
@@ -43,7 +43,7 @@ describe("drawerDowelInterlock — profundidade e centro (golden)", () => {
     expect(clampDrawerFaceDowelDepthMm(19)).toBe(13);
     expect(clampDrawerFaceDowelDepthMm(10)).toBe(9);
     expect(assertDowelDoesNotThrough(13, 16)).toBe(true);
-    expect(assertDowelDoesNotThrough(30, 16)).toBe(false); // aresta vai ao longo do painel, não T
+    expect(assertDowelDoesNotThrough(30, 16)).toBe(false); // aresta vai ao longo do painel, nï¿½o T
   });
 
   it("centro espessura = T/2", () => {
@@ -131,7 +131,7 @@ describe.each([
   });
 });
 
-describe("stack — Y frontais golden (isLowest ignorado)", () => {
+describe("stack ï¿½ Y frontais golden (isLowest ignorado)", () => {
   it("mesma tabela 15 / H?35 com ou sem isLowestDrawer", () => {
     const holes = computeDrawerFrenteIntStructuralHoles({
       largura: 600,
@@ -202,7 +202,7 @@ describe("XML / DRILL alinhado com coordenadas golden", () => {
     expect(xml).toContain("<Depth>30.00</Depth>");
   });
 
-  it("pipeline stack 3 — laterais/costa/frente com furos", () => {
+  it("pipeline stack 3 ï¿½ laterais/costa/frente com furos", () => {
     const { layers } = buildDrawerScenario({
       boxWidth: 600,
       boxHeight: 720,
@@ -242,7 +242,7 @@ describe("XML / DRILL alinhado com coordenadas golden", () => {
       const t = sample.espessura ?? 16;
       for (const h of rebuilt.data?.drillHoles ?? []) {
         if (h.holeSubtype === "groove") continue;
-        // Face: depth < T; aresta TypeNo=2 Depth 30 é ao longo do painel (não through-T)
+        // Face: depth < T; aresta TypeNo=2 Depth 30 ï¿½ ao longo do painel (nï¿½o through-T)
         if (h.depth >= t) {
           expect(h.depth).toBe(30);
         } else {

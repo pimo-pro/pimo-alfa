@@ -1,5 +1,5 @@
 /**
- * drill/XML: *_COMPLETO.xml (todas) + *_DRILL.xml (s estao DRILL).
+ * drill/{qr}.xml (principal, todas) + drill/XML/{qr}_DRILL.xml (so estacao DRILL).
  */
 import { describe, expect, it } from "vitest";
 import { defaultRulesConfig } from "../rules/rulesConfig";
@@ -71,17 +71,21 @@ const cav: PanelDrillHole[] = [
   { x: 0, y: 39, diameter: 10, depth: 14, holeType: "cavilha" },
 ];
 
-describe("drill/XML  COMPLETO + DRILL", () => {
-  it("cx_gav_* e div/sep ? DRILL", () => {
+describe("drill principal + DRILL split", () => {
+  it("cx_gav_* e div/sep -> DRILL", () => {
     expect(resolveXmlMachineTarget("cx_gav_lat_dir")).toBe("drill");
     expect(resolveXmlMachineTarget("cx_gav_lat_esq")).toBe("drill");
     expect(resolveXmlMachineTarget("cx_gav_cima")).toBe("drill");
-    expect(resolveXmlMachineTarget(item("cx_gav_lat_dir", { largura: 400, altura: 150 }, cav, {
-      nome: "CX_GAV_LAT_DIR",
-    }))).toBe("drill");
+    expect(
+      resolveXmlMachineTarget(
+        item("cx_gav_lat_dir", { largura: 400, altura: 150 }, cav, {
+          nome: "CX_GAV_LAT_DIR",
+        })
+      )
+    ).toBe("drill");
   });
 
-  it("_DRILL s tem peas da estao DRILL; _COMPLETO tem todas", () => {
+  it("_DRILL so tem pecas da estacao DRILL; principal tem todas", () => {
     const items = [
       item("cima", { largura: 600, altura: 560 }, holes, { metadata: { qrCode: "C1_TOP-1" } }),
       item("fundo", { largura: 600, altura: 560 }, holes, { metadata: { qrCode: "C1_FUN-1" } }),
@@ -100,7 +104,7 @@ describe("drill/XML  COMPLETO + DRILL", () => {
     ];
 
     const drill = buildDrillStationXmlFilesForProject(items, project);
-    const completo = buildDrillCompletoXmlFilesForProject(items, project);
+    const principal = buildDrillCompletoXmlFilesForProject(items, project);
     const cnc = buildCncXmlFilesForProject(items, project);
 
     expect(drill.map((f) => f.filenameBase).sort()).toEqual([
@@ -113,16 +117,18 @@ describe("drill/XML  COMPLETO + DRILL", () => {
     expect(drill.some((f) => f.filenameBase.includes("TOP"))).toBe(false);
     expect(drill.some((f) => f.filenameBase.includes("FUN"))).toBe(false);
 
-    expect(completo).toHaveLength(6);
-    expect(completo.every((f) => f.filenameBase.endsWith("_COMPLETO"))).toBe(true);
-    expect(completo.every((f) => f.zipPath.startsWith("drill/XML/"))).toBe(true);
-    expect(completo.map((f) => f.filenameBase).sort()).toEqual([
-      "C1_FUN-1_COMPLETO",
-      "C1_GAV_COST-1_COMPLETO",
-      "C1_GAV_FRENT-1_COMPLETO",
-      "C1_LAT_ESQ-1_COMPLETO",
-      "C1_SEP-1_COMPLETO",
-      "C1_TOP-1_COMPLETO",
+    expect(principal).toHaveLength(6);
+    expect(principal.every((f) => !f.filenameBase.endsWith("_COMPLETO"))).toBe(true);
+    expect(
+      principal.every((f) => f.zipPath.startsWith("drill/") && !f.zipPath.includes("/XML/"))
+    ).toBe(true);
+    expect(principal.map((f) => f.filenameBase).sort()).toEqual([
+      "C1_FUN-1",
+      "C1_GAV_COST-1",
+      "C1_GAV_FRENT-1",
+      "C1_LAT_ESQ-1",
+      "C1_SEP-1",
+      "C1_TOP-1",
     ]);
 
     expect(cnc.map((f) => f.zipPath).sort()).toEqual([
@@ -131,8 +137,10 @@ describe("drill/XML  COMPLETO + DRILL", () => {
     ]);
   });
 
-  it("etiqueta DRILL s para peas da estao DRILL (COMPLETO no conta)", () => {
-    expect(pieceShouldHaveDrillLabel(item("cima", { largura: 600, altura: 560 }, holes))).toBe(false);
+  it("etiqueta DRILL so para pecas da estacao DRILL (principal nao conta)", () => {
+    expect(pieceShouldHaveDrillLabel(item("cima", { largura: 600, altura: 560 }, holes))).toBe(
+      false
+    );
     expect(
       pieceShouldHaveDrillLabel(item("lateral_direita", { largura: 351, altura: 720 }, holes))
     ).toBe(true);

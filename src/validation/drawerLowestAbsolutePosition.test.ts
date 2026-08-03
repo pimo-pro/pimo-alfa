@@ -1,5 +1,5 @@
 /**
- * Posição absoluta do gaveta inferior: frontBottom=0, bodyBottom=18.5.
+ * Posiï¿½ï¿½o absoluta do gaveta inferior: frontBottom=0, bodyBottom=18.5.
  */
 import { describe, expect, it } from "vitest";
 import {
@@ -18,7 +18,7 @@ import { computeDrawerFrenteExtStructuralHoles } from "../core/drawers/drilling/
 import { resolveDrawerWoodBodyHeightMm } from "../core/drawers/drawerViewerLayout";
 import { settingsDefaults } from "../core/settings/settingsSchema";
 
-describe("gaveta inferior — posição absoluta corpo/frente", () => {
+describe("gaveta inferior ï¿½ posiï¿½ï¿½o absoluta corpo/frente", () => {
   it("constantes SSOT", () => {
     expect(DRAWER_LOWEST_FRONT_BOTTOM_FROM_MODULE_BASE_MM).toBe(0);
     expect(DRAWER_VERTICAL_BASE_OFFSET_MM).toBe(0);
@@ -27,7 +27,7 @@ describe("gaveta inferior — posição absoluta corpo/frente", () => {
     expect(DRAWER_SLIDE_OFFSET_FROM_BOTTOM_MM).toBe(41);
   });
 
-  it("generateDrawerGroup — frontBottom=0, bodyBottom=18.5; superior elev=17", () => {
+  it("generateDrawerGroup ï¿½ frontBottom=0, bodyBottom=18.5; superior elev=17", () => {
     const boxH = 720;
     const group = generateDrawerGroup({
       boxWidth: 600,
@@ -73,9 +73,10 @@ describe("gaveta inferior — posição absoluta corpo/frente", () => {
     ).toBeCloseTo(18.5, 5);
   });
 
-  it("furos fixos lowest / progressivos highest inalterados", () => {
+  it("furos lowest/highest: mesmo padrÃ£o elev+sideHâˆ’13 (distÃ¢ncia cavilhaâ†”rasgo = 22)", () => {
     const frontH = 358;
     const sideH = resolveDrawerWoodBodyHeightMm(frontH);
+    const elev = DRAWER_SIDE_BASE_ELEVATION_MM;
     const lowest = computeDrawerFrenteExtStructuralHoles({
       largura: 598,
       altura: frontH,
@@ -85,6 +86,7 @@ describe("gaveta inferior — posição absoluta corpo/frente", () => {
       bodyWidthMm: 548,
       sideThicknessMm: 16,
       bottomThicknessMm: 10,
+      sideBaseElevationMm: elev,
     });
     const highest = computeDrawerFrenteExtStructuralHoles({
       largura: 598,
@@ -96,10 +98,14 @@ describe("gaveta inferior — posição absoluta corpo/frente", () => {
       bodyWidthMm: 548,
       sideThicknessMm: 16,
       bottomThicknessMm: 10,
-      sideBaseElevationMm: DRAWER_SIDE_BASE_ELEVATION_MM,
+      sideBaseElevationMm: elev,
     });
-    expect(lowest.find((h) => h.holeSubtype === "groove")?.y).toBe(56.5);
-    expect(lowest.filter((h) => h.tipo === "cavilha").every((h) => h.y === 73.5)).toBe(true);
-    expect(highest.find((h) => h.holeSubtype === "groove")?.y).not.toBe(56.5);
+    const grooveY = elev + sideH - 13;
+    expect(lowest.find((h) => h.holeSubtype === "groove")?.y).toBe(grooveY);
+    expect(highest.find((h) => h.holeSubtype === "groove")?.y).toBe(grooveY);
+    const upperCav = Math.max(
+      ...lowest.filter((h) => h.tipo === "cavilha").map((h) => h.y)
+    );
+    expect(grooveY - upperCav).toBeCloseTo(22, 5);
   });
 });

@@ -66,7 +66,7 @@ const shelfHoles: PanelDrillHole[] = [
   { x: 291, y: 464, diameter: 5, depth: 13, holeType: "prateleira", topDrillable: true },
 ];
 
-describe("xmlMachineRouting  CNC vs DRILL", () => {
+describe("xmlMachineRouting ï¿½ CNC vs DRILL", () => {
   it("classifica tipos CNC e DRILL", () => {
     expect(resolveXmlMachineTarget("cima")).toBe("cnc");
     expect(resolveXmlMachineTarget("fundo")).toBe("cnc");
@@ -82,7 +82,7 @@ describe("xmlMachineRouting  CNC vs DRILL", () => {
     expect(resolveXmlMachineTarget("separador")).toBe("drill");
   });
 
-  it("etiqueta DRILL s em peas da estao DRILL", () => {
+  it("etiqueta DRILL sï¿½ em peï¿½as da estaï¿½ï¿½o DRILL", () => {
     expect(
       pieceShouldHaveDrillLabel(item("cima", { largura: 600, altura: 560 }, shelfHoles))
     ).toBe(false);
@@ -105,8 +105,8 @@ describe("xmlMachineRouting  CNC vs DRILL", () => {
   });
 });
 
-describe("buildDrillFilesForProject — CNC / DRILL / COMPLETO", () => {
-  it("gera CNC + DRILL + COMPLETO com caminhos correctos", () => {
+describe("buildDrillFilesForProject ï¿½ CNC / DRILL / COMPLETO", () => {
+  it("gera CNC + DRILL + PRINCIPAL com caminhos correctos", () => {
     const items = [
       item("cima", { largura: 600, altura: 560 }, shelfHoles, {
         metadata: { qrCode: "C1_TOP-1" },
@@ -126,7 +126,7 @@ describe("buildDrillFilesForProject — CNC / DRILL / COMPLETO", () => {
     const all = buildDrillFilesForProject(items, project);
     const cnc = buildCncXmlFilesForProject(items, project);
     const drill = buildDrillStationXmlFilesForProject(items, project);
-    const completo = all.filter((f) => f.machineTarget === "completo");
+    const principal = all.filter((f) => f.machineTarget === "completo");
 
     expect(cnc.map((f) => f.filenameBase)).toEqual(["C1_TOP-1"]);
     expect(cnc[0]!.zipPath).toBe("cnc/XML/C1_TOP-1.xml");
@@ -139,27 +139,57 @@ describe("buildDrillFilesForProject — CNC / DRILL / COMPLETO", () => {
       "drill/XML/C1_GAV_LAT_ESQ-1_DRILL.xml",
       "drill/XML/C1_LAT_DIR-89_DRILL.xml",
     ]);
-    // COMPLETO: todas as 4 peças (CNC + DRILL) em drill/XML
-    expect(completo).toHaveLength(4);
-    expect(completo.every((f) => f.filenameBase.endsWith("_COMPLETO"))).toBe(true);
-    expect(completo.every((f) => f.zipPath.startsWith("drill/XML/"))).toBe(true);
-    expect(completo.map((f) => f.filenameBase).sort()).toEqual([
-      "C1_DIV-1_COMPLETO",
-      "C1_GAV_LAT_ESQ-1_COMPLETO",
-      "C1_LAT_DIR-89_COMPLETO",
-      "C1_TOP-1_COMPLETO",
+    // PRINCIPAL: todas as 4 pecas (CNC + DRILL) em drill/{qr}.xml
+    expect(principal).toHaveLength(4);
+    expect(principal.every((f) => !f.filenameBase.endsWith("_COMPLETO"))).toBe(true);
+    expect(
+      principal.every((f) => f.zipPath.startsWith("drill/") && !f.zipPath.includes("/XML/"))
+    ).toBe(true);
+    expect(principal.map((f) => f.filenameBase).sort()).toEqual([
+      "C1_DIV-1",
+      "C1_GAV_LAT_ESQ-1",
+      "C1_LAT_DIR-89",
+      "C1_TOP-1",
     ]);
-    // 1 CNC + 3 DRILL + 4 COMPLETO
+    // 1 CNC + 3 DRILL + 4 PRINCIPAL
     expect(all).toHaveLength(8);
   });
 
-  it("C1_LAT_DIR — Panel L×W = largura×altura SSOT; furos dentro da placa; X/Y = drillHoles", () => {
+  it("anti-duplicacao: mesmo QR nao gera entradas repetidas", () => {
+    const lat = item("lateral_direita", { largura: 351, altura: 862 }, shelfHoles, {
+      metadata: { qrCode: "C1_LAT_DIR-89" },
+    });
+    const dup = { ...lat, id: "lat-dup" };
+    const all = buildDrillFilesForProject([lat, dup], project);
+    const principal = all.filter((f) => f.machineTarget === "completo");
+    const drillOnly = all.filter((f) => f.machineTarget === "drill");
+    expect(principal).toHaveLength(1);
+    expect(drillOnly).toHaveLength(1);
+    expect(principal[0]!.zipPath).toBe("drill/C1_LAT_DIR-89.xml");
+    expect(drillOnly[0]!.zipPath).toBe("drill/XML/C1_LAT_DIR-89_DRILL.xml");
+  });
+
+  it("cima/fundo/porta/remate nunca entram em *_DRILL", () => {
+    const items = [
+      item("cima", { largura: 600, altura: 560 }, shelfHoles, { metadata: { qrCode: "C1_TOP-1" } }),
+      item("fundo", { largura: 600, altura: 560 }, shelfHoles, { metadata: { qrCode: "C1_FUN-1" } }),
+      item("porta", { largura: 598, altura: 720 }, shelfHoles, { metadata: { qrCode: "C1_PORTA-1" } }),
+      item("remate", { largura: 600, altura: 100 }, shelfHoles, { metadata: { qrCode: "C1_REM-1" } }),
+      item("roda_pe", { largura: 600, altura: 100 }, shelfHoles, { metadata: { qrCode: "C1_RP-1" } }),
+    ];
+    const drillOnly = buildDrillStationXmlFilesForProject(items, project);
+    expect(drillOnly).toHaveLength(0);
+    expect(resolveXmlMachineTarget("remate")).toBeNull();
+    expect(resolveXmlMachineTarget("roda_pe")).toBeNull();
+  });
+
+  it("C1_LAT_DIR â€” golden mÃ³dulo: L=altura W=profundidade; furos remapeados", () => {
     const holes: PanelDrillHole[] = [
       { x: 60, y: 200, diameter: 5, depth: 13, holeType: "prateleira", topDrillable: true },
       { x: 291, y: 200, diameter: 5, depth: 13, holeType: "prateleira", topDrillable: true },
       { x: 60, y: 464, diameter: 5, depth: 13, holeType: "prateleira", topDrillable: true },
       { x: 291, y: 464, diameter: 5, depth: 13, holeType: "prateleira", topDrillable: true },
-      // furo fora da placa (deve ser rejeitado)
+      // furo fora da placa apÃ³s remap (Y_cutlist=999 â†’ X_machine=999 > L=862)
       { x: 60, y: 999, diameter: 5, depth: 13, holeType: "prateleira", topDrillable: true },
     ];
     const lat = item("lateral_direita", { largura: 351, altura: 862 }, holes, {
@@ -168,18 +198,18 @@ describe("buildDrillFilesForProject — CNC / DRILL / COMPLETO", () => {
     const files = buildDrillStationXmlFilesForProject([lat], project);
     expect(files).toHaveLength(1);
     const xml = files[0]!.xml;
-    expect(xml).toContain("<PanelLength>351.00</PanelLength>");
-    expect(xml).toContain("<PanelWidth>862.00</PanelWidth>");
-    expect(xml).toContain("<X1>60.00</X1>");
-    expect(xml).toContain("<X1>291.00</X1>");
-    expect(xml).toContain("<Y1>200.00</Y1>");
-    expect(xml).toContain("<Y1>464.00</Y1>");
+    expect(xml).toContain("<PanelLength>862.00</PanelLength>");
+    expect(xml).toContain("<PanelWidth>351.00</PanelWidth>");
+    // Remap (x_depth,y_height) â†’ (X=y_height, Y=x_depth)
+    expect(xml).toContain("<X1>200.00</X1>");
+    expect(xml).toContain("<X1>464.00</X1>");
+    expect(xml).toContain("<Y1>60.00</Y1>");
+    expect(xml).toContain("<Y1>291.00</Y1>");
     expect(xml).not.toContain("<Y1>999.00</Y1>");
-    // Sem o swap antigo (L=altura) que gerava furos fora da placa
-    expect(xml).not.toContain("<PanelLength>862.00</PanelLength>");
+    expect(xml).not.toContain("<X1>999.00</X1>");
   });
 
-  it("gaveta DRILL  sem Diameter 5.00; s cavilhas", () => {
+  it("gaveta DRILL ï¿½ sem Diameter 5.00; sï¿½ cavilhas", () => {
     const lat = item(
       "gaveta_lat_dir",
       { largura: 500, altura: 150 },

@@ -1,6 +1,6 @@
 /**
- * Garante que peas da gaveta NUNCA recebem furos 5 / corredia.
- * Corredias = apenas laterais do mdulo.
+ * Garante que peï¿½as da gaveta NUNCA recebem furos ï¿½5 / corrediï¿½a.
+ * Corrediï¿½as = apenas laterais do mï¿½dulo.
  */
 import { describe, expect, it } from "vitest";
 import { calculateTechnicalDrillingsForPiece } from "../../drilling/drillingService";
@@ -26,7 +26,7 @@ function assertNoFiveMm(holes: Array<{ diameter?: number; diametro?: number; hol
   }
 }
 
-describe("gaveta  sem furos 5 / corredia (SSOT ? PDF ? XML)", () => {
+describe("gaveta ï¿½ sem furos ï¿½5 / corrediï¿½a (SSOT ? PDF ? XML)", () => {
   it("computeDrawerPieceCorredicaHoles retorna sempre []", () => {
     const rules = getDrawerSlideDrillingRules("Hettich ArciTech", "Nenhuma", {
       mode: "drawer_piece",
@@ -44,7 +44,7 @@ describe("gaveta  sem furos 5 / corredia (SSOT ? PDF ? XML)", () => {
     }
   });
 
-  it.each(TYPES)("%s  calculateTechnicalDrillingsForPiece sem 5", (tipo) => {
+  it.each(TYPES)("%s ï¿½ calculateTechnicalDrillingsForPiece sem ï¿½5", (tipo) => {
     const holes = calculateTechnicalDrillingsForPiece(
       { tipo, largura: DIM.L, altura: DIM.H, espessura: DIM.T },
       defaultRulesConfig
@@ -53,7 +53,7 @@ describe("gaveta  sem furos 5 / corredia (SSOT ? PDF ? XML)", () => {
     expect(holes.some((h) => h.tipo === "cavilha")).toBe(true);
   });
 
-  it.each(TYPES)("%s  adapter cutlist sem 5", (tipo) => {
+  it.each(TYPES)("%s ï¿½ adapter cutlist sem ï¿½5", (tipo) => {
     const result = buildPanelDrillingResult(
       { tipo, larguraMm: DIM.L, alturaMm: DIM.H, espessuraMm: DIM.T },
       defaultRulesConfig
@@ -62,7 +62,7 @@ describe("gaveta  sem furos 5 / corredia (SSOT ? PDF ? XML)", () => {
     assertNoFiveMm(result.data!.drillHoles);
   });
 
-  it("lat_esq  cutlistToPieces + holesForPdf s cavilhas (+ rasgo se presente)", () => {
+  it("lat_esq ï¿½ cutlistToPieces + holesForPdf sï¿½ cavilhas (+ rasgo se presente)", () => {
     const result = buildPanelDrillingResult(
       { tipo: "gaveta_lat_esq", larguraMm: DIM.L, alturaMm: DIM.H, espessuraMm: DIM.T },
       defaultRulesConfig

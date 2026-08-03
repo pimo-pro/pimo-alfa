@@ -351,7 +351,7 @@ export const settingsDefaults: SettingsSchema = {
       ativo: true,
     },
     parafuso: {
-      diametro: 4,
+      diametro: 5,
       comprimento: 30,
       ativo: true,
     },

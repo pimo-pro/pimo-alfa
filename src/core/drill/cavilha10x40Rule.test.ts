@@ -1,5 +1,5 @@
 /**
- * Regra global CAVILHA_10x40 — canto Direita Inferior (CIMA ? FRENTE FIXA).
+ * Regra global CAVILHA_10x40 ï¿½ canto Direita Inferior (CIMA ? FRENTE FIXA).
  */
 import { describe, expect, it } from "vitest";
 import {
@@ -21,8 +21,8 @@ import { insertDesignHoleWithCavilhaPairing } from "../industrialDesigner/cavilh
 import type { IndustrialDesignBox } from "../industrialDesigner/types";
 import { nextDesignId } from "../industrialDesigner/designModel";
 
-describe("CAVILHA_10x40 — regra global", () => {
-  it("catálogo: 10×30 ? 10×13 + ferragem", () => {
+describe("CAVILHA_10x40 ï¿½ regra global", () => {
+  it("catï¿½logo: 10ï¿½30 ? 10ï¿½13 + ferragem", () => {
     expect(getPairedHoleTypeId("cavilha_10x30")).toBe("cavilha_10x13");
     expect(getPairedHoleTypeId("cavilha_10x13")).toBe("cavilha_10x30");
     expect(getHoleTypeById("cavilha_10x30").ferragemId).toBe(CAVILHA_10x40_FERRAGEM_ID);
@@ -30,7 +30,7 @@ describe("CAVILHA_10x40 — regra global", () => {
     expect(getHoleTypeById("cavilha_10x13").profundidadeMm).toBe(13);
   });
 
-  it("ferragem CAVILHA_10x40 no catálogo (bege, Ø10×40)", () => {
+  it("ferragem CAVILHA_10x40 no catï¿½logo (bege, ï¿½10ï¿½40)", () => {
     const f = FERRAGENS_DEFAULT.find((x) => x.id === CAVILHA_10x40_FERRAGEM_ID);
     expect(f).toBeDefined();
     expect(f!.nome).toBe("CAVILHA_10x40");
@@ -40,7 +40,7 @@ describe("CAVILHA_10x40 — regra global", () => {
   });
 });
 
-describe("Canto Direita Inferior — CIMA ? FRENTE FIXA", () => {
+describe("Canto Direita Inferior ï¿½ CIMA ? FRENTE FIXA", () => {
   const layout = {
     fixedFrontWidthMm: 400,
     fixedFrontHeightMm: 720,
@@ -49,7 +49,7 @@ describe("Canto Direita Inferior — CIMA ? FRENTE FIXA", () => {
     thicknessMm: 19,
   };
 
-  it("cada 10×30 tem par 10×13 com mesmo pairedHoleKey + ferragem", () => {
+  it("cada 10ï¿½30 tem par 10ï¿½13 com mesmo pairedHoleKey + ferragem", () => {
     const holes = buildCornerFixedFrontDowelHoles(layout, 682);
     expect(holes.cima).toHaveLength(2);
     expect(holes.cima.every((h) => h.depth === CORNER_FF_EDGE_DOWEL_DEPTH_MM)).toBe(true);

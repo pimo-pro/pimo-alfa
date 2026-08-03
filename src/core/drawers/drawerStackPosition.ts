@@ -1,10 +1,10 @@
 /**
- * Posio da gaveta no stack vertical do mdulo (SSOT industrial).
+ * Posiï¿½ï¿½o da gaveta no stack vertical do mï¿½dulo (SSOT industrial).
  *
- * Ordem fsica: ndice 0 = inferior (perto da base); ltimo = superior (perto da CIMA).
+ * Ordem fï¿½sica: ï¿½ndice 0 = inferior (perto da base); ï¿½ltimo = superior (perto da CIMA).
  * Com `DRAWER_VERTICAL_BASE_OFFSET_MM = 0`:
- * - frente inferior chega  borda inferior do vo
- * - frente superior chega  borda superior (CIMA)
+ * - frente inferior chega ï¿½ borda inferior do vï¿½o
+ * - frente superior chega ï¿½ borda superior (CIMA)
  */
 
 import {
@@ -28,14 +28,14 @@ export function resolveDrawerStackRole(
 }
 
 /**
- * Elevação do corpo vs base da frente (mm) para a gaveta inferior / única.
- * Com `frontBottom=0` ? `drawerBodyBottom = 18.5` acima da base do módulo.
+ * Elevaï¿½ï¿½o do corpo vs base da frente (mm) para a gaveta inferior / ï¿½nica.
+ * Com `frontBottom=0` ? `drawerBodyBottom = 18.5` acima da base do mï¿½dulo.
  */
 export function resolveLowestDrawerBodyElevationFromFrontMm(): number {
   return DRAWER_LOWEST_BODY_ABOVE_MODULE_BASE_MM;
 }
 
-/** Base do corpo relativamente à base do módulo (mm). */
+/** Base do corpo relativamente ï¿½ base do mï¿½dulo (mm). */
 export function resolveDrawerBodyBottomFromModuleBaseMm(params: {
   frontBottomFromModuleBaseMm: number;
   sideBaseElevationMm: number;
@@ -45,22 +45,22 @@ export function resolveDrawerBodyBottomFromModuleBaseMm(params: {
 
 export type DrawerFrontStackGeometry = {
   role: DrawerStackRole;
-  /** Altura da frente (mm)  igual ao slot atribudo em calculateDrawerHeights. */
+  /** Altura da frente (mm) ï¿½ igual ao slot atribuï¿½do em calculateDrawerHeights. */
   frontHeightMm: number;
-  /** Distncia da base da frente ao piso interno do vo (mm). */
+  /** Distï¿½ncia da base da frente ao piso interno do vï¿½o (mm). */
   frontBottomFromModuleBaseMm: number;
-  /** Distncia do topo da frente ao piso interno (mm). */
+  /** Distï¿½ncia do topo da frente ao piso interno (mm). */
   frontTopFromModuleBaseMm: number;
-  /** Centro Y local (origem = centro do mdulo). */
+  /** Centro Y local (origem = centro do mï¿½dulo). */
   posYMm: number;
-  /** Confirma flush  base (inferior / nica). */
+  /** Confirma flush ï¿½ base (inferior / ï¿½nica). */
   flushToModuleBase: boolean;
-  /** Confirma flush  CIMA (superior / nica). */
+  /** Confirma flush ï¿½ CIMA (superior / ï¿½nica). */
   flushToModuleTop: boolean;
 };
 
 /**
- * Geometria absoluta da frente no vo interno do mdulo.
+ * Geometria absoluta da frente no vï¿½o interno do mï¿½dulo.
  * `drawerHeights` na mesma ordem que `calculateDrawerHeights` / `resolveDrawerVerticalPositions`.
  */
 export function resolveDrawerFrontStackGeometry(params: {

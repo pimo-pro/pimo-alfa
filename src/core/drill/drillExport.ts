@@ -16,6 +16,8 @@ import {
   type XmlMachineTarget,
 } from "./xmlMachineRouting";
 import { DRAWER_LAT_GROOVE_OVERCUT_MM } from "../drawers/drawerGeometryConstants";
+import { isIndustrialEdgeCavilhaHole } from "./cavilha10x40Rule";
+import { resolveTcnDrillDiameterMm } from "../cnc/tcnDrillParams";
 
 export type { XmlMachineTarget } from "./xmlMachineRouting";
 export {
@@ -23,10 +25,18 @@ export {
   pieceShouldHaveDrillLabel,
   isDrillStationXmlPiece,
   isCncStationXmlPiece,
+  isDrawerFrontPieceTipo,
 } from "./xmlMachineRouting";
 
 const fmt = (n: number) => (Number.isFinite(n) ? n.toFixed(2) : "0.00");
 
+/** XML DRILL: Ø4 legado → Ø5; cavilhas Ø10 e demais ≥5 mm inalterados. */
+function resolveDrillXmlDiameterMm(hole: {
+  diameter?: number;
+  holeType?: string;
+}): number {
+  return resolveTcnDrillDiameterMm(hole);
+}
 /** Sangria default (frente inset / legado); laterais usam DRAWER_LAT_GROOVE_OVERCUT_MM. */
 const GROOVE_OVERCUT_MM = 10;
 const PANEL_EDGE_EPS_MM = 0.5;
@@ -115,15 +125,15 @@ export function panelFileNameFromPiece(
   return sanitizeFilename(buildDrillXmlFallbackFileName(item, project));
 }
 
+/** Golden módulo: frente (Y menor) → Q1; fundo (Y maior) → Q2. */
+function resolveModuleLateralEdgeQuadrant(y: number, panelWidth: number): 1 | 2 {
+  return y <= panelWidth / 2 ? 1 : 2;
+}
+
 /**
- * Gera XML KDTPanelFormat para uma peça lateral.
- * Sistema de coordenadas da máquina:
- *   - Origem = canto superior direito
- *   - X+ = vai para a esquerda (ao longo do comprimento PanelLength)
- *   - Y+ = vai para baixo (ao longo da largura PanelWidth)
- *   - TypeNo=1 = Vertical Hole (perfura de cima para baixo)
- *   - X1 = posição ao longo do comprimento
- *   - Y1 = edge "top" → espessura/2 | edge "bottom" → PanelWidth - espessura/2
+ * XML fallback laterais de MÓDULO sem drillHoles.
+ * Golden `module_lateral_esq.xml`: L=altura, W=profundidade;
+ * TypeNo2 em X∈{0,L}, Y=front/back, Depth=30, Quadrant por Y, Z1=T/2.
  */
 function buildXmlForLateral(
   panelLength: number,
@@ -132,7 +142,6 @@ function buildXmlForLateral(
   frontDist: number,
   backDist: number
 ): string {
-  const z1 = fmt(panelThickness / 2);
   const y1Front = frontDist;
   const y1Back = panelWidth - backDist;
   const lines: string[] = [];
@@ -143,34 +152,21 @@ function buildXmlForLateral(
   lines.push(`  <PanelThickness>${fmt(panelThickness)}</PanelThickness>`);
   lines.push(" </PANEL>");
 
-  // Quadrant 2 — borda esquerda (X1=0), 2 furos: frente e fundo
-  for (const y1 of [y1Front, y1Back]) {
-    lines.push(" <CAD>");
-    lines.push("  <TypeNo>2</TypeNo>");
-    lines.push("  <TypeName>Horizontal Hole</TypeName>");
-    lines.push("  <X1>0.00</X1>");
-    lines.push(`  <Y1>${fmt(y1)}</Y1>`);
-    lines.push(`  <Z1>${z1}</Z1>`);
-    lines.push("  <Quadrant>2</Quadrant>");
-    lines.push("  <Depth>30.00</Depth>");
-    lines.push("  <Diameter>10.00</Diameter>");
-    lines.push("  <Enable>1</Enable>");
-    lines.push(" </CAD>");
-  }
-
-  // Quadrant 1 — borda direita (X1=L), 2 furos: frente e fundo
-  for (const y1 of [y1Front, y1Back]) {
-    lines.push(" <CAD>");
-    lines.push("  <TypeNo>2</TypeNo>");
-    lines.push("  <TypeName>Horizontal Hole</TypeName>");
-    lines.push(`  <X1>${fmt(panelLength)}</X1>`);
-    lines.push(`  <Y1>${fmt(y1)}</Y1>`);
-    lines.push(`  <Z1>${z1}</Z1>`);
-    lines.push("  <Quadrant>1</Quadrant>");
-    lines.push("  <Depth>30.00</Depth>");
-    lines.push("  <Diameter>10.00</Diameter>");
-    lines.push("  <Enable>1</Enable>");
-    lines.push(" </CAD>");
+  for (const x1 of [0, panelLength]) {
+    for (const y1 of [y1Front, y1Back]) {
+      const quadrant = resolveModuleLateralEdgeQuadrant(y1, panelWidth);
+      lines.push(" <CAD>");
+      lines.push("  <TypeNo>2</TypeNo>");
+      lines.push("  <TypeName>Horizontal Hole</TypeName>");
+      lines.push(`  <X1>${fmt(x1)}</X1>`);
+      lines.push(`  <Y1>${fmt(y1)}</Y1>`);
+      lines.push(`  <Z1>${fmt(panelThickness / 2)}</Z1>`);
+      lines.push(`  <Quadrant>${quadrant}</Quadrant>`);
+      lines.push("  <Depth>30.00</Depth>");
+      lines.push("  <Diameter>10.00</Diameter>");
+      lines.push("  <Enable>1</Enable>");
+      lines.push(" </CAD>");
+    }
   }
 
   const body = lines.join("\n");
@@ -181,8 +177,10 @@ function buildXmlFromDrillHoles(
   panelLength: number,
   panelWidth: number,
   panelThickness: number,
-  holes: PanelDrillHole[]
+  holes: PanelDrillHole[],
+  opts?: { moduleLateralGolden?: boolean }
 ): string {
+  const moduleGolden = opts?.moduleLateralGolden === true;
   const lines: string[] = [];
   lines.push(" <PANEL>");
   lines.push(`  <PanelLength>${fmt(panelLength)}</PanelLength>`);
@@ -270,7 +268,7 @@ function buildXmlFromDrillHoles(
       lines.push(`  <Y1>${fmt(hole.y)}</Y1>`);
       lines.push("  <Z1>0.00</Z1>");
       lines.push(`  <Depth>${fmt(hole.depth)}</Depth>`);
-      lines.push(`  <Diameter>${fmt(hole.diameter)}</Diameter>`);
+      lines.push(`  <Diameter>${fmt(resolveDrillXmlDiameterMm(hole))}</Diameter>`);
       lines.push("  <Enable>1</Enable>");
       lines.push(" </CAD>");
       continue;
@@ -281,16 +279,72 @@ function buildXmlFromDrillHoles(
     lines.push("  <TypeName>Horizontal Hole</TypeName>");
     lines.push(`  <X1>${fmt(hole.x)}</X1>`);
     lines.push(`  <Y1>${fmt(hole.y)}</Y1>`);
-    lines.push(`  <Z1>${fmt(panelThickness / 2)}</Z1>`);
-    lines.push(`  <Quadrant>${resolveHorizontalHoleQuadrant(hole.x, panelLength)}</Quadrant>`);
+    lines.push(
+      `  <Z1>${fmt(panelThickness / 2)}</Z1>`
+    );
+    lines.push(
+      `  <Quadrant>${
+        moduleGolden
+          ? resolveModuleLateralEdgeQuadrant(hole.y, panelWidth)
+          : resolveHorizontalHoleQuadrant(hole.x, panelLength)
+      }</Quadrant>`
+    );
     lines.push(`  <Depth>${fmt(hole.depth)}</Depth>`);
-    lines.push(`  <Diameter>${fmt(hole.diameter)}</Diameter>`);
+    lines.push(`  <Diameter>${fmt(resolveDrillXmlDiameterMm(hole))}</Diameter>`);
     lines.push("  <Enable>1</Enable>");
     lines.push(" </CAD>");
   }
 
   const body = lines.join("\n");
   return `<?xml version="1.0" encoding="UTF-8"?>\n<KDTPanelFormat>\n${body}\n</KDTPanelFormat>`;
+}
+
+/**
+ * Laterais de MÓDULO — golden `module_lateral_esq.xml`:
+ * PanelLength = altura, PanelWidth = profundidade (cutlist.largura).
+ * Cutlist holes: x ao longo da profundidade, y ao longo da altura → remap máquina.
+ */
+function resolveModuleLateralPanelDimensions(item: CutListItemComPreco): {
+  panelLength: number;
+  panelWidth: number;
+} | null {
+  const depthMm = Number(item.dimensoes?.largura ?? 0);
+  const heightMm = Number(item.dimensoes?.altura ?? 0);
+  if (depthMm <= 0 || heightMm <= 0) return null;
+  return { panelLength: heightMm, panelWidth: depthMm };
+}
+
+/**
+ * Remap cutlist → máquina (só módulo).
+ * Cavilha 10×30: X∈{0,L}, Y = posição em profundidade.
+ * Restantes: (x,y) → (y,x).
+ */
+function remapModuleLateralHolesToMachineFrame(
+  holes: PanelDrillHole[],
+  panelHeightMm: number
+): PanelDrillHole[] {
+  return holes.map((h) => {
+    if (isIndustrialEdgeCavilhaHole(h)) {
+      const xMachine = Number(h.y) < panelHeightMm / 2 ? 0 : panelHeightMm;
+      return { ...h, x: xMachine, y: Number(h.x) };
+    }
+    return { ...h, x: Number(h.y), y: Number(h.x) };
+  });
+}
+
+function resolveModuleLateralXmlHoles(item: CutListItemComPreco): {
+  panelLength: number;
+  panelWidth: number;
+  holes: PanelDrillHole[];
+} | null {
+  const dims = resolveModuleLateralPanelDimensions(item);
+  if (!dims) return null;
+  const raw = item.drillHoles ?? [];
+  if (raw.length === 0) return { ...dims, holes: [] };
+  return {
+    ...dims,
+    holes: remapModuleLateralHolesToMachineFrame(raw, dims.panelLength),
+  };
 }
 
 function resolveDrawerPanelDimensions(item: CutListItemComPreco): {
@@ -371,7 +425,7 @@ export type DrillExportFile = {
   xml: string;
   /** Estação industrial do ficheiro. */
   machineTarget: XmlMachineTarget;
-  /** Caminho relativo no ZIP (ex.: cnc/XML/… ou drill/XML/…). */
+  /** Caminho relativo no ZIP (ex.: cnc/XML/…, drill/… ou drill/XML/…). */
   zipPath: string;
 };
 
@@ -384,11 +438,6 @@ type ProjectContext = {
 function appendDrillSuffix(filenameBase: string): string {
   if (/_DRILL$/i.test(filenameBase)) return filenameBase;
   return `${filenameBase}_DRILL`;
-}
-
-function appendCompletoSuffix(filenameBase: string): string {
-  if (/_COMPLETO$/i.test(filenameBase)) return filenameBase;
-  return `${filenameBase}_COMPLETO`;
 }
 
 /** Metadata PIMO no XML (comentário — ignorado pela KDT). Inclui stackRole da gaveta. */
@@ -415,12 +464,21 @@ function buildXmlForItem(
   const panelThickness = Number(item.espessura) || 19;
 
   if (isLateralPanel(item)) {
-    const dims = resolveDrawerPanelDimensions(item);
-    if (!dims) return null;
-    const { panelLength, panelWidth } = dims;
-    const xml = item.drillHoles?.length
-      ? buildXmlFromDrillHoles(panelLength, panelWidth, panelThickness, item.drillHoles)
-      : buildXmlForLateral(panelLength, panelWidth, panelThickness, frontDist, backDist);
+    const mapped = resolveModuleLateralXmlHoles(item);
+    if (!mapped) return null;
+    const { panelLength, panelWidth, holes } = mapped;
+    const xml =
+      holes.length > 0
+        ? buildXmlFromDrillHoles(panelLength, panelWidth, panelThickness, holes, {
+            moduleLateralGolden: true,
+          })
+        : buildXmlForLateral(
+            panelLength,
+            panelWidth,
+            panelThickness,
+            frontDist,
+            backDist
+          );
     return { panelLength, panelWidth, xml };
   }
 
@@ -496,42 +554,35 @@ function buildXmlForItem(
 
 function pushExportFile(
   out: DrillExportFile[],
-  usedNames: Set<string>,
+  usedPaths: Set<string>,
   args: {
     code: string;
-    suffix: "none" | "drill" | "completo";
+    suffix: "none" | "drill";
     partName: string;
     thicknessMm: number;
     xml: string;
     machineTarget: XmlMachineTarget;
-    folder: "cnc/XML" | "drill/XML";
+    folder: "cnc/XML" | "drill/XML" | "drill";
   }
 ): void {
-  let filenameBase =
-    args.suffix === "drill"
-      ? appendDrillSuffix(args.code)
-      : args.suffix === "completo"
-        ? appendCompletoSuffix(args.code)
-        : args.code;
+  let filenameBase = args.suffix === "drill" ? appendDrillSuffix(args.code) : args.code;
   let dedupe = 2;
-  while (usedNames.has(filenameBase)) {
+  let zipPath = `${args.folder}/${filenameBase}.xml`;
+  while (usedPaths.has(zipPath)) {
     const stamped =
-      args.suffix === "drill"
-        ? `${args.code}_${dedupe}_DRILL`
-        : args.suffix === "completo"
-          ? `${args.code}_${dedupe}_COMPLETO`
-          : `${args.code}_${dedupe}`;
+      args.suffix === "drill" ? `${args.code}_${dedupe}_DRILL` : `${args.code}_${dedupe}`;
     filenameBase = sanitizeFilename(stamped);
+    zipPath = `${args.folder}/${filenameBase}.xml`;
     dedupe += 1;
   }
-  usedNames.add(filenameBase);
+  usedPaths.add(zipPath);
   out.push({
     filenameBase,
     partName: args.partName,
     thicknessMm: args.thicknessMm,
     xml: args.xml,
     machineTarget: args.machineTarget,
-    zipPath: `${args.folder}/${filenameBase}.xml`,
+    zipPath,
   });
 }
 
@@ -539,9 +590,9 @@ function pushExportFile(
  * Gera ficheiros XML por peça:
  * - CNC → `cnc/XML/{qr}.xml` (peças da estação CNC)
  * - DRILL → `drill/XML/{qr}_DRILL.xml` (apenas peças da máquina DRILL)
- * - COMPLETO → `drill/XML/{qr}_COMPLETO.xml` (auditoria: todas as peças com XML)
+ * - PRINCIPAL → `drill/{qr}.xml` (auditoria: todas as peças com XML, sem duplicados)
  *
- * Etiquetas: só `_DRILL` activa etiqueta DRILL; `_COMPLETO` não altera etiquetas.
+ * Etiquetas: só `_DRILL` activa etiqueta DRILL; lista principal não altera etiquetas.
  */
 export function buildDrillFilesForProject(
   items: CutListItemComPreco[],
@@ -553,7 +604,11 @@ export function buildDrillFilesForProject(
   const out: DrillExportFile[] = [];
   const frontDist = getDrillFrontDistance();
   const backDist = getDrillBackDistance();
-  const usedNames = new Set<string>();
+  const usedPaths = new Set<string>();
+  /** Anti-duplicação por QR dentro de cada destino. */
+  const seenQrPrincipal = new Set<string>();
+  const seenQrDrill = new Set<string>();
+  const seenQrCnc = new Set<string>();
   const piecesPerSheet = buildIndustrialListPiecesPerSheet(items);
 
   for (let idx = 0; idx < items.length; idx++) {
@@ -567,43 +622,52 @@ export function buildDrillFilesForProject(
     const code = panelFileNameFromPiece(item, project, piecesPerSheet, idx);
     const thicknessMm = Number(item.espessura) || 19;
 
-    // Auditoria: todas as peças com XML → drill/XML/{qr}_COMPLETO.xml
+    // Lista principal: todas as peças com XML → drill/{qr}.xml (únicas por QR)
     if (filter === "all" || filter === "completo") {
-      pushExportFile(out, usedNames, {
-        code,
-        suffix: "completo",
-        partName: item.nome,
-        thicknessMm,
-        xml: built.xml,
-        machineTarget: "completo",
-        folder: "drill/XML",
-      });
+      if (!seenQrPrincipal.has(code)) {
+        seenQrPrincipal.add(code);
+        pushExportFile(out, usedPaths, {
+          code,
+          suffix: "none",
+          partName: item.nome,
+          thicknessMm,
+          xml: built.xml,
+          machineTarget: "completo",
+          folder: "drill",
+        });
+      }
     }
 
-    // Máquina DRILL
+    // Máquina DRILL — só peças da estação DRILL (nunca CNC nesting)
     if (target === "drill" && (filter === "all" || filter === "drill")) {
-      pushExportFile(out, usedNames, {
-        code,
-        suffix: "drill",
-        partName: item.nome,
-        thicknessMm,
-        xml: built.xml,
-        machineTarget: "drill",
-        folder: "drill/XML",
-      });
+      if (!seenQrDrill.has(code)) {
+        seenQrDrill.add(code);
+        pushExportFile(out, usedPaths, {
+          code,
+          suffix: "drill",
+          partName: item.nome,
+          thicknessMm,
+          xml: built.xml,
+          machineTarget: "drill",
+          folder: "drill/XML",
+        });
+      }
     }
 
-    // Máquina CNC
+    // Máquina CNC — intacta (pasta cnc/XML)
     if (target === "cnc" && (filter === "all" || filter === "cnc")) {
-      pushExportFile(out, usedNames, {
-        code,
-        suffix: "none",
-        partName: item.nome,
-        thicknessMm,
-        xml: built.xml,
-        machineTarget: "cnc",
-        folder: "cnc/XML",
-      });
+      if (!seenQrCnc.has(code)) {
+        seenQrCnc.add(code);
+        pushExportFile(out, usedPaths, {
+          code,
+          suffix: "none",
+          partName: item.nome,
+          thicknessMm,
+          xml: built.xml,
+          machineTarget: "cnc",
+          folder: "cnc/XML",
+        });
+      }
     }
   }
 
@@ -626,7 +690,7 @@ export function buildDrillStationXmlFilesForProject(
   return buildDrillFilesForProject(items, project, { machineTarget: "drill" });
 }
 
-/** Apenas XML de auditoria (`*_COMPLETO.xml` em drill/XML). */
+/** Apenas XML de lista principal (`drill/{qr}.xml`). */
 export function buildDrillCompletoXmlFilesForProject(
   items: CutListItemComPreco[],
   project: ProjectContext

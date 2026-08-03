@@ -1,23 +1,23 @@
 /**
- * SSOT — cavilhas / rasgos de gaveta (golden XML_COMPLITO).
+ * SSOT ï¿½ cavilhas / rasgos de gaveta (golden XML_COMPLITO).
  *
  * Laterais (LAT_DIR / LAT_ESQ):
  *   Face (TypeNo=1): Y = 15 e W?38; X = T/2 (esq) ou L?T/2 (dir); Depth 13
  *   Aresta (TypeNo=2): Y = 15 e W?35; X = 0 (dir) ou L (esq); Depth 30
- *   Rasgos: W?13 (Ø/largura 13, prof. 3) e W?23 (largura 11, prof. 10)
+ *   Rasgos: W?13 (ï¿½/largura 13, prof. 3) e W?23 (largura 11, prof. 10)
  *
  * Costa: Y = 15 e W?15; Depth 30; topo X=8 / L?8 Depth 10
  * Frente inferior: Y = W?56.5 (rasgo), W?73.5 (cavilha); X = 33
  */
 
-/** Distância industrial da base ao eixo da corrediça no módulo (mm) — inalterado. */
+/** Distï¿½ncia industrial da base ao eixo da corrediï¿½a no mï¿½dulo (mm) ï¿½ inalterado. */
 export const DRAWER_SLIDE_OFFSET_FROM_BOTTOM_MM = 41;
 
 export const DRAWER_DOWEL_DIAMETER_MM = 10;
 export const DRAWER_DOWEL_FACE_DEPTH_MM = 13;
-/** Profundidade na aresta (ao longo do painel, não atravessa T). */
+/** Profundidade na aresta (ao longo do painel, nï¿½o atravessa T). */
 export const DRAWER_DOWEL_EDGE_DEPTH_MM = 30;
-/** Folga mínima legado (face through-thickness). */
+/** Folga mï¿½nima legado (face through-thickness). */
 export const DRAWER_DOWEL_EDGE_CLEARANCE_MM = 2;
 
 /** Y inferior golden (desde a base). */
@@ -26,10 +26,10 @@ export const DRAWER_LAT_DOWEL_Y_FROM_BOTTOM_MM = 15;
 export const DRAWER_LAT_FACE_DOWEL_Y_FROM_TOP_MM = 38;
 /** Aresta superior (interlock frente): W?35. */
 export const DRAWER_LAT_EDGE_DOWEL_Y_FROM_TOP_MM = 35;
-/** Costa: simétrico 15 mm de cada bordo. */
+/** Costa: simï¿½trico 15 mm de cada bordo. */
 export const DRAWER_COSTA_DOWEL_Y_FROM_EDGE_MM = 15;
 
-/** @deprecated Prefer DRAWER_LAT_DOWEL_Y_FROM_BOTTOM_MM — alias legado. */
+/** @deprecated Prefer DRAWER_LAT_DOWEL_Y_FROM_BOTTOM_MM ï¿½ alias legado. */
 export const DRAWER_REAR_DOWEL_Y_FROM_BOTTOM_MM = DRAWER_LAT_FACE_DOWEL_Y_FROM_TOP_MM;
 /** @deprecated Prefer DRAWER_LAT_DOWEL_Y_FROM_BOTTOM_MM. */
 export const DRAWER_FRONT_DOWEL_Y_FROM_BOTTOM_MM = DRAWER_LAT_DOWEL_Y_FROM_BOTTOM_MM;

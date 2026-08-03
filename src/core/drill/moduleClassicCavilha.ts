@@ -1,6 +1,6 @@
 /**
- * Pairing industrial de cavilhas em módulos clássicos (CIMA/FUNDO ? laterais).
- * Regra global: 10×30 (espessura lateral) ? 10×13 (face cima/fundo) + CAVILHA_10x40.
+ * Pairing industrial de cavilhas em mï¿½dulos clï¿½ssicos (CIMA/FUNDO ? laterais).
+ * Regra global: 10ï¿½30 (espessura lateral) ? 10ï¿½13 (face cima/fundo) + CAVILHA_10x40.
  */
 
 import type { PanelDrillHole, TechnicalDrillHole, DrillFace } from "../types";
@@ -24,7 +24,7 @@ export type ModuleCavilhaSide = "le" | "ld";
 export type ModuleCavilhaEdge = "top" | "bottom";
 export type ModuleCavilhaDepthEnd = "front" | "back";
 
-/** Chave estável do par lateral ? cima/fundo. */
+/** Chave estï¿½vel do par lateral ? cima/fundo. */
 export function moduleCavilhaPairKey(
   side: ModuleCavilhaSide,
   edge: ModuleCavilhaEdge,
@@ -54,8 +54,10 @@ function depthEndFromX(x: number, xFront: number, xBack: number): ModuleCavilhaD
 }
 
 /**
- * Furos 10×30 na espessura das laterais (aresta cima/fundo).
- * Y = espessura/2 a partir da aresta (não 0/H — evita furo fora do painel).
+ * Furos 10Ã—30 na espessura das laterais de MÃ“DULO (aresta cima/fundo).
+ * Cutlist frame: x ao longo da profundidade, y perto do topo/fundo da altura.
+ * Export DRILL remapeia para golden L=altura / W=profundidade (ver drillExport).
+ * NÃƒO usar para gaveta_lat_* (SSOT transversal separado).
  */
 export function buildModuleLateralEdgeCavilhaHoles(params: {
   panelDepthMm: number;
@@ -88,7 +90,7 @@ export function buildModuleLateralEdgeCavilhaHoles(params: {
 }
 
 /**
- * Furos 10×13 na face de CIMA/FUNDO — pares das arestas das laterais.
+ * Furos 10ï¿½13 na face de CIMA/FUNDO ï¿½ pares das arestas das laterais.
  * CIMA ? edge "top"; FUNDO ? edge "bottom".
  */
 export function buildModuleTopBottomFaceCavilhaHoles(params: {

@@ -1,8 +1,8 @@
 /**
- * Regra industrial global — Cavilha 10×40 (par 10×30 espessura ? 10×13 face).
+ * Regra industrial global ï¿½ Cavilha 10ï¿½40 (par 10ï¿½30 espessura ? 10ï¿½13 face).
  *
- * Sempre que existir um furo Ø10×30 na espessura de uma peça A, deve existir
- * o furo Ø10×13 na face da peça B de encaixe, e uma ferragem CAVILHA_10x40
+ * Sempre que existir um furo ï¿½10ï¿½30 na espessura de uma peï¿½a A, deve existir
+ * o furo ï¿½10ï¿½13 na face da peï¿½a B de encaixe, e uma ferragem CAVILHA_10x40
  * associada ao par.
  */
 
@@ -12,15 +12,15 @@ export const CAVILHA_10x40_COR = "bege";
 export const CAVILHA_10x40_DIAMETER_MM = 10;
 export const CAVILHA_10x40_LENGTH_MM = 40;
 
-/** Furo na espessura (peça A). */
+/** Furo na espessura (peï¿½a A). */
 export const CAVILHA_EDGE_DEPTH_MM = 30;
-/** Furo na face (peça B). */
+/** Furo na face (peï¿½a B). */
 export const CAVILHA_FACE_DEPTH_MM = 13;
 
 export const CAVILHA_EDGE_HOLE_TYPE_ID = "cavilha_10x30" as const;
 export const CAVILHA_FACE_HOLE_TYPE_ID = "cavilha_10x13" as const;
 
-/** True se o furo é cavilha de espessura industrial (10×30). */
+/** True se o furo ï¿½ cavilha de espessura industrial (10ï¿½30). */
 export function isIndustrialEdgeCavilhaHole(h: {
   diameter?: number;
   depth?: number;
@@ -37,7 +37,7 @@ export function isIndustrialEdgeCavilhaHole(h: {
   );
 }
 
-/** True se o furo é cavilha de face industrial (10×13). */
+/** True se o furo ï¿½ cavilha de face industrial (10ï¿½13). */
 export function isIndustrialFaceCavilhaHole(h: {
   diameter?: number;
   depth?: number;
@@ -55,8 +55,8 @@ export function isIndustrialFaceCavilhaHole(h: {
 }
 
 /**
- * Conta ferragens CAVILHA_10x40 a partir de furos de espessura 10×30
- * (1 ferragem física por par A?B — nunca contar o furo de face).
+ * Conta ferragens CAVILHA_10x40 a partir de furos de espessura 10ï¿½30
+ * (1 ferragem fï¿½sica por par A?B ï¿½ nunca contar o furo de face).
  */
 export function countCavilha10x40FromEdgeHoles(
   holes: Array<{

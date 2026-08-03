@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<KDT>
+  <Header>
+    <PanelName>MODULE_LATERAL_ESQ</PanelName>
+    <!-- Altura do mdulo -->
+    <PanelLength>862</PanelLength>
+    <!-- Profundidade do mdulo -->
+    <PanelWidth>351</PanelWidth>
+    <!-- Espessura da lateral -->
+    <PanelThickness>15</PanelThickness>
+  </Header>
+
+  <CADCAM>
+    <!-- Cavilha 1030  aresta frente (X=0, Y=distncia frente) -->
+    <CAD>
+      <TypeNo>2</TypeNo>
+      <X1>0</X1>
+      <Y1>60</Y1>
+      <Z1>7.5</Z1>
+      <X2>0</X2>
+      <Y2>60</Y2>
+      <Width>0</Width>
+      <Depth>30</Depth>
+      <Diameter>10</Diameter>
+      <Quadrant>1</Quadrant>
+    </CAD>
+
+    <!-- Cavilha 1030  aresta fundo (X=0, Y=W?60) -->
+    <CAD>
+      <TypeNo>2</TypeNo>
+      <X1>0</X1>
+      <Y1>291</Y1>
+      <Z1>7.5</Z1>
+      <X2>0</X2>
+      <Y2>291</Y2>
+      <Width>0</Width>
+      <Depth>30</Depth>
+      <Diameter>10</Diameter>
+      <Quadrant>2</Quadrant>
+    </CAD>
+
+    <!-- Cavilha 1030  aresta frente no topo (X=L, Y=60) -->
+    <CAD>
+      <TypeNo>2</TypeNo>
+      <X1>862</X1>
+      <Y1>60</Y1>
+      <Z1>7.5</Z1>
+      <X2>862</X2>
+      <Y2>60</Y2>
+      <Width>0</Width>
+      <Depth>30</Depth>
+      <Diameter>10</Diameter>
+      <Quadrant>1</Quadrant>
+    </CAD>
+
+    <!-- Cavilha 1030  aresta fundo no topo (X=L, Y=W?60) -->
+    <CAD>
+      <TypeNo>2</TypeNo>
+      <X1>862</X1>
+      <Y1>291</Y1>
+      <Z1>7.5</Z1>
+      <X2>862</X2>
+      <Y2>291</Y2>
+      <Width>0</Width>
+      <Depth>30</Depth>
+      <Diameter>10</Diameter>
+      <Quadrant>2</Quadrant>
+    </CAD>
+  </CADCAM>
+</KDT>

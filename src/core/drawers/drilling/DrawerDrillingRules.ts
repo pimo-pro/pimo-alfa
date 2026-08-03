@@ -765,10 +765,10 @@ export function computeDrawerFrenteIntStructuralHoles(params: {
 }
 
 /**
- * Frente externa madeira — regra global CAVILHA_10×40:
+ * Frente externa madeira — regra global CAVILHA_10×40 (todas as frentes, incl. GAV_FRENTE_EXT_01):
  * cada 10×30 na aresta dos laterais → 10×13 na face da frente (Y = elev + Y_lateral).
- * - lowest/single: rasgo golden W−56.5 / X=12; cavilhas só do pairing (sem W−73.5 duplicado)
- * - highest/middle: mesmo pairing; rasgo alinhado ao topo das laterais
+ * Rasgo: Y = elev + sideH − 13 (distância fixa 22 mm à cavilha superior).
+ * Furação exclusiva DRILL — o pipeline CNC remove estes furos do TCN.
  */
 export function computeDrawerFrenteExtStructuralHoles(params: {
   largura: number;
@@ -782,23 +782,9 @@ export function computeDrawerFrenteExtStructuralHoles(params: {
   bottomThicknessMm: number;
   sideBaseElevationMm?: number;
 }): TechnicalDrillHole[] {
-  const useLowestFixed =
-    params.stackRole === "lowest" ||
-    params.stackRole === "single" ||
-    (params.stackRole == null && params.isLowestDrawer === true);
-
-  if (useLowestFixed) {
-    return computeDrawerLowestFrenteExtFixedHoles({
-      largura: params.largura,
-      altura: params.altura,
-      espessura: params.espessura,
-      bottomThicknessMm: params.bottomThicknessMm,
-      sideHeightMm: params.sideHeightMm,
-      sideBaseElevationMm: params.sideBaseElevationMm,
-      bodyWidthMm: params.bodyWidthMm,
-      sideThicknessMm: params.sideThicknessMm,
-    });
-  }
+  // stackRole / isLowestDrawer: mantidos na assinatura (cutlist/metadata); não alteram a geometria.
+  void params.stackRole;
+  void params.isLowestDrawer;
 
   const {
     largura,
@@ -909,8 +895,9 @@ export function projectDrawerLateralEdgeCavilhasOntoFront(params: {
 }
 
 /**
- * Frente inferior — rasgo golden XML_COMPLITO + cavilhas 10×13 só do pairing com laterais.
- * (Removido W−73.5 fixo que duplicava o furo superior ~elev+(sideH−35).)
+ * Frente inferior — legado XML_COMPLITO (rasgo W−56.5 / X=12).
+ * Produção usa `computeDrawerFrenteExtStructuralHoles` (padrão uniforme frentes 1–3).
+ * Mantido para regressão / referência golden.
  */
 export function computeDrawerLowestFrenteExtFixedHoles(params: {
   largura: number;

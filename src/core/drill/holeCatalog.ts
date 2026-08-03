@@ -77,7 +77,7 @@ export const HOLE_CATALOG: readonly HoleType[] = [
   },
   {
     id: "parafuso_4x19",
-    nome: "Parafuso Ø4 × 19 mm",
+    nome: "Parafuso Ø5 × 19 mm",
     diametroMm: t.parafuso.diametro,
     profundidadeMm: t.parafuso.profundidade,
     face: "espessura",

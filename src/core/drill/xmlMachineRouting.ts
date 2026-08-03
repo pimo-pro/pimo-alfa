@@ -1,16 +1,16 @@
 /**
- * Routing industrial: peÁa ? m·quina XML (CNC vs DRILL).
+ * Routing industrial: pe√ßa ‚Üí m√°quina XML (CNC vs DRILL).
  *
- * CNC (`cnc/XML/{qr}.xml`): cima, fundo, costa de mÛdulo, frentes/portas, prateleira.
- * DRILL (`drill/XML/{qr}_DRILL.xml`): laterais mÛdulo, laterais/costa/frente gaveta, sep, div.
- * COMPLETO (`drill/XML/{qr}_COMPLETO.xml`): auditoria ó todas as peÁas com XML (CNC+DRILL).
+ * CNC (`cnc/XML/{qr}.xml`): cima, fundo, costa de m√≥dulo, frentes/portas, prateleira.
+ * DRILL (`drill/XML/{qr}_DRILL.xml`): laterais m√≥dulo, laterais/costa/frente gaveta, sep, div.
+ * PRINCIPAL (`drill/{qr}.xml`): auditoria ‚Äî todas as pe√ßas com XML (CNC+DRILL), sem duplicados.
  */
 
 import type { CutListItemComPreco } from "../types";
 import { isLateralPanel } from "./lateralDowels";
 import { isDrawerPieceTipo } from "../../services/drawerCutlistAdapter";
 
-/** Destino de ficheiro no export. `completo` = cÛpia de auditoria em drill/XML. */
+/** Destino de ficheiro no export. `completo` = lista principal em `drill/{qr}.xml`. */
 export type XmlMachineTarget = "cnc" | "drill" | "completo";
 
 const CNC_TIPOS = new Set([
@@ -29,14 +29,22 @@ const CNC_TIPOS = new Set([
 const DRILL_TIPOS = new Set([
   "lateral_esquerda",
   "lateral_direita",
+  "lat_esq",
+  "lat_dir",
   "gaveta_lat_esq",
   "gaveta_lat_dir",
+  "gav_lat_esq",
+  "gav_lat_dir",
   "gaveta_traseira",
+  "gav_costa",
   "gaveta_frente",
+  "gav_frente",
   "gaveta_frente_int",
   "gaveta_frente_ext",
   "divisorio",
   "separador",
+  "div",
+  "sep",
   // Caixa / variantes industriais (cx_gav_*)
   "cx_gav_lat_dir",
   "cx_gav_lat_esq",
@@ -45,44 +53,103 @@ const DRILL_TIPOS = new Set([
   "cx_gav_lat_esquerda",
 ]);
 
+/** Pe√ßas sem fura√ß√£o de m√°quina (acabamentos / rodap√©s). */
+const EXCLUDED_TIPOS = new Set([
+  "remate",
+  "roda_pe",
+  "rodape",
+  "rodap√©",
+  "rodape_frente",
+  "rodape_lateral",
+  "rodape_canto",
+]);
+
+function normalizeTipoToken(tipo: string): string {
+  return String(tipo ?? "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "");
+}
+
+function isExcludedPiece(tipo: string, nome: string): boolean {
+  const lower = normalizeTipoToken(tipo);
+  if (EXCLUDED_TIPOS.has(tipo) || EXCLUDED_TIPOS.has(lower)) return true;
+  const token = `${lower} ${normalizeTipoToken(nome)}`;
+  if (token.includes("remate")) return true;
+  if (token.includes("roda_pe") || token.includes("roda-pe") || token.includes("rodape")) {
+    return true;
+  }
+  return false;
+}
+
 /**
- * Destino de m·quina da peÁa (CNC ou DRILL).
- * `null` = n„o gera XML de m·quina (ex.: remate, rodapÈ, fundo de gaveta sem furos).
- * Nota: o ficheiro `_COMPLETO` È gerado ‡ parte para todas as peÁas com XML.
+ * Destino de m√°quina da pe√ßa (CNC ou DRILL).
+ * `null` = n√£o gera XML de m√°quina (ex.: remate, rodap√©, fundo de gaveta sem furos).
+ * Nota: o ficheiro principal (`drill/{qr}.xml`) √© gerado √† parte para todas as pe√ßas com XML.
  */
 export function resolveXmlMachineTarget(
   item: Pick<CutListItemComPreco, "tipo" | "nome" | "drillHoles"> | string
 ): "cnc" | "drill" | null {
   const tipo = typeof item === "string" ? item : String(item.tipo ?? "");
   if (!tipo) return null;
+
+  const nome =
+    typeof item === "string" ? "" : String((item as { nome?: string }).nome ?? "");
+  if (isExcludedPiece(tipo, nome)) return null;
+
+  // DRILL antes de CNC: laterais / gavetas / div-sep nunca caem em CNC.
   if (DRILL_TIPOS.has(tipo) || isLateralPanel({ tipo } as CutListItemComPreco)) return "drill";
+
+  // CNC nesting (furos + corte) ‚Äî nunca entram em *_DRILL.xml
   if (CNC_TIPOS.has(tipo)) return "cnc";
 
-  const lower = tipo.toLowerCase();
-  const nome =
-    typeof item === "string" ? "" : String((item as { nome?: string }).nome ?? "").toLowerCase();
-  const token = `${lower} ${nome}`;
+  const lower = normalizeTipoToken(tipo);
+  const nomeLower = normalizeTipoToken(nome);
+  const token = `${lower} ${nomeLower}`;
 
   if (token.includes("cx_gav") || token.includes("cx-gav")) return "drill";
   if (lower.includes("lateral") && !lower.includes("gaveta")) return "drill";
-  if (lower.startsWith("gaveta_lat") || lower.includes("gav_lat")) return "drill";
+  if (
+    lower.startsWith("gaveta_lat") ||
+    lower.includes("gav_lat") ||
+    lower === "lat_dir" ||
+    lower === "lat_esq"
+  ) {
+    return "drill";
+  }
   if (lower === "gaveta_traseira" || lower.includes("gav_cost")) return "drill";
-  if (lower.startsWith("gaveta_frente") || lower.includes("gav_frent")) return "drill";
+  if (
+    lower.startsWith("gaveta_frente") ||
+    lower.includes("gav_frent") ||
+    lower === "gav_frente"
+  ) {
+    return "drill";
+  }
   if (lower === "divisorio" || lower === "separador" || lower === "div" || lower === "sep") {
     return "drill";
   }
+
+  // Pe√ßas CNC por heur√≠stica de nome/tipo (exclui cx_gav_* j√° tratados acima)
   if (
     lower === "cima" ||
     lower === "fundo" ||
     lower === "costa" ||
     lower.startsWith("porta") ||
     lower === "frente_fixa" ||
-    lower === "prateleira"
+    lower === "prateleira" ||
+    (nomeLower.startsWith("porta") && !token.includes("gav")) ||
+    ((nomeLower === "cima" || nomeLower.includes("_cima") || nomeLower.endsWith("-cima")) &&
+      !token.includes("cx_gav") &&
+      !token.includes("gav")) ||
+    ((nomeLower === "fundo" || nomeLower.includes("_fundo") || nomeLower.endsWith("-fundo")) &&
+      !token.includes("cx_gav") &&
+      !token.includes("gav"))
   ) {
     return "cnc";
   }
 
-  // Qualquer peÁa com furos que n„o seja CNC nesting ? DRILL
+  // Qualquer pe√ßa com furos que n√£o √© CNC nesting ‚Üí DRILL
   if (typeof item !== "string") {
     const holes = (item as { drillHoles?: unknown[] }).drillHoles;
     if (Array.isArray(holes) && holes.length > 0 && isDrawerPieceTipo(tipo)) return "drill";
@@ -91,7 +158,7 @@ export function resolveXmlMachineTarget(
   return null;
 }
 
-/** PeÁa deve ter etiqueta/passo DRILL activo (apenas estaÁ„o DRILL ó n„o COMPLETO). */
+/** Pe√ßa deve ter etiqueta/passo DRILL activo (apenas esta√ß√£o DRILL ‚Äî n√£o lista principal). */
 export function pieceShouldHaveDrillLabel(
   item: Pick<CutListItemComPreco, "tipo" | "nome" | "drillHoles">
 ): boolean {
@@ -99,12 +166,12 @@ export function pieceShouldHaveDrillLabel(
   return (item.drillHoles?.length ?? 0) > 0 || isLateralPanel(item as CutListItemComPreco);
 }
 
-/** PeÁa elegÌvel para XML na estaÁ„o DRILL. */
+/** Pe√ßa eleg√≠vel para XML na esta√ß√£o DRILL. */
 export function isDrillStationXmlPiece(item: CutListItemComPreco): boolean {
   return resolveXmlMachineTarget(item) === "drill";
 }
 
-/** PeÁa elegÌvel para XML na estaÁ„o CNC (furaÁ„o em CNC). */
+/** Pe√ßa eleg√≠vel para XML na esta√ß√£o CNC (fura√ß√£o em CNC). */
 export function isCncStationXmlPiece(item: CutListItemComPreco): boolean {
   return resolveXmlMachineTarget(item) === "cnc";
 }
@@ -118,5 +185,21 @@ export function isDrawerDrillPieceTipo(tipo: string): boolean {
     tipo === "gaveta_frente_int" ||
     tipo === "gaveta_frente_ext" ||
     (isDrawerPieceTipo(tipo) && resolveXmlMachineTarget(tipo) === "drill")
+  );
+}
+
+/** Frente de gaveta ‚Äî fura√ß√£o exclusiva DRILL (nunca TCN/CNC). */
+export function isDrawerFrontPieceTipo(tipo: string): boolean {
+  const t = normalizeTipoToken(tipo);
+  return (
+    t === "gaveta_frente" ||
+    t === "gaveta_frente_int" ||
+    t === "gaveta_frente_ext" ||
+    t === "gav_frente" ||
+    t === "gav_frent" ||
+    t === "gav_frent_int" ||
+    t === "gav_frent_ext" ||
+    t.startsWith("gaveta_frente") ||
+    t.startsWith("gav_frent")
   );
 }
