@@ -56,6 +56,9 @@ export interface DrawerDimensions {
   // Número total de gavetas no box (para cálculos proporcionais)
   totalDrawers: number;
 
+  /** Papel no stack — altura das laterais SW (lowest vs mid/top). */
+  stackRole?: import("./drawerStackPosition").DrawerStackRole;
+
   // Tipo de gaveta
   type: "normal" | "pro";
 }
@@ -355,8 +358,11 @@ export function calculateDrawerSpecs(
   const frontHeight = clampMm(frontHeightOverride ?? drawerHeight);
 
   // ===== CORPO =====
-  // Laterais + costa mais baixas que a frente externa (quarto superior livre).
-  const woodBodyHeight = resolveDrawerWoodBodyHeightMm(frontHeight);
+  // Laterais + costa mais baixas que a frente externa (desconto SW por role).
+  const woodBodyHeight = resolveDrawerWoodBodyHeightMm(
+    frontHeight,
+    dimensions.stackRole
+  );
   const bodyHeight =
     metalBoxEnabled && resolvedMetalHeight > 0 ? resolvedMetalHeight : woodBodyHeight;
   const sideElev =

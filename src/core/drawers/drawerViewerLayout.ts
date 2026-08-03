@@ -10,6 +10,7 @@ import {
   DRAWER_SIDE_HEIGHT_RATIO,
   DRAWER_SIDE_TOP_CLEARANCE_RATIO,
 } from "./drawerGeometryConstants";
+import { resolveDrawerWoodBodyHeightForStackRoleMm } from "./drawerSolidWorksStackGeometry";
 import { isMetalBoxCatalogType } from "./drawerMetalBoxCatalog";
 import {
   DRAWER_FRONT_FACE_OVERHANG_MM,
@@ -48,9 +49,15 @@ export function resolveDrawerSideBaseElevationMm(
   return DRAWER_SIDE_BASE_ELEVATION_MM;
 }
 
-/** Altura do corpo madeira (laterais/costa) = 75% da frente. */
-export function resolveDrawerWoodBodyHeightMm(frontHeightMm: number): number {
+/** Altura do corpo madeira (laterais/costa). Com role: SSOT SolidWorks; sem role: 75% legado. */
+export function resolveDrawerWoodBodyHeightMm(
+  frontHeightMm: number,
+  stackRole?: import("./drawerStackPosition").DrawerStackRole
+): number {
   const frontH = Math.max(0, Number(frontHeightMm));
+  if (stackRole != null) {
+    return resolveDrawerWoodBodyHeightForStackRoleMm(frontH, stackRole);
+  }
   return Math.max(1, frontH * DRAWER_SIDE_HEIGHT_RATIO);
 }
 

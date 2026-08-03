@@ -19,6 +19,10 @@ import {
   DRAWER_VERTICAL_GAP_MM,
   getDrawerUsableInternalHeightMm,
 } from "./drawerVerticalPosition";
+import {
+  isSolidWorksThreeDrawerEqualStack,
+  resolveSolidWorksThreeDrawerFrontHeightsMm,
+} from "./drawerSolidWorksStackGeometry";
 
 export interface DrawerGroup {
   id: string;
@@ -44,6 +48,8 @@ export type CalculateDrawerHeightsOptions = {
   kitchenZoneProfile?: KitchenZoneProfile;
   minHeightMm?: number;
   maxHeightMm?: number;
+  /** Espessura CIMA — necessária para stack SW de 3 gavetas. */
+  topPanelThicknessMm?: number;
 };
 
 /**
@@ -89,8 +95,17 @@ export function calculateDrawerHeights(
     return raw.map((v) => v * scale);
   }
 
-  // Modo equal
+  // Modo equal — 3 gavetas: alturas assimétricas SolidWorks (258.667 / 260.667 / 260.667 @ 762×19)
   if (mode === "equal" || count === 1) {
+    const T = options?.topPanelThicknessMm;
+    if (
+      isSolidWorksThreeDrawerEqualStack(count, mode) &&
+      T != null &&
+      Number.isFinite(T) &&
+      T >= 0
+    ) {
+      return [...resolveSolidWorksThreeDrawerFrontHeightsMm(totalHeight, T)];
+    }
     const each = distributable / count;
     return Array.from({ length: count }, () => each);
   }
@@ -102,7 +117,17 @@ export function calculateDrawerHeights(
     return [lower, upper];
   }
 
-  // Modo progressivo (3+ gavetas) — índice 0 = inferior (peso maior)
+  // Modo progressivo (3+ gavetas) — 3 gavetas: mesmo SSOT SW que equal
+  const Tprog = options?.topPanelThicknessMm;
+  if (
+    isSolidWorksThreeDrawerEqualStack(count, "progressive") &&
+    Tprog != null &&
+    Number.isFinite(Tprog) &&
+    Tprog >= 0
+  ) {
+    return [...resolveSolidWorksThreeDrawerFrontHeightsMm(totalHeight, Tprog)];
+  }
+
   const upperWeight = 0.2;
   const lowerWeight = 0.4;
   const middleWeight = 1 - upperWeight - lowerWeight;
@@ -124,9 +149,10 @@ export function calculateDrawerHeights(
 export function calculateDrawerPositions(
   heights: number[],
   boxHeight: number,
-  baseOffset: number = DRAWER_VERTICAL_BASE_OFFSET_MM
+  baseOffset: number = DRAWER_VERTICAL_BASE_OFFSET_MM,
+  options?: { topPanelThicknessMm?: number }
 ): number[] {
-  return resolveDrawerVerticalPositions(heights, boxHeight, baseOffset);
+  return resolveDrawerVerticalPositions(heights, boxHeight, baseOffset, options);
 }
 
 /**
@@ -135,15 +161,17 @@ export function calculateDrawerPositions(
 export function recalculateDrawerGroupLayout(group: DrawerGroup): DrawerGroup {
   const heights = calculateDrawerHeights(
     group.drawers.length,
-    group.boxDimensions.height, // Sem base offset - regra (altura/N - 6mm)
+    group.boxDimensions.height,
     group.heightMode,
-    group.customHeights
+    group.customHeights,
+    { topPanelThicknessMm: group.boxDimensions.thickness }
   );
 
   const positions = calculateDrawerPositions(
     heights,
     group.boxDimensions.height,
-    DRAWER_VERTICAL_BASE_OFFSET_MM
+    DRAWER_VERTICAL_BASE_OFFSET_MM,
+    { topPanelThicknessMm: group.boxDimensions.thickness }
   );
 
   const updatedDrawers = group.drawers.map((drawer, index) => ({

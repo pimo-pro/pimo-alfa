@@ -24,7 +24,10 @@ import {
 import type { DrawerHeightMode } from "./drawerHeightModeTypes";
 import type { ErgonomicHeightRules, KitchenZoneProfile } from "./drawerErgonomicsHeights";
 import { DRAWER_VERTICAL_BASE_OFFSET_MM } from "./drawerVerticalPosition";
-import { resolveLowestDrawerBodyElevationFromFrontMm } from "./drawerStackPosition";
+import {
+  resolveDrawerStackRole,
+  resolveLowestDrawerBodyElevationFromFrontMm,
+} from "./drawerStackPosition";
 import { resolveDrawerGroupPosZMm } from "./drawerViewerLayout";
 export interface DrawerGenerationConfig {
   // Box dimensions
@@ -128,17 +131,21 @@ export function generateDrawerGroup(config: DrawerGenerationConfig): DrawerGroup
       kitchenZoneProfile,
       minHeightMm: minDrawerHeightMm ?? drawerSettings?.gavetaAlturaMinimaMm,
       maxHeightMm: maxDrawerHeightMm ?? drawerSettings?.gavetaAlturaMaximaMm,
+      topPanelThicknessMm: boxThickness,
     }
   );
 
-  // Calcula posições Y (empilhamento vertical)
-  const positions = calculateDrawerPositions(heights, boxHeight, DRAWER_VERTICAL_BASE_OFFSET_MM);
+  // Calcula posições Y (empilhamento vertical) — datum = boxHeight (igual ao cutlist/runner).
+  const positions = calculateDrawerPositions(heights, boxHeight, DRAWER_VERTICAL_BASE_OFFSET_MM, {
+    topPanelThicknessMm: boxThickness,
+  });
 
   // Gera cada gaveta
   const drawers: Drawer[] = [];
   for (let i = 0; i < drawerCount; i++) {
     const drawerHeight = heights[i];
     const posY = positions[i];
+    const stackRole = resolveDrawerStackRole(i, drawerCount);
     const perDrawerOverrides = {
       ...drawerOverrides?.[i],
       // Gaveta inferior: corpo 18.5 mm acima da base do módulo (frente continua flush).
@@ -157,6 +164,7 @@ export function generateDrawerGroup(config: DrawerGenerationConfig): DrawerGroup
       boxThickness,
       drawerHeight,
       totalDrawers: drawerCount,
+      stackRole,
       type: effectiveDrawerType,
     };
 

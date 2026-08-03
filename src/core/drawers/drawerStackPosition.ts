@@ -7,10 +7,6 @@
  * - frente superior chega � borda superior (CIMA)
  */
 
-import {
-  DRAWER_VERTICAL_BASE_OFFSET_MM,
-  DRAWER_VERTICAL_GAP_MM,
-} from "./drawerVerticalPosition";
 import { DRAWER_LOWEST_BODY_ABOVE_MODULE_BASE_MM } from "./drawerGeometryConstants";
 
 export type DrawerStackRole = "lowest" | "highest" | "middle" | "single";
@@ -71,21 +67,14 @@ export function resolveDrawerFrontStackGeometry(params: {
   posYMm: number;
 }): DrawerFrontStackGeometry {
   const boxH = Math.max(1, Number(params.boxInternalHeightMm) || 1);
-  const base =
-    params.baseOffsetMm != null && Number.isFinite(params.baseOffsetMm)
-      ? params.baseOffsetMm
-      : DRAWER_VERTICAL_BASE_OFFSET_MM;
   const heights = params.drawerHeights;
   const i = Math.max(0, Math.min(heights.length - 1, params.drawerIndex0Based));
   const frontHeightMm = Math.max(1, Number(heights[i]) || 1);
   const role = resolveDrawerStackRole(i, heights.length);
 
-  let offsetY = 0;
-  for (let k = 0; k < i; k++) {
-    offsetY += Number.isFinite(heights[k]) ? heights[k]! : 0;
-    offsetY += DRAWER_VERTICAL_GAP_MM;
-  }
-  const frontBottomFromModuleBaseMm = base + offsetY;
+  // Bottom a partir de posY (SSOT) — cobre stack equal clássico e bottoms SolidWorks.
+  const frontBottomFromModuleBaseMm =
+    params.posYMm - (-boxH / 2) - frontHeightMm / 2;
   const frontTopFromModuleBaseMm = frontBottomFromModuleBaseMm + frontHeightMm;
 
   const eps = 0.51;

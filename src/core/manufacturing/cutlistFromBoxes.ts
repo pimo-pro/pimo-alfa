@@ -418,8 +418,9 @@ export function cutlistComPrecoFromBox(
       const sortedDrawers = [...drawersLayer].sort(
         (a, b) => (Number(a.posY) || 0) - (Number(b.posY) || 0)
       );
-      /** Altura interna real do vão (não derivar de p.altura_mm — laterais podem já ser H−2T). */
-      const boxInternalHeightMm = Math.max(1, box.dimensoes.altura - 2 * box.espessura);
+      /** Datum alinhado ao stack das frentes (H externo) — não H−2T.
+       * Os Y desde o fundo do painel (41 / 288.667 / 555.333) cabem no painel H−2T. */
+      const boxInternalHeightMm = Math.max(1, box.dimensoes.altura);
       const runnerLines = resolveEuropeanModuleRunnerLinesYMm({
         panelHeightMm: p.altura_mm,
         boxInternalHeightMm,
