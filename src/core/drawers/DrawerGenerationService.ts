@@ -26,7 +26,7 @@ import type { ErgonomicHeightRules, KitchenZoneProfile } from "./drawerErgonomic
 import { DRAWER_VERTICAL_BASE_OFFSET_MM } from "./drawerVerticalPosition";
 import {
   resolveDrawerStackRole,
-  resolveLowestDrawerBodyElevationFromFrontMm,
+  resolveDrawerBodyElevationForStackRoleMm,
 } from "./drawerStackPosition";
 import { resolveDrawerGroupPosZMm } from "./drawerViewerLayout";
 export interface DrawerGenerationConfig {
@@ -148,10 +148,10 @@ export function generateDrawerGroup(config: DrawerGenerationConfig): DrawerGroup
     const stackRole = resolveDrawerStackRole(i, drawerCount);
     const perDrawerOverrides = {
       ...drawerOverrides?.[i],
-      // Gaveta inferior: corpo 18.5 mm acima da base do módulo (frente continua flush).
+      // Elevação corpo por role: lowest/single 18,5 · middle 17 · highest 12,5.
       sideBaseElevationMm:
         drawerOverrides?.[i]?.sideBaseElevationMm ??
-        (i === 0 ? resolveLowestDrawerBodyElevationFromFrontMm() : undefined),
+        resolveDrawerBodyElevationForStackRoleMm(stackRole),
     };
     const effectiveDrawerType = perDrawerOverrides?.drawerType ?? drawerType;
 

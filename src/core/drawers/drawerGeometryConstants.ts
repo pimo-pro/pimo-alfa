@@ -6,7 +6,7 @@ export const DRAWER_VERTICAL_GAP_MM = 4;
 
 /** Folga lateral padrão da frente (mm por lado) — espelha settings.gavetaFolgaFrenteMm. */
 
-export const DRAWER_FRONT_LATERAL_GAP_MM = 1;
+export const DRAWER_FRONT_LATERAL_GAP_MM = 2;
 
 
 
@@ -19,10 +19,19 @@ export const DRAWER_SIDE_TOP_CLEARANCE_RATIO = 0.25;
 /** Altura útil das laterais em relação à frente (75%). */
 export const DRAWER_SIDE_HEIGHT_RATIO = 1 - DRAWER_SIDE_TOP_CLEARANCE_RATIO;
 
-/** Elevação da base das laterais/costa em relação à base da frente (mm). */
-export const DRAWER_SIDE_BASE_ELEVATION_MIN_MM = 15;
+/**
+ * Elevação da base das laterais/costa em relação à base da frente (mm).
+ * Intervalo industrial: 12,5 (superior, folga CIMA ≥33) … 22.
+ */
+export const DRAWER_SIDE_BASE_ELEVATION_MIN_MM = 12.5;
 export const DRAWER_SIDE_BASE_ELEVATION_MAX_MM = 22;
+/** Elevação corpo — gavetas intermédias. */
 export const DRAWER_SIDE_BASE_ELEVATION_MM = 17;
+/**
+ * Elevação corpo — gaveta superior (stackRole=highest).
+ * Com sideH = h−64,5 e T=19 → folga até face inferior da CIMA = 33 mm.
+ */
+export const DRAWER_HIGHEST_BODY_ELEVATION_FROM_FRONT_MM = 12.5;
 
 /**
  * Frente do gaveta inferior: distância da base da frente à borda inferior do módulo (mm).
@@ -31,9 +40,10 @@ export const DRAWER_SIDE_BASE_ELEVATION_MM = 17;
 export const DRAWER_LOWEST_FRONT_BOTTOM_FROM_MODULE_BASE_MM = 0;
 
 /**
- * Gaveta inferior: corpo (laterais/fundo) 18.5 mm acima da base do módulo.
+ * Gaveta inferior: corpo (laterais/fundo) 18,5 mm acima da base do módulo.
  * Com `frontBottom(lowest)=0`, isto é também a elevação das laterais vs base da frente.
- * Os furos da frente usam medidas fixas e NÃO dependem deste valor.
+ * Furos da frente: pairing `elev+15` / `elev+sideH−35` / rasgo `elev+sideH−13` (reposicionam com elev).
+ * Piso da corrediça (41 mm) é independente.
  */
 export const DRAWER_LOWEST_BODY_ABOVE_MODULE_BASE_MM = 18.5;
 

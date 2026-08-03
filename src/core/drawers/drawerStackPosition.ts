@@ -7,7 +7,11 @@
  * - frente superior chega � borda superior (CIMA)
  */
 
-import { DRAWER_LOWEST_BODY_ABOVE_MODULE_BASE_MM } from "./drawerGeometryConstants";
+import {
+  DRAWER_HIGHEST_BODY_ELEVATION_FROM_FRONT_MM,
+  DRAWER_LOWEST_BODY_ABOVE_MODULE_BASE_MM,
+  DRAWER_SIDE_BASE_ELEVATION_MM,
+} from "./drawerGeometryConstants";
 
 export type DrawerStackRole = "lowest" | "highest" | "middle" | "single";
 
@@ -24,11 +28,30 @@ export function resolveDrawerStackRole(
 }
 
 /**
- * Eleva��o do corpo vs base da frente (mm) para a gaveta inferior / �nica.
- * Com `frontBottom=0` ? `drawerBodyBottom = 18.5` acima da base do m�dulo.
+ * Elevação do corpo vs base da frente (mm) para a gaveta inferior / única.
+ * Com `frontBottom=0` → `drawerBodyBottom = 18,5` acima da base do módulo.
  */
 export function resolveLowestDrawerBodyElevationFromFrontMm(): number {
   return DRAWER_LOWEST_BODY_ABOVE_MODULE_BASE_MM;
+}
+
+/**
+ * Elevação industrial do corpo vs frente por papel no stack.
+ * lowest/single: 18,5 · middle: 17 · highest: 12,5 (folga CIMA ≥33 mm).
+ */
+export function resolveDrawerBodyElevationForStackRoleMm(
+  stackRole: DrawerStackRole
+): number {
+  switch (stackRole) {
+    case "lowest":
+    case "single":
+      return DRAWER_LOWEST_BODY_ABOVE_MODULE_BASE_MM;
+    case "highest":
+      return DRAWER_HIGHEST_BODY_ELEVATION_FROM_FRONT_MM;
+    case "middle":
+    default:
+      return DRAWER_SIDE_BASE_ELEVATION_MM;
+  }
 }
 
 /** Base do corpo relativamente � base do m�dulo (mm). */

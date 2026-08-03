@@ -32,6 +32,7 @@ import {
   DRAWER_COSTA_HEIGHT_BELOW_LATERAL_MM,
   DRAWER_SIDE_BASE_ELEVATION_MM,
 } from "./drawerGeometryConstants";
+import { resolveDrawerBodyElevationForStackRoleMm } from "./drawerStackPosition";
 import {
   DRAWER_SLIDE_LENGTHS_MM,
   isDrawerSlideLengthMm,
@@ -96,7 +97,7 @@ export interface DrawerCalculatedSpecs {
   
   /** Deslocamento vertical do centro do corpo (laterais/costa) para alinhar fundo ao rasgo. */
   bodyCenterOffsetY: number;
-  /** Elevação da base do corpo vs base da frente (mm). Gaveta inferior = 18.5. */
+  /** Elevação da base do corpo vs base da frente (mm). Gaveta inferior = 18. */
   sideBaseElevationMm: number;
   
   // Posicionamento
@@ -161,7 +162,7 @@ export type DrawerParametricOverrides = {
   frontHeightMm?: number;
   metalBoxProfileId?: string;
   metalBoxHeightMm?: number;
-  /** Elevação do corpo vs base da frente (mm). Default 17; gaveta inferior = 18.5. */
+  /** Elevação do corpo vs base da frente (mm). Default 17; gaveta inferior = 18. */
   sideBaseElevationMm?: number;
 };
 
@@ -368,7 +369,9 @@ export function calculateDrawerSpecs(
   const sideElev =
     overrides?.sideBaseElevationMm != null && Number.isFinite(overrides.sideBaseElevationMm)
       ? overrides.sideBaseElevationMm
-      : DRAWER_SIDE_BASE_ELEVATION_MM;
+      : dimensions.stackRole != null
+        ? resolveDrawerBodyElevationForStackRoleMm(dimensions.stackRole)
+        : DRAWER_SIDE_BASE_ELEVATION_MM;
   const bodyCenterOffsetY = resolveDrawerBodyCenterOffsetYMm(
     frontHeight,
     woodBodyHeight,

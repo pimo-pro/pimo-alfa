@@ -110,12 +110,15 @@ export {
   resolveDrawerStackRole,
   resolveDrawerFrontStackGeometry,
   resolveLowestDrawerBodyElevationFromFrontMm,
+  resolveDrawerBodyElevationForStackRoleMm,
   resolveDrawerBodyBottomFromModuleBaseMm,
   type DrawerStackRole,
   type DrawerFrontStackGeometry,
 } from "./drawerStackPosition";
 export {
   DRAWER_LOWEST_BODY_ABOVE_MODULE_BASE_MM,
+  DRAWER_HIGHEST_BODY_ELEVATION_FROM_FRONT_MM,
+  DRAWER_FRONT_LATERAL_GAP_MM,
   DRAWER_LOWEST_FRONT_BOTTOM_FROM_MODULE_BASE_MM,
 } from "./drawerGeometryConstants";
 

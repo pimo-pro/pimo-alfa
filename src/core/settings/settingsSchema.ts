@@ -313,7 +313,7 @@ export const settingsDefaults: SettingsSchema = {
     portaPosZOffsetMm: 9,
   },
   gavetas: {
-    gavetaFolgaFrenteMm: 1,
+    gavetaFolgaFrenteMm: 2,
     gavetaFolgaLateralMm: 7,
     gavetaEspessuraFrenteMm: 19,
     gavetaEspessuraLateralMm: 16,

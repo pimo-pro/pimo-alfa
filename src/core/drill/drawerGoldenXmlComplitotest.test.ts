@@ -156,7 +156,7 @@ describe("golden XML_COMPLITO � frente inferior pairing laterais", () => {
   const W = 260.67;
   const T = 19;
   const sideH = 195.5;
-  const elev = 18.5;
+  const elev = 18;
 
   it("legado fixed holes: rasgo W-56.5; cavilhas = elev+15 e elev+(sideH-35); X=33", () => {
     const holes = computeDrawerLowestFrenteExtFixedHoles({

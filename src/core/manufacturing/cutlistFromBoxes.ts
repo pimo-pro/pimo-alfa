@@ -31,7 +31,8 @@ import {
   buildEuropeanModuleLateralCorredicaDrilling,
   resolveEuropeanModuleRunnerLinesYMm,
 } from "../drawers/drilling/DrawerDrillingRules";
-import { DRAWER_LOWEST_BODY_ABOVE_MODULE_BASE_MM } from "../drawers/drawerGeometryConstants";
+import { resolveDrawerBodyElevationForStackRoleMm } from "../drawers/drawerStackPosition";
+import type { DrawerStackRole } from "../drawers/drawerStackPosition";
 import { resolveCorredicaOverlaps } from "../drawers/drilling/drawerSlideDrillingCatalog";
 import { resolveDrawerSlideLength } from "../drawers/drawerSlideDepth";
 import {
@@ -622,10 +623,9 @@ export function cutlistComPrecoFromBox(
           drawerBodyWidthMm: drawerRules?.bodyWidthMm,
           drawerSideThicknessMm: drawerRules?.sideThicknessMm,
           drawerBottomThicknessMm: drawerRules?.bottomThicknessMm,
-          drawerSideBaseElevationMm:
-            stackRole === "lowest" || stackRole === "single"
-              ? DRAWER_LOWEST_BODY_ABOVE_MODULE_BASE_MM
-              : undefined,
+          drawerSideBaseElevationMm: resolveDrawerBodyElevationForStackRoleMm(
+            (stackRole as DrawerStackRole) || "middle"
+          ),
           drawerStackRole: stackRole,
           isLowestDrawer:
             isLowestDrawer &&

@@ -19,10 +19,6 @@ import {
   DRAWER_VERTICAL_GAP_MM,
   getDrawerUsableInternalHeightMm,
 } from "./drawerVerticalPosition";
-import {
-  isSolidWorksThreeDrawerEqualStack,
-  resolveSolidWorksThreeDrawerFrontHeightsMm,
-} from "./drawerSolidWorksStackGeometry";
 
 export interface DrawerGroup {
   id: string;
@@ -48,7 +44,7 @@ export type CalculateDrawerHeightsOptions = {
   kitchenZoneProfile?: KitchenZoneProfile;
   minHeightMm?: number;
   maxHeightMm?: number;
-  /** Espessura CIMA — necessária para stack SW de 3 gavetas. */
+  /** Espessura CIMA (validação overlay; não força alturas fixas). */
   topPanelThicknessMm?: number;
 };
 
@@ -95,17 +91,8 @@ export function calculateDrawerHeights(
     return raw.map((v) => v * scale);
   }
 
-  // Modo equal — 3 gavetas: alturas assimétricas SolidWorks (258.667 / 260.667 / 260.667 @ 762×19)
+  // Modo equal — dinâmico: h = (H − B0 − G·(n−1)) / n (sem overlap)
   if (mode === "equal" || count === 1) {
-    const T = options?.topPanelThicknessMm;
-    if (
-      isSolidWorksThreeDrawerEqualStack(count, mode) &&
-      T != null &&
-      Number.isFinite(T) &&
-      T >= 0
-    ) {
-      return [...resolveSolidWorksThreeDrawerFrontHeightsMm(totalHeight, T)];
-    }
     const each = distributable / count;
     return Array.from({ length: count }, () => each);
   }
@@ -117,17 +104,7 @@ export function calculateDrawerHeights(
     return [lower, upper];
   }
 
-  // Modo progressivo (3+ gavetas) — 3 gavetas: mesmo SSOT SW que equal
-  const Tprog = options?.topPanelThicknessMm;
-  if (
-    isSolidWorksThreeDrawerEqualStack(count, "progressive") &&
-    Tprog != null &&
-    Number.isFinite(Tprog) &&
-    Tprog >= 0
-  ) {
-    return [...resolveSolidWorksThreeDrawerFrontHeightsMm(totalHeight, Tprog)];
-  }
-
+  // Modo progressivo (3+ gavetas) — índice 0 = inferior (peso maior)
   const upperWeight = 0.2;
   const lowerWeight = 0.4;
   const middleWeight = 1 - upperWeight - lowerWeight;

@@ -36,7 +36,7 @@ export function resolveDrawerSideTopClearanceMm(frontHeightMm: number): number {
   return frontH * DRAWER_SIDE_TOP_CLEARANCE_RATIO;
 }
 
-/** Elevação da base das laterais acima da base da frente (mm), clamp 15–22. */
+/** Elevação da base das laterais acima da base da frente (mm), clamp 12,5–22. */
 export function resolveDrawerSideBaseElevationMm(
   overrideMm?: number
 ): number {
@@ -224,7 +224,7 @@ export function resolveDrawerViewerWoodSideLayoutMm(input: {
   sideThicknessMm: number;
   /** Comprimento nominal da corrediça (mm). */
   slideLengthMm: number;
-  /** Elevação da base das laterais vs frente (mm). Default 17; gaveta inferior = 18.5. */
+  /** Elevação da base das laterais vs frente (mm). Default 17; inferior 18,5; superior 12,5. */
   baseElevationMm?: number;
 }): DrawerViewerWoodSideLayoutMm {
   const sideHeightMm = resolveDrawerViewerSideHeightMm(input.frontHeightMm);
