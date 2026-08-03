@@ -59,6 +59,8 @@ import {
 } from "../industrial/industrialValidation";
 import { buildIndustrialPieceId, IndustrialError } from "../industrial/IndustrialError";
 import { isIndustrialDoorPanelTipo } from "../doors/industrialDoorPanels";
+import { resolveActiveGavetasCount } from "../drawers/drawerModeloAGate";
+import { resolveCustoMontagemPorGavetaEur } from "../financeiro/drawerAssemblyCost";
 
 type PainelIndustrial = {
   id: string;
@@ -225,25 +227,30 @@ export function gerarModeloIndustrial(box: BoxModule, rules: RulesConfig): Model
   const portasRaw = gerarPortas(box, rules);
   const gavetas = gerarGavetas(box, rules);
 
-  // Opção 1: material das portas 1× (painéis porta_*); Painéis totais = só carcaça.
-  // `gerarPortas.custo` recalcula o mesmo material — alinhar e não somar em duplicado.
+  // Fase 1: material das portas de módulo em Painéis (1×). Linha Portas = €0 (divisão futura).
+  // Fase 2: madeira de gaveta em Painéis (cutlist); custoTotalGavetas = N × montagem/gaveta.
   const paineisPorta = paineis.filter((painel) => isIndustrialDoorPanelTipo(painel.tipo));
-  const paineisCarcaca = paineis.filter((painel) => !isIndustrialDoorPanelTipo(painel.tipo));
   const portas = portasRaw.map((porta, index) => ({
     ...porta,
     custo: paineisPorta[index]?.custo ?? 0,
   }));
-  const custoTotalPaineis = paineisCarcaca.reduce((total, painel) => total + painel.custo, 0);
+  const montagemPorGavetaEur = resolveCustoMontagemPorGavetaEur();
+  const gavetasCount = Math.max(resolveActiveGavetasCount(box), gavetas.length);
+  const gavetasPriced =
+    gavetas.length > 0
+      ? gavetas.map((gaveta) => ({ ...gaveta, custo: montagemPorGavetaEur }))
+      : gavetas;
+  const custoTotalPaineis = paineis.reduce((total, painel) => total + painel.custo, 0);
   const custoTotalFerragens = calcularCustoFerragens(ferragens);
-  const custoTotalPortas = paineisPorta.reduce((total, painel) => total + painel.custo, 0);
-  const custoTotalGavetas = gavetas.reduce((total, gaveta) => total + gaveta.custo, 0);
+  const custoTotalPortas = 0;
+  const custoTotalGavetas = Math.round(gavetasCount * montagemPorGavetaEur * 100) / 100;
   return {
     dimensoes: box.dimensoes,
     espessura: getEspessura(box),
     paineis,
     ferragens,
     portas,
-    gavetas,
+    gavetas: gavetasPriced,
     custoTotalPaineis,
     custoTotalFerragens,
     custoTotalPortas,

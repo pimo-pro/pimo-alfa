@@ -5,8 +5,8 @@
  * FASE 2: quando `drawersLayer` existe, painéis de gaveta vêm de `cutlistComPrecoFromBox`
  * (pipeline moderno, alinhado com CNC). Caso contrário, fallback legado (`gerarModeloIndustrial`).
  *
- * Custos (opção 1): material das portas conta 1× na linha Portas (cutlist);
- * Painéis = carcaça (exclui portas/gavetas/remates). Não somar `modelo.portas.custo` em cima.
+ * Fase 1: material das portas de módulo conta 1× em Painéis; linha Portas = €0 (reservada a divisão).
+ * Fase 2: madeira de gaveta em Painéis; linha Gavetas = N × montagem/gaveta (configurável).
  */
 
 import { useMemo } from "react";
@@ -15,6 +15,7 @@ import {
   isCarcassPanelForAdminCost,
   isDoorPieceForAdminCost,
 } from "../core/financeiro/cutlistAdminCostPartition";
+import { resolveCustoMontagemPorGavetaEur } from "../core/financeiro/drawerAssemblyCost";
 import { gerarModeloIndustrial } from "../core/manufacturing/boxManufacturing";
 import { cutlistComPrecoFromBox } from "../core/manufacturing/cutlistFromBoxes";
 import { gerarFerragensIndustriais, agruparPorComponente } from "../core/industriais/ferragensIndustriais";
@@ -129,7 +130,8 @@ function cutlistItemToPainelRow(
 function buildGavetaRowsFromModernCutlist(
   box: BoxModule,
   boxNome: string,
-  modernCutlist: CutListItemComPreco[]
+  modernCutlist: CutListItemComPreco[],
+  montagemPorGavetaEur: number
 ): GavetaRow[] {
   const drawerPieceIds = modernCutlist.filter((item) => isDrawerPieceTipo(item.tipo));
   const drawerIndices = new Set<number>();
@@ -155,7 +157,8 @@ function buildGavetaRowsFromModernCutlist(
       profundidade_mm: front.dimensoes.profundidade,
       espessura_mm: front.espessura,
       corrediças: DRAWER_SLIDES_PER_DRAWER,
-      custo: drawerPieces.reduce((sum, piece) => sum + piece.precoTotal, 0),
+      // Fase 2: linha Gavetas = montagem; madeira já em Painéis.
+      custo: montagemPorGavetaEur,
     });
   }
   return rows;
@@ -275,6 +278,8 @@ export function useCutlistData() {
     const allOrlaFerragens: OrlaFerragemRow[] = [];
     const allRemates: RemateRow[] = [];
 
+    const montagemPorGavetaEur = resolveCustoMontagemPorGavetaEur();
+
     boxes.forEach((box) => {
       const { profundidadeExternaMm, profundidadeInternaUtilMm } = computeBoxProfundidadeLeituraMm(
         box,
@@ -290,7 +295,7 @@ export function useCutlistData() {
 
         const doorItems = modernCutlist.filter((item) => isDoorPieceForAdminCost(item.tipo));
         for (const item of modernCutlist) {
-          // Painéis = carcaça; portas/gavetas/remates têm buckets próprios.
+          // Painéis = carcaça + portas de módulo + madeira de gavetas; remates fora.
           if (!isCarcassPanelForAdminCost(item.tipo)) continue;
           totalPaineisQty += item.quantidade;
           custoTotalPaineis += item.precoTotal;
@@ -299,14 +304,19 @@ export function useCutlistData() {
           );
         }
 
+        // Listagem de fabrico; material já em Painéis — linha financeira Portas = €0 (divisão futura).
         const portaRows = buildPortaRowsFromCutlist(boxNome, doorItems, modelo.portas);
         for (const porta of portaRows) {
           totalPortasQty += 1;
-          custoTotalPortas += porta.custo;
-          allPortas.push(porta);
+          allPortas.push({ ...porta, custo: 0 });
         }
 
-        const gavetaRows = buildGavetaRowsFromModernCutlist(box, boxNome, modernCutlist);
+        const gavetaRows = buildGavetaRowsFromModernCutlist(
+          box,
+          boxNome,
+          modernCutlist,
+          montagemPorGavetaEur
+        );
         for (const gaveta of gavetaRows) {
           totalGavetasQty += 1;
           custoTotalGavetas += gaveta.custo;
@@ -328,17 +338,18 @@ export function useCutlistData() {
           });
         });
 
+        // Listagem de fabrico; material já em Painéis — linha financeira Portas = €0.
         const portaRows = buildPortaRowsFromDoorPanels(box.id, boxNome, doorPanels, modelo.portas);
         for (const porta of portaRows) {
           totalPortasQty += 1;
-          custoTotalPortas += porta.custo;
-          allPortas.push(porta);
+          allPortas.push({ ...porta, custo: 0 });
         }
 
         modelo.gavetas.forEach((p) => {
           totalGavetasQty += 1;
-          custoTotalGavetas += p.custo;
-          allGavetas.push({ ...p, key: `${box.id}-${p.id}`, boxNome });
+          // Fase 2: legado PI — linha Gavetas = montagem; madeira (se existir) já em painéis via cutlist.
+          custoTotalGavetas += montagemPorGavetaEur;
+          allGavetas.push({ ...p, key: `${box.id}-${p.id}`, boxNome, custo: montagemPorGavetaEur });
         });
       }
 

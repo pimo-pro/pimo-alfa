@@ -335,7 +335,7 @@ export default function OrcamentosAdminSettings() {
             }
           />
           <NumberInput
-            label="Montagem por peca (EUR)"
+            label="Custo de montagem por gaveta (EUR)"
             value={draft.custosIndustriais.custoMontagemPorPeca}
             onChange={(v) =>
               setDraft((p) => ({

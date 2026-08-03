@@ -41,6 +41,13 @@ export {
 export type { FinanceiroUnificadoProjectSlice } from "./financeiroUnificado";
 
 export {
+  CUSTO_MONTAGEM_POR_GAVETA_DEFAULT_EUR,
+  computeMontagemGavetasEur,
+  countGavetasInBoxes,
+  resolveCustoMontagemPorGavetaEur,
+} from "./drawerAssemblyCost";
+
+export {
   buildFinanceiroPecasRows,
   buildFinanceiroPecasPdfRows,
   financeiroPecasPdfHead,

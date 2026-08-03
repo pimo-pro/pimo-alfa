@@ -22,6 +22,7 @@ export type OrcamentosCustosIndustriaisSettings = {
   custoOperacoesEspeciais: number;
   valorHoraMaquina: number;
   custoLogisticaPorKg: number;
+  /** € de montagem/colagem por gaveta (bucket financeiro Gavetas). */
   custoMontagemPorPeca: number;
   materialCostMode: OrcamentosMaterialCostMode;
   enableDesperdicio: boolean;

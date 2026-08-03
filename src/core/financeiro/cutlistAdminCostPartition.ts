@@ -1,16 +1,21 @@
 /**
- * Partição de custos ADMIN/Totais: Painéis (carcaça) vs Portas (material 1×).
- * Alinhado a classifyFinanceiroCustoKey — evita somar material de portas em Painéis + Portas.
+ * PartiÃ§Ã£o de custos ADMIN/Totais: PainÃ©is (carcaÃ§a + portas de mÃ³dulo + madeira de gavetas).
+ * Bucket financeiro Â«GavetasÂ» = montagem unitÃ¡ria (fora desta partiÃ§Ã£o de madeira).
+ * Alinhado a classifyFinanceiroCustoKey.
  */
 
 import { isIndustrialDoorPanelTipo } from "../doors/industrialDoorPanels";
 import { classifyFinanceiroCustoKey } from "./financeiroUnificado";
 
-/** Peça cujo material deve ir para Painéis (carcaça), não Portas/Gavetas/Remates. */
+/** PeÃ§a cujo material deve ir para PainÃ©is (exclui remates/divisÃ£o; inclui gaveta_* e porta_* mÃ³dulo). */
 export function isCarcassPanelForAdminCost(tipo: string): boolean {
   return classifyFinanceiroCustoKey(tipo) === "paineis";
 }
 
+/**
+ * Identidade de peÃ§a de porta de mÃ³dulo (listagens de fabrico / CNC).
+ * NÃ£o implica bucket financeiro Â«PortasÂ» â€” o material dessas folhas vai para PainÃ©is.
+ */
 export function isDoorPieceForAdminCost(tipo: string): boolean {
   return isIndustrialDoorPanelTipo(tipo) || classifyFinanceiroCustoKey(tipo) === "portas";
 }

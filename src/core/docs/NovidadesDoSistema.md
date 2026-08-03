@@ -1,5 +1,12 @@
 # Novidades do Sistema
 
+### Plano industrial/financeiro concluído
+- Painéis SSOT (carcaça + portas de módulo + madeira de gavetas)
+- Gavetas = montagem configurável (default 22 €)
+- Ferragens estabilizadas (corrediças + dobradiças)
+- Chapas reais = métrica industrial (sem monetização no default)
+- Portas de módulo sem preço separado (linha Portas reservada a divisão)
+
 ### Atualização Industrial — Correções DRILL
 - Furos Ø4 substituídos por Ø5
 - Z centrado na espessura (T/2)

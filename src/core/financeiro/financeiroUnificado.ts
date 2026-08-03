@@ -18,6 +18,7 @@ import { freeagem4x35JuntasRematesCusto } from "../ferragens/freeagemParafusos";
 import { computeChapasReal } from "../industrial/computeChapasReal";
 import { getSettings } from "../settings/settingsService";
 import { isDrawerPieceTipo } from "../../services/drawerCutlistAdapter";
+import { isIndustrialDoorPanelTipo } from "../doors/industrialDoorPanels";
 import type { IndustrialPieceEditsStore } from "../industrial/industrialPieceEditsTypes";
 import { getCentralPricingCached } from "../pricing/centralPricingConfig";
 import {
@@ -38,6 +39,7 @@ import {
 } from "./computeDesperdicioSerragemFinanceiras";
 import { computeCustosAvancadosFinanceiras } from "./computeCustosAvancadosFinanceiras";
 import { computeOperacoesIndustriaisAvancadas } from "./computeOperacoesIndustriaisAvancadas";
+import { computeMontagemGavetasEur } from "./drawerAssemblyCost";
 import {
   computeOrlaFerragem,
   syncOrlaPiecesForProject,
@@ -153,8 +155,11 @@ function pieceWeightKg(
 
 export function classifyFinanceiroCustoKey(tipo: string): FinanceiroCustoKey {
   const t = String(tipo ?? "").toLowerCase();
+  // Folhas de módulo (armário) = Painéis. Bucket «portas» reservado a portas de divisão (futuro).
+  if (isIndustrialDoorPanelTipo(tipo) || isIndustrialDoorPanelTipo(t)) return "paineis";
   if (t.includes("porta")) return "portas";
-  if (isDrawerPieceTipo(tipo) || t.includes("gaveta")) return "gavetas";
+  // Fase 2: madeira de gaveta = Painéis. Bucket «gavetas» = só montagem (fora do cutlist).
+  if (isDrawerPieceTipo(tipo) || t.includes("gaveta")) return "paineis";
   if (
     t.includes("remate") ||
     t.includes("rodape") ||
@@ -364,8 +369,8 @@ export function computeFinanceiroUnificado(
     cutlist,
     wasteM2,
     serragemM2,
-    // 18% × material de chapas (carcaça + portas; pricing.json desperdicio.percentual).
-    // Portas são folhas nas mesmas chapas — entram na base do desperdício, não só Painéis.
+    // 18% × material de chapas (Painéis inclui folhas de módulo; portas de divisão futuras em portas).
+    // Base = paineis + portas para não excluir madeira se/quando bucket portas voltar a ter valor.
     custoPaineisEur: custosComputed.paineis + custosComputed.portas,
   });
   custosComputed.desperdicio = despSerr.precoDesperdicio;
@@ -390,6 +395,8 @@ export function computeFinanceiroUnificado(
       custosComputed[k] = 0;
     }
   }
+  // Fase 2: bucket Gavetas = N × montagem/gaveta (não madeira; não é zerado por chapas reais).
+  custosComputed.gavetas = computeMontagemGavetasEur(boxes).total;
   custosComputed.chapasReais = avancados.precoChapasReais;
   custosComputed.maoDeObra = avancados.precoMaoDeObra;
   custosComputed.logistica = avancados.precoLogistica;
@@ -553,7 +560,7 @@ export function financeiroCustoRows(
   const rows: Array<{ label: string; valor: number | null; emBreve?: boolean; total?: boolean }> = [
     { label: "Painéis", valor: snap.custosEffective.paineis },
     { label: "Portas", valor: snap.custosEffective.portas },
-    { label: "Gavetas", valor: snap.custosEffective.gavetas },
+    { label: "Gavetas", valor: snap.custosEffective.gavetas }, // montagem N×€/gaveta (Fase 2)
     { label: "Ferragens", valor: snap.custosEffective.ferragens },
     { label: "Orla", valor: snap.custosEffective.orla },
   ];

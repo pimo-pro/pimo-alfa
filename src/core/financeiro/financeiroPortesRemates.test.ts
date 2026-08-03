@@ -54,6 +54,12 @@ describe("remates — classificação e linhas UI", () => {
     expect(classifyFinanceiroCustoKey("remate")).toBe("remates");
     expect(classifyFinanceiroCustoKey("rodape")).toBe("remates");
     expect(classifyFinanceiroCustoKey("lateral")).toBe("paineis");
+    expect(classifyFinanceiroCustoKey("porta_simples")).toBe("paineis");
+    expect(classifyFinanceiroCustoKey("porta_dupla")).toBe("paineis");
+    expect(classifyFinanceiroCustoKey("porta_divisao")).toBe("portas");
+    expect(classifyFinanceiroCustoKey("gaveta_frente_ext")).toBe("paineis");
+    expect(classifyFinanceiroCustoKey("gaveta_lat_esq")).toBe("paineis");
+    expect(classifyFinanceiroCustoKey("gaveta_fundo")).toBe("paineis");
   });
 
   it("financeiroCustoRows omite Remates quando custo=0", () => {

@@ -1,24 +1,72 @@
 import { describe, expect, it } from "vitest";
 
 import { isCarcassPanelForAdminCost, isDoorPieceForAdminCost } from "./cutlistAdminCostPartition";
+import { classifyFinanceiroCustoKey } from "./financeiroUnificado";
+import { FINANCEIRO_PIECE_MATERIAL_KEYS } from "./financeiroUnificadoTypes";
+import {
+  CUSTO_MONTAGEM_POR_GAVETA_DEFAULT_EUR,
+  computeMontagemGavetasEur,
+  resolveCustoMontagemPorGavetaEur,
+} from "./drawerAssemblyCost";
 
-describe("cutlistAdminCostPartition — Portas vs Painéis (opção 1)", () => {
-  it("classifica folhas de porta como Portas, não Painéis", () => {
+describe("cutlistAdminCostPartition â€” PainÃ©is inclui portas e madeira de gavetas", () => {
+  it("classifica folhas de porta de mÃ³dulo como PainÃ©is", () => {
     for (const tipo of ["porta_simples", "porta_dupla", "porta_correr", "porta_inferior", "porta_superior"]) {
       expect(isDoorPieceForAdminCost(tipo)).toBe(true);
-      expect(isCarcassPanelForAdminCost(tipo)).toBe(false);
+      expect(isCarcassPanelForAdminCost(tipo)).toBe(true);
+      expect(classifyFinanceiroCustoKey(tipo)).toBe("paineis");
     }
   });
 
-  it("classifica carcaça como Painéis", () => {
+  it("classifica carcaÃ§a como PainÃ©is", () => {
     for (const tipo of ["lateral_esquerda", "cima", "fundo", "COSTA", "prateleira", "separador"]) {
       expect(isCarcassPanelForAdminCost(tipo)).toBe(true);
       expect(isDoorPieceForAdminCost(tipo)).toBe(false);
+      expect(classifyFinanceiroCustoKey(tipo)).toBe("paineis");
     }
   });
 
-  it("classifica gavetas fora de Painéis (bucket próprio)", () => {
-    expect(isCarcassPanelForAdminCost("gaveta_frente_ext")).toBe(false);
-    expect(isCarcassPanelForAdminCost("gaveta_lat_esq")).toBe(false);
+  it("classifica madeira de gaveta como PainÃ©is (Fase 2)", () => {
+    for (const tipo of [
+      "gaveta_frente_ext",
+      "gaveta_frente",
+      "gaveta_lat_esq",
+      "gaveta_lat_dir",
+      "gaveta_traseira",
+      "gaveta_fundo",
+    ]) {
+      expect(isCarcassPanelForAdminCost(tipo)).toBe(true);
+      expect(classifyFinanceiroCustoKey(tipo)).toBe("paineis");
+    }
+  });
+
+  it("reserva bucket portas para tipos de divisÃ£o", () => {
+    expect(classifyFinanceiroCustoKey("porta_divisao")).toBe("portas");
+    expect(isCarcassPanelForAdminCost("porta_divisao")).toBe(false);
+  });
+
+  it("por_chapas_reais nÃ£o inclui gavetas na suppress de material", () => {
+    expect(FINANCEIRO_PIECE_MATERIAL_KEYS).toEqual(["paineis", "portas", "remates"]);
+    expect(FINANCEIRO_PIECE_MATERIAL_KEYS).not.toContain("gavetas");
+  });
+});
+
+describe("drawerAssemblyCost â€” montagem por gaveta", () => {
+  it("default de fÃ¡brica Ã© 22 â‚¬", () => {
+    expect(CUSTO_MONTAGEM_POR_GAVETA_DEFAULT_EUR).toBe(22);
+    expect(resolveCustoMontagemPorGavetaEur(null)).toBeGreaterThanOrEqual(0);
+  });
+
+  it("total = N Ã— tarifa override", () => {
+    const boxes = [
+      {
+        drawersLayer: [{ id: "d1" }, { id: "d2" }] as never[],
+      },
+      { gavetas: 1, drawersLayer: [] },
+    ];
+    const r = computeMontagemGavetasEur(boxes, 22);
+    expect(r.gavetasCount).toBe(3);
+    expect(r.custoUnitario).toBe(22);
+    expect(r.total).toBe(66);
   });
 });

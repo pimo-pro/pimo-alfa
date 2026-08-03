@@ -28,7 +28,7 @@ export type CustosAvancadosTarifas = Pick<
 
 export type CustosAvancadosFinanceirasResult = {
   materialCostMode: OrcamentosMaterialCostMode;
-  /** true ? Unificado/Peças devem zerar paineis/portas/gavetas/remates. */
+  /** true → Unificado/Peças devem zerar paineis/portas/remates (não gavetas = montagem). */
   suppressPieceMaterial: boolean;
   chapasCount: number;
   precoChapasReais: number;
