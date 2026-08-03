@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-08-03T15:48:41.706Z",
+      "author": "pimo-pro",
+      "commitMessage": "Industrial: Conclusão do plano de correção (Fases 1–4) — estabilidade financeira e SSOT consolidado",
+      "version": "v6.0803.1648"
+    },
+    {
       "publishedAt": "2026-08-03T14:31:29.408Z",
       "author": "pimo-pro",
       "commitMessage": "Industrial: Correções finais DRILL — Ø4→Ø5, Z centrado, laterais módulo alinhadas ao XML golden",
