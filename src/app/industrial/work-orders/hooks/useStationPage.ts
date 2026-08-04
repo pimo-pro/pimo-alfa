@@ -4,15 +4,19 @@ import { useAuth } from '@/auth/useAuth';
 import { parseBarcode } from '@/industrial/core/barcode/actions';
 import { useIndustrialRealtime } from '@/industrial/realtime';
 import {
-  assignOperator,
   fetchStationTasks,
   fetchWorkOrders,
-  finishTask,
+  finishTasks,
   logTaskEvent,
-  rejectTask,
-  startTask,
+  rejectTasks,
+  startTasks,
 } from '@/industrial/api/workOrderActions';
-import type { IndustrialStation, IndustrialWorkOrder, IndustrialWorkOrderTask } from '@/industrial/work-orders/types';
+import type {
+  IndustrialStation,
+  IndustrialWorkOrder,
+  IndustrialWorkOrderTask,
+  WorkOrderTaskStatus,
+} from '@/industrial/work-orders/types';
 import { STATION_LABELS } from '@/industrial/work-orders/types';
 import type {
   StationActionFeedback,
@@ -170,14 +174,16 @@ export function useStationPage(station: IndustrialStation, options: UseStationPa
     config.enableSupervisorChat ? 'supervisor' : 'station',
   );
   const [eventLog, setEventLog] = useState<Array<{ id: string; type: string; at: string }>>([]);
-  const reloadRef = useRef<() => Promise<void>>(async () => undefined);
+  const reloadRef = useRef<(opts?: { quiet?: boolean }) => Promise<void>>(async () => undefined);
   const reloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const codeInputRef = useRef<HTMLInputElement | null>(null);
+  const busyRef = useRef(false);
 
   const scheduleReload = useCallback(() => {
+    if (busyRef.current) return;
     if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current);
     reloadTimerRef.current = setTimeout(() => {
-      void reloadRef.current();
+      void reloadRef.current({ quiet: true });
     }, 800);
   }, []);
 
@@ -187,9 +193,11 @@ export function useStationPage(station: IndustrialStation, options: UseStationPa
     onDataRefresh: scheduleReload,
   });
 
-  const reload = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const reload = useCallback(async (opts?: { quiet?: boolean }) => {
+    if (!opts?.quiet) {
+      setLoading(true);
+      setError(null);
+    }
     try {
       const [orderRows, taskRows] = await Promise.all([
         fetchWorkOrders({
@@ -221,9 +229,11 @@ export function useStationPage(station: IndustrialStation, options: UseStationPa
       });
       setSelectedTaskIds((prev) => prev.filter((id) => filteredTasks.some((t) => t.id === id)));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao carregar estação.');
+      if (!opts?.quiet) {
+        setError(err instanceof Error ? err.message : 'Erro ao carregar estação.');
+      }
     } finally {
-      setLoading(false);
+      if (!opts?.quiet) setLoading(false);
     }
   }, [station, workOrderId, projectCodeFilter]);
 
@@ -291,16 +301,10 @@ export function useStationPage(station: IndustrialStation, options: UseStationPa
     [activeTasks],
   );
 
-  const focusTask = useCallback(
-    (task: IndustrialWorkOrderTask | null) => {
-      setSelectedTask(task);
-      setSelectedPieceId(task?.pieceId ?? null);
-      if (task && user?.id) {
-        void assignOperator(task.id, user.id).catch(() => undefined);
-      }
-    },
-    [user?.id],
-  );
+  const focusTask = useCallback((task: IndustrialWorkOrderTask | null) => {
+    setSelectedTask(task);
+    setSelectedPieceId(task?.pieceId ?? null);
+  }, []);
 
   /** Compat: selecção única (substitui lista). */
   const selectTask = useCallback(
@@ -439,80 +443,87 @@ export function useStationPage(station: IndustrialStation, options: UseStationPa
         return;
       }
 
+      const targetIds = [...selectedTaskIds];
+      const targets = targetIds
+        .map((id) => tasks.find((t) => t.id === id))
+        .filter((t): t is IndustrialWorkOrderTask => Boolean(t));
+      const pieceByTaskId = new Map(targets.map((t) => [t.id, t.pieceId]));
+
+      const optimisticStatus: WorkOrderTaskStatus =
+        action === 'start' ? 'in_progress' : action === 'complete' ? 'completed' : 'rejected';
+
+      busyRef.current = true;
       setBusy(true);
       setError(null);
       setActionFeedback(null);
 
-      const targets = selectedTaskIds
-        .map((id) => tasks.find((t) => t.id === id))
-        .filter((t): t is IndustrialWorkOrderTask => Boolean(t));
-
-      let okCount = 0;
-      const failures: string[] = [];
-
-      for (const task of targets) {
-        try {
-          if (action === 'start') {
-            await startTask(task.id, user?.id);
-            await logTaskEvent(task.id, 'station_started', { station, bulk: true }, user?.id);
-          } else if (action === 'complete') {
-            await finishTask(task.id, user?.id);
-            await logTaskEvent(task.id, 'station_confirmed', { station, bulk: true }, user?.id);
-          } else {
-            await rejectTask(task.id, 'Rejeitado em grupo na estação', user?.id);
-            await logTaskEvent(task.id, 'station_rejected', { station, bulk: true }, user?.id);
-          }
-          okCount += 1;
-          setEventLog((prev) => [
-            {
-              id: `${Date.now()}-${task.id}`,
-              type: `${action}:${task.pieceId}`,
-              at: new Date().toISOString(),
-            },
-            ...prev,
-          ]);
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : 'Falha';
-          failures.push(`${task.pieceId}: ${msg}`);
-        }
-      }
-
-      const label = ACTION_LABEL[action];
-      if (failures.length === 0) {
-        setActionFeedback({
-          ok: true,
-          message: `${label}: ${okCount} peça(s) actualizada(s).`,
-        });
-        setSelectedTaskIds([]);
-        focusTask(null);
-        setCodeInput('');
-      } else if (okCount > 0) {
-        setActionFeedback({
-          ok: false,
-          message: `${label}: ${okCount} ok, ${failures.length} falha(s). ${failures[0]}`,
-        });
-        setError(failures.slice(0, 2).join(' · '));
-        // Manter apenas as que falharam na selecção.
-        const failedPieceHints = new Set(failures.map((f) => f.split(':')[0]));
-        setSelectedTaskIds((prev) =>
-          prev.filter((id) => {
-            const t = tasks.find((row) => row.id === id);
-            return t ? failedPieceHints.has(t.pieceId) : false;
-          }),
-        );
-      } else {
-        setActionFeedback({
-          ok: false,
-          message: `${label} falhou: ${failures[0] ?? 'erro desconhecido'}`,
-        });
-        setError(failures[0] ?? `${label} falhou.`);
-      }
+      // UI optimista: o operador vê o resultado de imediato.
+      setTasks((prev) =>
+        prev.map((task) =>
+          targetIds.includes(task.id) ? { ...task, status: optimisticStatus } : task,
+        ),
+      );
+      setEventLog((prev) => [
+        {
+          id: `${Date.now()}-bulk-${action}`,
+          type: `${action}:bulk:${targetIds.length}`,
+          at: new Date().toISOString(),
+        },
+        ...prev,
+      ]);
 
       try {
-        await reload();
+        const result =
+          action === 'start'
+            ? await startTasks(targetIds, user?.id, { station })
+            : action === 'complete'
+              ? await finishTasks(targetIds, user?.id, { station })
+              : await rejectTasks(targetIds, 'Rejeitado em grupo na estação', user?.id, {
+                  station,
+                });
+
+        const okCount = result.ok.length;
+        const failures = result.failures.map((failure) => {
+          const pieceId = failure.pieceId ?? pieceByTaskId.get(failure.taskId) ?? failure.taskId;
+          return `${pieceId}: ${failure.error}`;
+        });
+        const label = ACTION_LABEL[action];
+
+        if (failures.length === 0) {
+          setActionFeedback({
+            ok: true,
+            message: `${label}: ${okCount} peça(s) actualizada(s).`,
+          });
+          setSelectedTaskIds([]);
+          focusTask(null);
+          setCodeInput('');
+        } else if (okCount > 0) {
+          const failedIds = new Set(result.failures.map((f) => f.taskId));
+          setActionFeedback({
+            ok: false,
+            message: `${label}: ${okCount} ok, ${failures.length} falha(s). ${failures[0]}`,
+          });
+          setError(failures.slice(0, 2).join(' · '));
+          setSelectedTaskIds(targetIds.filter((id) => failedIds.has(id)));
+        } else {
+          setActionFeedback({
+            ok: false,
+            message: `${label} falhou: ${failures[0] ?? 'erro desconhecido'}`,
+          });
+          setError(failures[0] ?? `${label} falhou.`);
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Falha no processamento em lote.';
+        setActionFeedback({ ok: false, message: msg });
+        setError(msg);
       } finally {
-        setBusy(false);
-        requestAnimationFrame(() => codeInputRef.current?.focus());
+        try {
+          await reload({ quiet: true });
+        } finally {
+          busyRef.current = false;
+          setBusy(false);
+          requestAnimationFrame(() => codeInputRef.current?.focus());
+        }
       }
     },
     [focusTask, reload, selectedTaskIds, station, tasks, user?.id],

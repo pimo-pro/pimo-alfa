@@ -21,6 +21,9 @@ export type IndustrialUserRecord = {
 
 let cachedDefaultUserId: string | null = null;
 
+/** Cache de sucesso por candidateId (ou '__default__') — evita SELECT repetido no bulk. */
+const resolvedUserByCandidate = new Map<string, IndustrialUserRecord>();
+
 const USER_SELECT = 'id, email, name, role';
 
 async function fetchUserById(id: string): Promise<IndustrialUserRecord | null> {
@@ -76,23 +79,36 @@ export async function getOrCreateIndustrialUser(
   candidateId?: string | null,
 ): Promise<IndustrialUserRecord> {
   const trimmed = typeof candidateId === 'string' ? candidateId.trim() : '';
+  const cacheKey = trimmed || '__default__';
+  const cached = resolvedUserByCandidate.get(cacheKey);
+  if (cached) return cached;
+
   if (isValidIndustrialUserId(trimmed)) {
     const existing = await fetchUserById(trimmed);
-    if (existing) return existing;
+    if (existing) {
+      resolvedUserByCandidate.set(cacheKey, existing);
+      return existing;
+    }
   }
 
   if (cachedDefaultUserId) {
-    const cached = await fetchUserById(cachedDefaultUserId);
-    if (cached) return cached;
+    const fromDefault = await fetchUserById(cachedDefaultUserId);
+    if (fromDefault) {
+      resolvedUserByCandidate.set(cacheKey, fromDefault);
+      return fromDefault;
+    }
   }
 
   const byEmail = await fetchUserByEmail(DEFAULT_INDUSTRIAL_USER.email);
   if (byEmail) {
     cachedDefaultUserId = byEmail.id;
+    resolvedUserByCandidate.set(cacheKey, byEmail);
     return byEmail;
   }
 
-  return createDefaultIndustrialUser();
+  const created = await createDefaultIndustrialUser();
+  resolvedUserByCandidate.set(cacheKey, created);
+  return created;
 }
 
 export async function resolveIndustrialUserId(candidateId?: string | null): Promise<string> {

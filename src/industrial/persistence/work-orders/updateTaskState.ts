@@ -89,3 +89,11 @@ export async function syncWorkOrderStatusFromTasks(workOrderId: string): Promise
   await updateWorkOrderStatus(workOrderId, next);
   return next;
 }
+
+/** Sincroniza o status de várias WO — uma passagem por id único. */
+export async function syncWorkOrdersStatusFromTasks(workOrderIds: string[]): Promise<void> {
+  const unique = Array.from(new Set(workOrderIds.filter(Boolean)));
+  for (const id of unique) {
+    await syncWorkOrderStatusFromTasks(id);
+  }
+}
