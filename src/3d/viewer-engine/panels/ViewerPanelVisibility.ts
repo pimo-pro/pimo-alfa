@@ -297,6 +297,16 @@ export class ViewerPanelVisibility {
   applyPanelVisibilityForObject(root: THREE.Object3D): void {
     root.traverse((node) => {
       if (!(node instanceof THREE.Mesh)) return;
+      // Legado drawer-click-*: nunca renderizar (película 2 mm).
+      const drawerPart = node.userData?.drawerPart as string | undefined;
+      if (
+        drawerPart === "click-target" ||
+        (typeof node.name === "string" && node.name.startsWith("drawer-click-"))
+      ) {
+        node.visible = false;
+        node.layers.disable(0);
+        return;
+      }
       const panelType = node.userData?.panelType as PanelType | undefined;
       const isRemate = node.userData?.isRematePiece === true;
       const isDoorOrDrawerOrShelf =

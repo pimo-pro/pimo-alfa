@@ -741,19 +741,9 @@ export function createDrawerObject(
     drawerGroup.add(frontInt);
   }
 
-  const clickTarget = new THREE.Mesh(
-    new THREE.BoxGeometry(spec.widthM, spec.heightM, 0.002),
-    new THREE.MeshBasicMaterial({ visible: false, depthWrite: false, colorWrite: false })
-  );
-  clickTarget.name = `drawer-click-${spec.id}`;
-  clickTarget.visible = false;
-  clickTarget.position.set(
-    frontLocalX,
-    frontLocalY,
-    frontLocalZ + spec.frontThicknessM / 2 + 0.001
-  );
-  applyDrawerClickTargetIdentity(clickTarget, spec.id, "click-target");
-  drawerGroup.add(clickTarget);
+  // Sem mesh auxiliar drawer-click-* (película 2 mm): a frente real
+  // (drawerPart=front) já é o alvo de clique/raycast. Evita matéria do módulo
+  // e picking fantasma quando gav_frente está oculta.
 
   if (spec.handleType && spec.handleType !== "Nenhum") {
     const frontHeightMm = spec.heightM * 1000;

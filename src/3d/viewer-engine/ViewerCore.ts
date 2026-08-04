@@ -59,6 +59,7 @@ import {
 import {
   disposeLoadedWoodMaterial,
   isDoorOrDrawerFrontNode,
+  isDrawerClickTargetGhost,
   isKitchenFeetNode,
 } from "./materials/boxMaterialHelpers";
 import { createClonedMaterialWithDetailMaps } from "./materials/MaterialEngine";
@@ -2466,6 +2467,8 @@ export class ViewerCore {
       entry.mesh.traverse((child) => {
         if (child instanceof THREE.Mesh) {
           if (isKitchenFeetNode(child)) return;
+          // Click-target legado: nunca matéria do módulo (película fantasma).
+          if (isDrawerClickTargetGhost(child)) return;
           // Nunca escrever matéria do módulo em frentes independentes.
           if (isDoorOrDrawerFrontNode(child) || isDrawerFrontExteriorMesh(child)) {
             traceDrawerFrontMaterial("updateBoxMaterial.SKIP_front", {

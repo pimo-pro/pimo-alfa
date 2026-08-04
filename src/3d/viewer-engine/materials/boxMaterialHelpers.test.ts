@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   disposeLoadedWoodMaterial,
   isDoorOrDrawerFrontNode,
+  isDrawerClickTargetGhost,
   isKitchenFeetNode,
 } from "./boxMaterialHelpers";
 
@@ -23,6 +24,20 @@ describe("boxMaterialHelpers", () => {
     expect(isDoorOrDrawerFrontNode(exteriorCap)).toBe(true);
     expect(isDoorOrDrawerFrontNode(namedFront)).toBe(true);
     expect(isDoorOrDrawerFrontNode(body)).toBe(false);
+  });
+
+  it("identifica click-target fantasma (película)", () => {
+    const byPart = new THREE.Mesh();
+    byPart.userData.drawerPart = "click-target";
+    const byName = new THREE.Mesh();
+    byName.name = "drawer-click-layer-1";
+    const front = new THREE.Mesh();
+    front.userData.drawerPart = "front";
+
+    expect(isDrawerClickTargetGhost(byPart)).toBe(true);
+    expect(isDrawerClickTargetGhost(byName)).toBe(true);
+    expect(isDrawerClickTargetGhost(front)).toBe(false);
+    expect(isDoorOrDrawerFrontNode(byPart)).toBe(false);
   });
 
   it("identifica pés de cozinha na hierarquia", () => {

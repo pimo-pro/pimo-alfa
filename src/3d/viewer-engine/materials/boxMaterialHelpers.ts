@@ -16,6 +16,17 @@ export function isDoorOrDrawerFrontNode(node: THREE.Object3D): boolean {
   return false;
 }
 
+/**
+ * Mesh auxiliar legado drawer-click-* (película 2 mm).
+ * Nunca deve receber matéria do módulo nem participar no picking visual.
+ */
+export function isDrawerClickTargetGhost(node: THREE.Object3D): boolean {
+  const part = (node.userData as { drawerPart?: string } | undefined)?.drawerPart;
+  if (part === "click-target") return true;
+  const name = typeof node.name === "string" ? node.name : "";
+  return name.startsWith("drawer-click-");
+}
+
 export function isKitchenFeetNode(node: THREE.Object3D): boolean {
   let current: THREE.Object3D | null = node;
   while (current) {
