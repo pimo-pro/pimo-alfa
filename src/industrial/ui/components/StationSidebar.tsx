@@ -22,6 +22,8 @@ interface StationSidebarProps {
   onToggleNotifications?: () => void;
   onToggleChat?: () => void;
   chatOpen?: boolean;
+  onToggleFerragens3D?: () => void;
+  ferragens3DOpen?: boolean;
 }
 
 const RAIL_LABEL_STYLE = {
@@ -47,6 +49,8 @@ export default function StationSidebar({
   onToggleNotifications,
   onToggleChat,
   chatOpen = false,
+  onToggleFerragens3D,
+  ferragens3DOpen = false,
 }: StationSidebarProps) {
   ensureIndustrialInteractionStyles();
   const location = useLocation();
@@ -109,6 +113,25 @@ export default function StationSidebar({
       })}
 
       <div style={{ height: 1, width: '100%', background: ui.panelBorder, margin: '4px 0' }} />
+
+      {onToggleFerragens3D ? (
+        <button
+          type="button"
+          className={INDUSTRIAL_CONTROL_CLASS}
+          title="Ferragens 3D"
+          onClick={onToggleFerragens3D}
+          data-active={ferragens3DOpen ? 'true' : undefined}
+          style={{
+            ...btn(Boolean(ferragens3DOpen)),
+            width: 40,
+            height: 40,
+            padding: 0,
+            ...RAIL_LABEL_STYLE,
+          }}
+        >
+          F3D
+        </button>
+      ) : null}
 
       {onToggleNotifications ? (
         <button

@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import StationCanvas, { type StationCanvasPiece } from '@/industrial/ui/components/StationCanvas';
 import { useIndustrialPageState } from '@/industrial/ui/components';
+import Ferragens3DOverlay from '@/industrial/ui/ferragens3d/Ferragens3DOverlay';
 import { IndustrialThreeColumnLayout } from '@/industrial/ui/layouts/IndustrialThreeColumnLayout';
 import {
   industrialActionBtnStyle,
@@ -36,8 +37,10 @@ export default function IndustrialHomePage() {
   const [selectedPieceId, setSelectedPieceId] = useState<string | null>(null);
   const [toolMode, setToolMode] = useState<'select' | 'move' | 'rotate'>('select');
   const [snapEnabled, setSnapEnabled] = useState(false);
+  const [ferragens3DOpen, setFerragens3DOpen] = useState(false);
 
   return (
+    <>
     <IndustrialThreeColumnLayout
       title="Industrial · Principal"
       description="Base visual do módulo · sem operações"
@@ -68,6 +71,25 @@ export default function IndustrialHomePage() {
             </button>
           ))}
           <div style={{ height: 1, width: '100%', background: 'var(--border, #334155)', margin: '4px 0' }} />
+          <button
+            type="button"
+            title="Ferragens 3D"
+            onClick={() => setFerragens3DOpen(true)}
+            data-active={ferragens3DOpen ? 'true' : undefined}
+            style={{
+              ...industrialBtnStyle(ferragens3DOpen),
+              width: 40,
+              height: 40,
+              padding: 0,
+              display: 'grid',
+              placeItems: 'center',
+              fontSize: 9,
+              fontWeight: 700,
+              letterSpacing: 0.3,
+            }}
+          >
+            F3D
+          </button>
           <button
             type="button"
             title="Notificações (visual)"
@@ -161,6 +183,14 @@ export default function IndustrialHomePage() {
             >
               Histórico
             </button>
+            <button
+              type="button"
+              title="Visualizar biblioteca isolada de ferragens 3D"
+              onClick={() => setFerragens3DOpen(true)}
+              style={industrialBtnStyle(ferragens3DOpen)}
+            >
+              Ferragens 3D
+            </button>
           </div>
 
           <div style={{ display: 'grid', gap: 8 }}>
@@ -240,5 +270,7 @@ export default function IndustrialHomePage() {
         />
       }
     />
+    <Ferragens3DOverlay open={ferragens3DOpen} onClose={() => setFerragens3DOpen(false)} />
+    </>
   );
 }

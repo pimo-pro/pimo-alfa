@@ -1,0 +1,31 @@
+{
+  "tipo": "Dobradiça de porta europeia (copo 35mm)",
+  "norma": "EN 15570 / DIN 355",
+  "dimensoes_mm": {
+    "placa": "45 x 45 x 1.5",
+    "copo_diametro": 35,
+    "copo_profundidade": 11.5,
+    "braco": "30 x 8 x 2"
+  },
+  "abertura": "95° - 110° (conforme versão)",
+  "material": "Aço zincado / latão",
+  "sistema_coordenadas": "Placa no plano XZ, copo orientado para -Y, braço em +Y",
+  "escala": "1:1 (metros no ficheiro)",
+  "bounding_box_mm": {
+    "min": [
+      -22.5,
+      -12.25,
+      -22.5
+    ],
+    "max": [
+      22.5,
+      4,
+      22.5
+    ],
+    "dimensoes": [
+      45,
+      16.25,
+      45
+    ]
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "tipo": "Parafuso de madeira (rosca parcial)",
+  "norma": "DIN 7997 / EN 14592",
+  "dimensoes_mm": {
+    "diametro": 3.5,
+    "comprimento": 16,
+    "cabeca_diametro": 7,
+    "cabeca_altura": 3.5,
+    "passo_rosca": 1.2
+  },
+  "material": "Aço zincado",
+  "sistema_coordenadas": "Eixo longitudinal ao longo de Z, cabeça em +Z",
+  "escala": "1:1 (metros no ficheiro)",
+  "bounding_box_mm": {
+    "min": [
+      -3.5,
+      -3.5,
+      -8
+    ],
+    "max": [
+      3.5,
+      3.5,
+      11.5
+    ],
+    "dimensoes": [
+      7,
+      7,
+      19.5
+    ]
+  }
+}

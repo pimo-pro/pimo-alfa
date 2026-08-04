@@ -1,0 +1,29 @@
+{
+  "tipo": "Cavilha / Chaveta / Espiga (pino de madeira)",
+  "norma": "DIN 68840 / EN 14257",
+  "dimensoes_mm": {
+    "diametro": 10,
+    "comprimento": 35,
+    "tolerancia": "h9"
+  },
+  "material": "Faia (Fagus sylvatica)",
+  "sistema_coordenadas": "Eixo longitudinal ao longo de Y",
+  "escala": "1:1 (metros no ficheiro)",
+  "bounding_box_mm": {
+    "min": [
+      -5,
+      -17.5,
+      -5
+    ],
+    "max": [
+      5,
+      17.5,
+      5
+    ],
+    "dimensoes": [
+      10,
+      35,
+      10
+    ]
+  }
+}

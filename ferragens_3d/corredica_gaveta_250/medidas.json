@@ -1,0 +1,31 @@
+{
+  "tipo": "Corrediça de gaveta telescópica (slide) — 250mm",
+  "norma": "EN 15570 (carga) / série industrial 250mm",
+  "dimensoes_mm": {
+    "comprimento": 250,
+    "largura": 27,
+    "altura": 12,
+    "extensao": "100% (full extension)"
+  },
+  "carga_nominal_kg": 35,
+  "material": "Aço laminado a frio, zincado",
+  "sistema_coordenadas": "Trilho ao longo do eixo X, largura em Z, altura em Y",
+  "escala": "1:1 (metros no ficheiro)",
+  "bounding_box_mm": {
+    "min": [
+      -125,
+      -6,
+      -13.5
+    ],
+    "max": [
+      125,
+      6,
+      21.45
+    ],
+    "dimensoes": [
+      250,
+      12,
+      34.95
+    ]
+  }
+}
