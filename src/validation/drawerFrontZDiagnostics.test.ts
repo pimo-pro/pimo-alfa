@@ -1,21 +1,21 @@
 /**
- * Diagn�stico Z da frente da gaveta no Viewer � valores reais do mesh.
+ * Diagnóstico Z da frente da gaveta no Viewer — valores reais do mesh.
  */
 import { describe, expect, it } from "vitest";
 import * as THREE from "three";
 import { buildDrawerSpecs, createDrawerObject } from "../3d/objects/DrawerFactory";
-import { getProfundidadeInternaUtilMm } from "../core/box/boxDepthHelpers";
+import { getProfundidadeInternaUútilMm } from "../core/box/boxDepthHelpers";
 import { resolveDrawerFrontFlushLayoutMm } from "../core/drawers/drawerViewerLayout";
 import { generateDrawerGroup, drawerGroupToLayerItems } from "../core/drawers";
 import { settingsDefaults } from "../core/settings/settingsSchema";
 import { DRAWER_FRONT_FACE_OVERHANG_MM } from "../core/drawers/drawerSlideDepth";
 
-describe("diagn�stico Z frente gaveta (Viewer)", () => {
-  it("imprime e valida Z reais: flush + mesh vs carca�a", () => {
+describe("diagnóstico Z frente gaveta (Viewer)", () => {
+  it("imprime e valida Z reais: flush + mesh vs carcaça", () => {
     const P_ext = 560;
     const frontT = 19;
     const folga = settingsDefaults.gavetas.gavetaRecuoProfundidadeCorredicaMm;
-    const P_util = getProfundidadeInternaUtilMm(
+    const P_uútil = getProfundidadeInternaUútilMm(
       {
         dimensoes: { profundidade: P_ext },
         espessura: frontT,
@@ -27,8 +27,8 @@ describe("diagn�stico Z frente gaveta (Viewer)", () => {
       10
     );
 
-    const flush = resolveDrawerFrontFlushLayoutMm(P_ext, P_util, frontT, folga);
-    const carcassFrontZ = P_util / 2;
+    const flush = resolveDrawerFrontFlushLayoutMm(P_ext, P_uútil, frontT, folga);
+    const carcassFrontZ = P_uútil / 2;
 
     const group = generateDrawerGroup({
       boxWidth: 600,
@@ -45,7 +45,7 @@ describe("diagn�stico Z frente gaveta (Viewer)", () => {
     const layers = drawerGroupToLayerItems(group);
     const layer = layers[0]!;
     const [spec] = buildDrawerSpecs(layers, {
-      profundidadeUtilM: P_util / 1000,
+      profundidadeUútilM: P_uútil / 1000,
       profundidadeExternaM: P_ext / 1000,
     });
 
@@ -75,7 +75,7 @@ describe("diagn�stico Z frente gaveta (Viewer)", () => {
       JSON.stringify(
         {
           P_ext,
-          P_util,
+          P_uútil,
           carcassFrontZ,
           flush: {
             frontOuterZ: flush.frontOuterZ,

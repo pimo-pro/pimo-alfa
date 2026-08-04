@@ -86,7 +86,7 @@ export type RailCotaSystem = {
   count: number;
 };
 
-/** Classificacao local so para o PDF manual ù nao altera SSOT. */
+/** Classificacao local so para o PDF manual ‚Äî nao altera SSOT. */
 export function classifyManualHole(
   h: { diameter: number; depth: number; holeType?: string; topDrillable?: boolean },
   pieceThicknessMm?: number
@@ -120,7 +120,7 @@ export function classifyManualHole(
 
 /**
  * Agrupa furos de trilho no mesmo eixo Y e calcula first / spacing / last.
- * Nao gera cotas por furo ù so o sistema.
+ * Nao gera cotas por furo ‚Äî so o sistema.
  */
 export function computeRailCotaSystems(
   holes: Array<{ sx: number; sy: number; kind: ManualHoleKind }>,

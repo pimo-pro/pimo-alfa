@@ -100,11 +100,11 @@ export default function DrawerGlobalHardwarePanel({
       {open && (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-            Aplicar as mesmas ferragens a todas as gavetas. Altera��es individuais mant�m prioridade at� voltar a aplicar o global.
+            Aplicar as mesmas ferragens a todas as gavetas. Alterações individuais mantém prioridade até voltar a aplicar o global.
           </span>
 
           <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Corredi�a</span>
+            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Corrediça</span>
             <select
               className="select select-xs"
               value={draft.slideType}
@@ -119,7 +119,7 @@ export default function DrawerGlobalHardwarePanel({
           </label>
 
           <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Caixa met�lica</span>
+            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Caixa metálica</span>
             <select
               className="select select-xs"
               value={draft.metalBoxType}
@@ -160,7 +160,7 @@ export default function DrawerGlobalHardwarePanel({
 
           {metalProfile && listMetalBoxProfilesForType(draft.metalBoxType).length > 1 && (
             <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Perfil / s�rie</span>
+              <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Perfil / sórie</span>
               <select
                 className="select select-xs"
                 value={metalProfile.id}
@@ -239,7 +239,7 @@ export default function DrawerGlobalHardwarePanel({
           </label>
 
           <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Profundidade padr�o (mm)</span>
+            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Profundidade padrão (mm)</span>
             <select
               className="select select-xs"
               value={draft.nominalDepth}

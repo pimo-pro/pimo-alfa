@@ -23,7 +23,7 @@ type Options = {
 };
 
 /**
- * Indicadores reais para TopBarTrak — sem useIndustrialRealtime
+ * Indicadores reais para TopBarTrak â€” sem useIndustrialRealtime
  * (evita heartbeat duplicado; usa refCount do gateway).
  */
 export function useTopBarTrakIndicators(options: Options = {}): TopBarTrakIndicators {

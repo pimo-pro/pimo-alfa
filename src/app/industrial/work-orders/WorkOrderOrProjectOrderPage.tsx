@@ -7,7 +7,7 @@ import WorkOrderExecutionPage from './WorkOrderExecutionPage';
 
 /**
  * /industrial/work-orders/order/:orderOrProject
- * - UUID Supabase ? execução de WO (legado)
+ * - UUID Supabase ? execuÃ§Ã£o de WO (legado)
  * - slug de projecto ? hub de ordens + anchors
  */
 export default function WorkOrderOrProjectOrderPage() {

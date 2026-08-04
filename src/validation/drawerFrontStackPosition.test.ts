@@ -1,5 +1,5 @@
 /**
- * Frentes de gaveta alinhadas � posi��o no m�dulo (inferior / superior / interm�dia).
+ * Frentes de gaveta alinhadas — posição no módulo (inferior / superior / interm²dia).
  */
 import { describe, expect, it } from "vitest";
 import {
@@ -28,12 +28,12 @@ import {
   minimalBoxWithDrawers,
 } from "./drawerCertificationTestHelpers";
 
-describe("gav_frente � stack vertical por posi��o no m�dulo", () => {
-  it("offset de base = 0 (frente inferior flush ao piso do v�o)", () => {
+describe("gav_frente — stack vertical por posição no módulo", () => {
+  it("offset de base = 0 (frente inferior flush ao piso do vão)", () => {
     expect(DRAWER_VERTICAL_BASE_OFFSET_MM).toBe(0);
   });
 
-  it("m�dulo 2 gavetas iguais 720 mm � frentes (H-gap)/2; flush base e CIMA", () => {
+  it("módulo 2 gavetas iguais 720 mm — frentes (H-gap)/2; flush base e CIMA", () => {
     const boxH = 720;
     const heights = calculateDrawerHeights(2, boxH, "equal");
     const expectedEach = (boxH - DRAWER_VERTICAL_GAP_MM) / 2;
@@ -61,7 +61,7 @@ describe("gav_frente � stack vertical por posi��o no m�dulo", () => {
     expect(upper.frontTopFromModuleBaseMm).toBeCloseTo(boxH, 5);
   });
 
-  it("furos/rasgo � todas as frentes: pairing laterais + rasgo elev+sideH−13 (dist. 22 mm)", () => {
+  it("furos/rasgo — todas as frentes: pairing laterais + rasgo elev+sideH−13 (dist. 22 mm)", () => {
     const frontH = 358;
     const sideH = resolveDrawerWoodBodyHeightMm(frontH);
     const elev = DRAWER_SIDE_BASE_ELEVATION_MM;
@@ -107,7 +107,7 @@ describe("gav_frente � stack vertical por posi��o no m�dulo", () => {
     expect(grooveY - upperCavY).toBeCloseTo(22, 5);
   });
 
-  it("pipeline 2 gavetas � cutlist + DRILL: roles e furos", () => {
+  it("pipeline 2 gavetas — cutlist + DRILL: roles e furos", () => {
     const boxH = 720;
     const { layers } = buildDrawerScenario({
       boxWidth: 600,
@@ -151,7 +151,7 @@ describe("gav_frente � stack vertical por posi��o no m�dulo", () => {
     ).toBeGreaterThanOrEqual(2);
   });
 
-  it("generateDrawerGroup � inferior na base, superior na CIMA", () => {
+  it("generateDrawerGroup — inferior na base, superior na CIMA", () => {
     const boxH = 600;
     const group = generateDrawerGroup({
       boxWidth: 600,

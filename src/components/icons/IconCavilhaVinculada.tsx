@@ -6,8 +6,8 @@ export interface IconCavilhaVinculadaProps extends React.SVGProps<SVGSVGElement>
 }
 
 /**
- * Ícone da ferramenta «Cavilha vinculada 10×40» (bege) —
- * cilindro Ø10 × 40 mm com marca de par espessura?face.
+ * â€” cone da ferramenta â€”Cavilha vinculada 10â€“40â€” (bege) â€”
+ * cilindro â€”10 â€” 40 mm com marca de par espessura?face.
  */
 export const IconCavilhaVinculada = forwardRef<SVGSVGElement, IconCavilhaVinculadaProps>(
   ({ size = 22, color = "#d2b48c", className, ...props }, ref) => (
@@ -32,7 +32,7 @@ export const IconCavilhaVinculada = forwardRef<SVGSVGElement, IconCavilhaVincula
       {/* Marcas 30 / 13 */}
       <path d="M8 9v6" opacity="0.7" />
       <path d="M16.5 9v6" opacity="0.7" />
-      {/* Ligação A?B */}
+      {/* LigaÃ§Ã£o A?B */}
       <path d="M7 5h4" />
       <path d="M13 5h4" />
       <path d="M11 5v2" />

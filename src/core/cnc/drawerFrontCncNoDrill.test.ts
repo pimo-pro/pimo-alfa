@@ -1,5 +1,5 @@
 /**
- * Frentes de gaveta: nesting CNC sem furaÁ„o TCN (furos sÛ em DRILL).
+ * Frentes de gaveta: nesting CNC sem fura√ß√£o TCN (furos s√≥ em DRILL).
  */
 import { describe, expect, it } from "vitest";
 import { stripDrawerFrontHolesForCnc } from "./cncPipeline";
@@ -14,7 +14,7 @@ import type { CutlistItemForPieces } from "../cutlayout/cutLayoutEngine";
 import { cutlistToPieces } from "../cutlayout/cutLayoutEngine";
 import { generateTcnForPanelNestingMo } from "./tcnGeneratorNestingMo";
 
-describe("frente gaveta ó zero furos em CNC/TCN", () => {
+describe("frente gaveta ‚Äî zero furos em CNC/TCN", () => {
   it("isDrawerFrontPieceTipo cobre GAV_FRENTE_EXT_*", () => {
     expect(isDrawerFrontPieceTipo("gaveta_frente_ext")).toBe(true);
     expect(isDrawerFrontPieceTipo("gaveta_frente_int")).toBe(true);
@@ -53,7 +53,7 @@ describe("frente gaveta ó zero furos em CNC/TCN", () => {
     expect(fronts.every((f) => (f.drillHoles?.length ?? 0) > 0)).toBe(true);
   });
 
-  it("TCN gerado a partir de frentes stripped n„o contÈm operaÁıes de furo", () => {
+  it("TCN gerado a partir de frentes stripped n√£o cont√©m opera√ß√µes de furo", () => {
     const frontItem: CutlistItemForPieces = {
       id: "f1",
       nome: "Caixa_gav_frent_ext_01",
@@ -96,7 +96,7 @@ describe("frente gaveta ó zero furos em CNC/TCN", () => {
       } as never,
       { sheetIndex: 0 }
     );
-    // Sem W#DRILL / blocos de furo tÌpicos quando n„o h· drillHoles
+    // Sem W#DRILL / blocos de furo t√≠picos quando n√£o h√° drillHoles
     expect(tcn).not.toMatch(/W#1\d{3}\{[^}]*D=/s);
   });
 });

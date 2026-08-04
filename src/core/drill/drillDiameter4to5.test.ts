@@ -1,6 +1,6 @@
 /**
- * 4 legado ? 5 no XML DRILL (cima/fundo/parafuso).
- * Cavilhas 10 e gavetas inalteradas.
+ * â€” 4 legado ? â€”5 no XML DRILL (cima/fundo/parafuso).
+ * Cavilhas â€”10 e gavetas inalteradas.
  */
 import { describe, expect, it } from "vitest";
 import { buildDrillFilesForProject } from "./drillExport";
@@ -9,7 +9,7 @@ import type { CutListItemComPreco, PanelDrillHole } from "../types";
 import { resolveTcnDrillDiameterMm } from "../cnc/tcnDrillParams";
 import { withIndustrialOutputAuthorization } from "../industrial/industrialOutputGuard";
 
-describe("DRILL XML  4 ? 5", () => {
+describe("DRILL XML â€” â€”4 ? â€”5", () => {
   it("helper: 4?5; 10 permanece 10; 5 permanece 5", () => {
     expect(resolveTcnDrillDiameterMm({ diameter: 4, holeType: "parafuso" })).toBe(5);
     expect(resolveTcnDrillDiameterMm({ diameter: 4 })).toBe(5);
@@ -17,7 +17,7 @@ describe("DRILL XML  4 ? 5", () => {
     expect(resolveTcnDrillDiameterMm({ diameter: 5 })).toBe(5);
   });
 
-  it("cima com parafuso 4 legado exporta Diameter 5.00 (no 4.00)", () => {
+  it("cima com parafuso â€”4 legado exporta Diameter 5.00 (nÃ£o 4.00)", () => {
     const holes: PanelDrillHole[] = [
       { x: 60, y: 40, diameter: 4, depth: 19, holeType: "parafuso", topDrillable: true },
       { x: 540, y: 520, diameter: 4, depth: 19, holeType: "parafuso", topDrillable: true },
@@ -51,7 +51,7 @@ describe("DRILL XML  4 ? 5", () => {
     expect(xml).toContain("<Depth>19.00</Depth>");
   });
 
-  it("gaveta_lat cavilha 10 permanece 10.00", () => {
+  it("gaveta_lat cavilha â€”10 permanece 10.00", () => {
     const item: CutListItemComPreco = {
       id: "gav",
       nome: "gav",

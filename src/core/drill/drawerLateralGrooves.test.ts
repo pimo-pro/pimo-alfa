@@ -1,5 +1,5 @@
 /**
- * Rasgos inferiores laterais � permanentes e independentes de L (LAT_ESQ.xml).
+ * Rasgos inferiores laterais — permanentes e independentes de L (LAT_ESQ.xml).
  */
 import { describe, expect, it } from "vitest";
 import {
@@ -57,7 +57,7 @@ function xmlFor(
   });
 }
 
-describe("rasgos laterais gaveta � LAT_ESQ.xml permanente", () => {
+describe("rasgos laterais gaveta — LAT_ESQ.xml permanente", () => {
   it("constantes industriais fixas", () => {
     expect(DRAWER_LAT_GROOVE_TOP_FROM_TOP_MM).toBe(13);
     expect(DRAWER_LAT_GROOVE_TOP_WIDTH_MM).toBe(13);
@@ -70,7 +70,7 @@ describe("rasgos laterais gaveta � LAT_ESQ.xml permanente", () => {
     expect(DRAWER_LAT_GROOVE_TOOL_NAME).toBe("FRESA_DESBASTE_10MM");
   });
 
-  it("Y/Width/Depth iguais para L diferentes (s� overcut muda)", () => {
+  it("Y/Width/Depth iguais para L diferentes (só overcut muda)", () => {
     for (const L of [400, 540, 700]) {
       const grooves = buildDrawerLateralBottomGrooves(L, 195.5);
       expect(grooves).toHaveLength(2);

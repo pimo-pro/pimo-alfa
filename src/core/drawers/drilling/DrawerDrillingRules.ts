@@ -660,7 +660,7 @@ export function buildDrawerLateralBottomGrooves(
 }
 
 /**
- * Costa � golden COSTA_GAVETA.
+ * Costa — golden COSTA_GAVETA.
  * Altura SSOT = laterais - 23; Y = 15 e W-15; Depth 30; topo X=8/L-8 Depth 10.
  */
 export function computeDrawerCostaStructuralHoles(params: {
@@ -720,7 +720,7 @@ export function computeDrawerCostaStructuralHoles(params: {
 }
 
 /**
- * Frente interna � Y sync laterais (15 / H-35); Depth 13.
+ * Frente interna — Y sync laterais (15 / H-35); Depth 13.
  */
 export function computeDrawerFrenteIntStructuralHoles(params: {
   largura: number;

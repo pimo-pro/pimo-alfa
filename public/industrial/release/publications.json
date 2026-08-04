@@ -130,7 +130,7 @@
     {
       "publishedAt": "2026-07-31T21:48:55.526Z",
       "author": "pimo-pro",
-      "commitMessage": "Nova funcionalidade: Layout de Corte manual (PDF único com furos coloridos, cotas inteligentes e rasgos). Integração na UI e no Gerar arquivo completo.",
+      "commitMessage": "Nova funcionalidade: Layout de Corte manual (PDF úúnico com furos coloridos, cotas inteligentes e rasgos). Integração na UI e no Gerar arquivo completo.",
       "version": "v6.0731.2248"
     },
     {
@@ -184,7 +184,7 @@
     {
       "publishedAt": "2026-07-30T14:59:29.592Z",
       "author": "pimo-pro",
-      "commitMessage": "Correção de encoding — GavetasPopoverPanel.tsx convertido para UTF‑8 sem BOM. Remoção de caracteres partidos (��) e normalização completa dos textos PT.",
+      "commitMessage": "Correção de encoding — GavetasPopoverPanel.tsx convertido para UTF‑8 sem BOM. Remoção de caracteres partidos (mojibake) e normalização completa dos textos PT.",
       "version": "v6.0730.1559"
     },
     {
@@ -448,7 +448,7 @@
     {
       "publishedAt": "2026-07-17T22:28:46.618Z",
       "author": "pimo-pro",
-      "commitMessage": "feat(pdf): normalizar ferragens_totais com tabela unica landscape",
+      "commitMessage": "feat(pdf): normalizar ferragens_totais com tabela uúnica landscape",
       "version": "v6.0717.2328"
     },
     {
@@ -580,7 +580,7 @@
     {
       "publishedAt": "2026-07-15T00:35:01.535Z",
       "author": "pimo-pro",
-      "commitMessage": "fix(system-events): corrigir user_id fkey e garantir utilizador industrial válido",
+      "commitMessage": "fix(system-events): corrigir user_id fkey e garantir uútilizador industrial válido",
       "version": "v6.0715.0135"
     },
     {

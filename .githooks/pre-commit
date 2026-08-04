@@ -10,11 +10,11 @@ if [ ! -f "$APP/scripts/auditPortugueseEncoding.mjs" ]; then
 fi
 
 cd "$APP" || exit 1
-node scripts/auditPortugueseEncoding.mjs --ci
+node scripts/auditPortugueseEncoding.mjs --ci --strict
 status=$?
 if [ "$status" -ne 0 ]; then
   echo ""
-  echo "[encoding] Commit bloqueado. Corrija com: npm run encoding:fix"
+  echo "[encoding] Commit bloqueado. Corrija com: npm run encoding:fffd"
   echo "[encoding] Regras: src/core/rules/linguagem-portuguesa.md"
   exit "$status"
 fi

@@ -47,7 +47,7 @@ function latItem(side: "esq" | "dir"): CutListItemComPreco {
   };
 }
 
-describe("layout PDF — cavilhas SSOT (golden)", () => {
+describe("layout PDF â€” cavilhas SSOT (golden)", () => {
   it("cutlistToPieces NAO descarta cavilhas de aresta (topDrillable=false)", () => {
     const pieces = cutlistToPieces([latItem("esq")]);
     expect(pieces).toHaveLength(1);

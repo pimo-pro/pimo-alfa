@@ -1,5 +1,5 @@
 /**
- * GAV_FRENTE_EXT_01 alinhada ao padrão das frentes 2 e 3 (só DRILL).
+ * GAV_FRENTE_EXT_01 alinhada ao padrÃ£o das frentes 2 e 3 (sÃ³ DRILL).
  */
 import { describe, expect, it } from "vitest";
 import { cutlistComPrecoFromBox } from "../core/manufacturing/cutlistFromBoxes";
@@ -11,8 +11,8 @@ import {
   minimalBoxWithDrawers,
 } from "./drawerCertificationTestHelpers";
 
-describe("GAV_FRENTE_EXT_01 — padrão uniforme com frentes 2/3", () => {
-  it("3 gavetas: mesma distância cavilha superior ? rasgo (= 22 mm)", () => {
+describe("GAV_FRENTE_EXT_01 â€” padrÃ£o uniforme com frentes 2/3", () => {
+  it("3 gavetas: mesma distÃ¢ncia cavilha superior ? rasgo (= 22 mm)", () => {
     const { layers } = buildDrawerScenario({
       boxWidth: 600,
       boxHeight: 900,
@@ -45,7 +45,7 @@ describe("GAV_FRENTE_EXT_01 — padrão uniforme com frentes 2/3", () => {
       const dist = groove!.y - upperCav;
       expect(dist).toBeCloseTo(DRAWER_BOTTOM_GROOVE_Y_FROM_TOP_MM + 9, 5); // 13 + 9 = 22 (sideH?35 vs sideH?13)
       expect(dist).toBeCloseTo(22, 5);
-      // Não usar golden legado W?56.5 na frente 1
+      // NÃ£o usar golden legado W?56.5 na frente 1
       expect(groove!.y).not.toBe(56.5);
       distances.push(dist);
     }

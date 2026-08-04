@@ -124,7 +124,7 @@
     {
       "version": "v6.0801.2154",
       "title": "TopBar-TRK · Cabeçalho industrial unificado",
-      "description": "TopBar-TRK · Cabeçalho industrial unificado\n\nReestruturação do chrome por módulo. Páginas industriais passam a usar o novo TopBarTrak com título dinâmico, indicadores reais (tarefas activas, ordens, online/offline) e sessão do utilizador. Remoção do Navbar antigo nas rotas TRK.",
+      "description": "TopBar-TRK · Cabeçalho industrial unificado\n\nReestruturação do chrome por módulo. Páginas industriais passam a usar o novo TopBarTrak com título dinâmico, indicadores reais (tarefas activas, ordens, online/offline) e sessão do uútilizador. Remoção do Navbar antigo nas rotas TRK.",
       "publishedAt": "2026-08-01T21:57:33+01:00",
       "type": "feature",
       "author": "pimo-pro",
@@ -263,8 +263,8 @@
     },
     {
       "version": "v-ref-layout-corte-manual-0731",
-      "title": "Nova funcionalidade: Layout de Corte manual (PDF único com furos coloridos, cotas inteligentes e rasgos). Integração ...",
-      "description": "Nova funcionalidade: Layout de Corte manual (PDF único com furos coloridos, cotas inteligentes e rasgos). Integração na UI e no Gerar arquivo completo.",
+      "title": "Nova funcionalidade: Layout de Corte manual (PDF úúnico com furos coloridos, cotas inteligentes e rasgos). Integração ...",
+      "description": "Nova funcionalidade: Layout de Corte manual (PDF úúnico com furos coloridos, cotas inteligentes e rasgos). Integração na UI e no Gerar arquivo completo.",
       "publishedAt": "2026-07-31T22:52:24+01:00",
       "type": "update",
       "author": "pimo-pro",
@@ -273,8 +273,8 @@
     },
     {
       "version": "v6.0731.2248",
-      "title": "Nova funcionalidade: Layout de Corte manual (PDF único com furos coloridos, cotas inteligentes e rasgos). Integração ...",
-      "description": "Nova funcionalidade: Layout de Corte manual (PDF único com furos coloridos, cotas inteligentes e rasgos). Integração na UI e no Gerar arquivo completo.",
+      "title": "Nova funcionalidade: Layout de Corte manual (PDF úúnico com furos coloridos, cotas inteligentes e rasgos). Integração ...",
+      "description": "Nova funcionalidade: Layout de Corte manual (PDF úúnico com furos coloridos, cotas inteligentes e rasgos). Integração na UI e no Gerar arquivo completo.",
       "publishedAt": "2026-07-31T21:48:57.913Z",
       "type": "update",
       "author": "pimo-pro",
@@ -283,8 +283,8 @@
     },
     {
       "version": "v1.1.0-layout-corte-manual",
-      "title": "Nova funcionalidade: Layout de Corte manual (PDF único com furos coloridos, cotas inteligentes e rasgos). Integração ...",
-      "description": "Nova funcionalidade: Layout de Corte manual (PDF único com furos coloridos, cotas inteligentes e rasgos). Integração na UI e no Gerar arquivo completo.",
+      "title": "Nova funcionalidade: Layout de Corte manual (PDF úúnico com furos coloridos, cotas inteligentes e rasgos). Integração ...",
+      "description": "Nova funcionalidade: Layout de Corte manual (PDF úúnico com furos coloridos, cotas inteligentes e rasgos). Integração na UI e no Gerar arquivo completo.",
       "publishedAt": "2026-07-31T22:44:33+01:00",
       "type": "update",
       "author": "pimo-pro",
@@ -414,7 +414,7 @@
     {
       "version": "v-next-utf8-gavetas",
       "title": "Novidades do Sistema — correção de encoding nas novas fichas de gavetas",
-      "description": "Novidades do Sistema — correção de encoding nas novas fichas de gavetas. Textos PT agora 100% UTF-8 sem BOM, sem símbolos estranhos.\n\n• Correção de encoding nas novas fichas de gavetas.\n• Ficheiro GavetasPopoverPanel.tsx convertido para UTF-8 sem BOM.\n• Remoção de símbolos estranhos (��) em textos PT.\n• Normalização de acentuação: configurações, corrediça, cartão, padrão, divisórios.\n• Verificação dos restantes ficheiros (todos OK).",
+      "description": "Novidades do Sistema — correção de encoding nas novas fichas de gavetas. Textos PT agora 100% UTF-8 sem BOM, sem símbolos estranhos.\n\n• Correção de encoding nas novas fichas de gavetas.\n• Ficheiro GavetasPopoverPanel.tsx convertido para UTF-8 sem BOM.\n• Remoção de símbolos estranhos (mojibake) em textos PT.\n• Normalização de acentuação: configurações, corrediça, cartão, padrão, divisórios.\n• Verificação dos restantes ficheiros (todos OK).",
       "publishedAt": "2026-07-30T15:57:19+01:00",
       "type": "fix",
       "author": "pimo-pro",
@@ -424,7 +424,7 @@
     {
       "version": "v6.0730.1532",
       "title": "Novidades do Sistema — estabilidade total das matérias da frente da gaveta e frente fixa. Sem fallback. Sem substitui...",
-      "description": "Novidades do Sistema — estabilidade total das matérias da frente da gaveta e frente fixa. Sem fallback. Sem substituição automática. Fluxo unificado com portas.\n\n• Correção completa do fluxo de matéria da frente da gaveta.\n• Frente fixa agora preserva a matéria escolhida pelo utilizador.\n• Fallback silencioso removido.\n• Nenhuma matéria é substituída automaticamente ao abrir o projecto.\n• Fluxo unificado com portas (SSOT).\n• Estabilidade garantida no Viewer e no load.",
+      "description": "Novidades do Sistema — estabilidade total das matérias da frente da gaveta e frente fixa. Sem fallback. Sem substituição automática. Fluxo unificado com portas.\n\n• Correção completa do fluxo de matéria da frente da gaveta.\n• Frente fixa agora preserva a matéria escolhida pelo uútilizador.\n• Fallback silencioso removido.\n• Nenhuma matéria é substituída automaticamente ao abrir o projecto.\n• Fluxo unificado com portas (SSOT).\n• Estabilidade garantida no Viewer e no load.",
       "publishedAt": "2026-07-30T15:34:47+01:00",
       "type": "fix",
       "author": "pimo-pro",
@@ -434,7 +434,7 @@
     {
       "version": "v-next-materiais-estaveis",
       "title": "Novidades do Sistema — estabilidade total das matérias da frente da gaveta e frente fixa",
-      "description": "Novidades do Sistema — estabilidade total das matérias da frente da gaveta e frente fixa. Sem fallback. Sem substituição automática. Fluxo unificado com portas.\n\n• Correção completa do fluxo de matéria da frente da gaveta.\n• Frente fixa agora preserva a matéria escolhida pelo utilizador.\n• Fallback silencioso removido.\n• Nenhuma matéria é substituída automaticamente ao abrir o projecto.\n• Fluxo unificado com portas (SSOT).\n• Estabilidade garantida no Viewer e no load.",
+      "description": "Novidades do Sistema — estabilidade total das matérias da frente da gaveta e frente fixa. Sem fallback. Sem substituição automática. Fluxo unificado com portas.\n\n• Correção completa do fluxo de matéria da frente da gaveta.\n• Frente fixa agora preserva a matéria escolhida pelo uútilizador.\n• Fallback silencioso removido.\n• Nenhuma matéria é substituída automaticamente ao abrir o projecto.\n• Fluxo unificado com portas (SSOT).\n• Estabilidade garantida no Viewer e no load.",
       "publishedAt": "2026-07-30T14:28:02.501Z",
       "type": "fix",
       "author": "pimo-pro",
@@ -988,8 +988,8 @@
     },
     {
       "version": "v6.0717.2328",
-      "title": "feat(pdf): normalizar ferragens_totais com tabela unica landscape",
-      "description": "feat(pdf): normalizar ferragens_totais com tabela unica landscape",
+      "title": "feat(pdf): normalizar ferragens_totais com tabela uúnica landscape",
+      "description": "feat(pdf): normalizar ferragens_totais com tabela uúnica landscape",
       "publishedAt": "2026-07-17T22:28:46.618Z",
       "type": "feature",
       "author": "pimo-pro",
@@ -1186,8 +1186,8 @@
     },
     {
       "version": "v6.0715.0135",
-      "title": "fix(system-events): corrigir user_id fkey e garantir utilizador industrial válido",
-      "description": "fix(system-events): corrigir user_id fkey e garantir utilizador industrial válido",
+      "title": "fix(system-events): corrigir user_id fkey e garantir uútilizador industrial válido",
+      "description": "fix(system-events): corrigir user_id fkey e garantir uútilizador industrial válido",
       "publishedAt": "2026-07-15T00:35:01.535Z",
       "type": "fix",
       "author": "pimo-pro",

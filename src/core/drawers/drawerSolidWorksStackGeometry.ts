@@ -1,8 +1,8 @@
 /**
- * Stack vertical dinùmico das gavetas (anti-sobreposiùùo).
- * SolidWorks = referùncia de proporùùes (descontos laterais), nùo de alturas/bottoms fixos.
+ * Stack vertical din√¢mico das gavetas (anti-sobreposi√ß√£o).
+ * SolidWorks = refer√™ncia de propor√ß√µes (descontos laterais), n√£o de alturas/bottoms fixos.
  *
- * h_i = (H ? B0 ? Gù(n?1)) / n
+ * h_i = (H ? B0 ? G√ó(n?1)) / n
  * bottom[i+1] = bottom[i] + h[i] + G
  * slide[i] = bottom[i] + 41
  */
@@ -14,9 +14,9 @@ import { DRAWER_VERTICAL_GAP_MM } from "./drawerGeometryConstants";
 export const DRAWER_TOP_FRONT_CIMA_OVERHANG_BELOW_MM = 2;
 
 /**
- * Desconto frente?lateral (mm) ó unificado para todas as gavetas.
+ * Desconto frente?lateral (mm) ‚Äî unificado para todas as gavetas.
  * sideH = h ? 64,5 (mesmo tamanho industrial em lowest/mid/highest/single).
- * @deprecated Alias ó usar DRAWER_LATERAL_HEIGHT_BELOW_FRONT_MM.
+ * @deprecated Alias ‚Äî usar DRAWER_LATERAL_HEIGHT_BELOW_FRONT_MM.
  */
 export const DRAWER_LATERAL_HEIGHT_BELOW_FRONT_LOWEST_MM = 64.5;
 export const DRAWER_LATERAL_HEIGHT_BELOW_FRONT_OTHER_MM = 64.5;
@@ -43,7 +43,7 @@ export type DynamicDrawerStackLayout = {
 };
 
 /**
- * Layout equal dinùmico sem sobreposiùùo.
+ * Layout equal din√¢mico sem sobreposi√ß√£o.
  * `slideOffsetFromBottomMm` default 41 (piso industrial).
  */
 export function resolveDynamicEqualDrawerStackLayout(params: {
@@ -83,7 +83,7 @@ export function resolveDynamicEqualDrawerStackLayout(params: {
   return { heights, bottoms, tops, slides, gapMm: G, boxHeightMm: H, baseFrontMm: B0 };
 }
 
-/** Gaps entre frentes consecutivas; negativos = sobreposiùùo (mm). */
+/** Gaps entre frentes consecutivas; negativos = sobreposi√ß√£o (mm). */
 export function measureDrawerFrontGapsMm(bottoms: number[], tops: number[]): number[] {
   const gaps: number[] = [];
   for (let i = 0; i < bottoms.length - 1; i++) {
@@ -134,7 +134,7 @@ export function assertTopFrontCoversCimaWithClearance(params: {
   return { cimaUndersideMm, coverThroughCimaMm, extendsBelowUndersideMm, ok };
 }
 
-/** @deprecated Removido do stack de produùùo ù usar resolveDynamicEqualDrawerStackLayout. */
+/** @deprecated Removido do stack de produ√ß√£o ‚Äî usar resolveDynamicEqualDrawerStackLayout. */
 export function isSolidWorksThreeDrawerEqualStack(_count: number, _mode: string): boolean {
   return false;
 }

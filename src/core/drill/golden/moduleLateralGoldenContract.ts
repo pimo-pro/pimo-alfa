@@ -1,13 +1,13 @@
 /**
- * Contrato industrial — laterais de MÓDULO (`lateral_esquerda` / `lateral_direita`).
+ * Contrato industrial â€” laterais de MÃ—DULO (`lateral_esquerda` / `lateral_direita`).
  *
- * Escopo: apenas caixa/módulo. Laterais de gaveta (`gaveta_lat_*`, `cx_gav_lat_*`)
- * estão FORA — SSOT transversal congelado; não alterar geração/export de gaveta.
+ * Escopo: apenas caixa/mÃ³dulo. Laterais de gaveta (`gaveta_lat_*`, `cx_gav_lat_*`)
+ * estÃ£o FORA â€” SSOT transversal congelado; nÃ£o alterar geraÃ§Ã£o/export de gaveta.
  *
  * Fluxo:
  * 1) Colocar o XML KDT golden em `module_lateral_esq.xml` (e/ou `_dir.xml`).
- * 2) `parseModuleLateralGoldenXml` extrai L/W/T + TypeNo2 Ø10×30.
- * 3) Testes + correcção do ramo `isLateralPanel` alinhados a este contrato.
+ * 2) `parseModuleLateralGoldenXml` extrai L/W/T + TypeNo2 â€”10â€“30.
+ * 3) Testes + correÃ§Ã£o do ramo `isLateralPanel` alinhados a este contrato.
  */
 
 import { readFileSync, existsSync } from "node:fs";
@@ -25,10 +25,10 @@ export const MODULE_LATERAL_GOLDEN_DIR_PATH = join(
   "module_lateral_dir.xml"
 );
 
-/** Tipos de peça afectados pelo golden de módulo. */
+/** Tipos de peÃ§a afectados pelo golden de mÃ³dulo. */
 export const MODULE_LATERAL_TIPOS = ["lateral_esquerda", "lateral_direita"] as const;
 
-/** Tipos PROIBIDOS neste fluxo (não alterar geração/export). */
+/** Tipos PROIBIDOS neste fluxo (nÃ£o alterar geraÃ§Ã£o/export). */
 export const PROTECTED_DRAWER_LATERAL_TIPOS = [
   "gaveta_lat_esq",
   "gaveta_lat_dir",
@@ -54,7 +54,7 @@ export type ModuleLateralGoldenContract = {
   panelLength: number;
   panelWidth: number;
   panelThickness: number;
-  /** Cavilhas horizontais Ø10 (esperado Depth=30, X?{0,L}). */
+  /** Cavilhas horizontais â€”10 (esperado Depth=30, X?{0,L}). */
   edgeCavilhas: ModuleLateralGoldenHole[];
 };
 
@@ -69,7 +69,7 @@ function tagValue(xml: string, tag: string): number {
 }
 
 /**
- * Extrai o contrato industrial de um XML KDTPanelFormat de lateral de módulo.
+ * Extrai o contrato industrial de um XML KDTPanelFormat de lateral de mÃ³dulo.
  */
 export function parseModuleLateralGoldenXml(xml: string): ModuleLateralGoldenContract {
   const panelLength = tagValue(xml, "PanelLength");
@@ -77,7 +77,7 @@ export function parseModuleLateralGoldenXml(xml: string): ModuleLateralGoldenCon
   const panelThickness = tagValue(xml, "PanelThickness");
   if (!(panelLength > 0) || !(panelWidth > 0) || !(panelThickness > 0)) {
     throw new Error(
-      "XML golden inválido: PanelLength/PanelWidth/PanelThickness em falta ou ?0"
+      "XML golden invÃ¡lido: PanelLength/PanelWidth/PanelThickness em falta ou ?0"
     );
   }
 
@@ -118,8 +118,8 @@ export function moduleLateralGoldenFileReady(
 }
 
 /**
- * Valida o contrato industrial esperado (pré-correcção / pós-golden).
- * Não aplica correcções — só reporta conformidade.
+ * Valida o contrato industrial esperado (prÃ©-correÃ§Ã£o / pÃ³s-golden).
+ * NÃ£o aplica correÃ§Ãµes â€” sÃ³ reporta conformidade.
  */
 export function assertModuleLateralGoldenContractShape(
   contract: ModuleLateralGoldenContract,
@@ -138,7 +138,7 @@ export function assertModuleLateralGoldenContractShape(
 
   if (contract.edgeCavilhas.length !== expectCount) {
     issues.push(
-      `esperadas ${expectCount} cavilhas TypeNo2 Ø10; obtidas ${contract.edgeCavilhas.length}`
+      `esperadas ${expectCount} cavilhas TypeNo2 â€”10; obtidas ${contract.edgeCavilhas.length}`
     );
   }
 
@@ -148,7 +148,7 @@ export function assertModuleLateralGoldenContractShape(
     const onEdge = Math.abs(h.x) <= eps || Math.abs(h.x - L) <= eps;
     if (!onEdge) {
       xOnEdges = false;
-      issues.push(`X=${h.x} fora de {0, L=${L}} (não é furo de aresta longitudinal)`);
+      issues.push(`X=${h.x} fora de {0, L=${L}} (nÃ£o â€” furo de aresta longitudinal)`);
     }
     if (!(Math.abs(h.depth - expectDepth) < 0.05)) {
       allDepth30 = false;
@@ -162,7 +162,7 @@ export function assertModuleLateralGoldenContractShape(
   return { ok: issues.length === 0, issues, xOnEdges, allDepth30 };
 }
 
-/** Chave estável para comparar conjuntos de furos (ordem-independente). */
+/** Chave estÃ¡vel para comparar conjuntos de furos (ordem-independente). */
 export function goldenHoleKey(h: Pick<ModuleLateralGoldenHole, "x" | "y" | "depth" | "diameter">): string {
   return `${h.x.toFixed(2)}_${h.y.toFixed(2)}_${h.depth.toFixed(2)}_${h.diameter.toFixed(2)}`;
 }

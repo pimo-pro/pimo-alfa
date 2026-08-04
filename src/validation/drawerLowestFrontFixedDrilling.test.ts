@@ -1,5 +1,5 @@
 /**
- * Frente da gaveta � pairing 10�30 laterais ? 10�13 frente (CAVILHA_10x40).
+ * Frente da gaveta — pairing 10–30 laterais ? 10–13 frente (CAVILHA_10x40).
  */
 import { describe, expect, it } from "vitest";
 import {
@@ -24,7 +24,7 @@ import {
   CAVILHA_FACE_DEPTH_MM,
 } from "../core/drill/cavilha10x40Rule";
 
-describe("gav_frente_ext � pairing com laterais (regra global)", () => {
+describe("gav_frente_ext — pairing com laterais (regra global)", () => {
   it("constantes rasgo golden + X inset", () => {
     expect(DRAWER_LOWEST_FRONT_GROOVE_FROM_TOP_MM).toBe(56.5);
     expect(DRAWER_LOWEST_FRONT_GROOVE_X_INSET_MM).toBe(12);
@@ -56,7 +56,7 @@ describe("gav_frente_ext � pairing com laterais (regra global)", () => {
     for (const y of expectedYs) {
       expect(cav.filter((h) => Math.abs(h.y - y) < 0.01)).toHaveLength(2);
     }
-    // N�o duplicar perto de W?73.5 se ? pairing
+    // Não duplicar perto de W?73.5 se ? pairing
     const legacyY = W - 73.5;
     if (expectedYs.every((y) => Math.abs(y - legacyY) > 2)) {
       expect(cav.every((h) => Math.abs(h.y - legacyY) > 0.5)).toBe(true);

@@ -66,7 +66,7 @@ const shelfHoles: PanelDrillHole[] = [
   { x: 291, y: 464, diameter: 5, depth: 13, holeType: "prateleira", topDrillable: true },
 ];
 
-describe("xmlMachineRouting � CNC vs DRILL", () => {
+describe("xmlMachineRouting — CNC vs DRILL", () => {
   it("classifica tipos CNC e DRILL", () => {
     expect(resolveXmlMachineTarget("cima")).toBe("cnc");
     expect(resolveXmlMachineTarget("fundo")).toBe("cnc");
@@ -82,7 +82,7 @@ describe("xmlMachineRouting � CNC vs DRILL", () => {
     expect(resolveXmlMachineTarget("separador")).toBe("drill");
   });
 
-  it("etiqueta DRILL s� em pe�as da esta��o DRILL", () => {
+  it("etiqueta DRILL só em peças da estação DRILL", () => {
     expect(
       pieceShouldHaveDrillLabel(item("cima", { largura: 600, altura: 560 }, shelfHoles))
     ).toBe(false);
@@ -105,7 +105,7 @@ describe("xmlMachineRouting � CNC vs DRILL", () => {
   });
 });
 
-describe("buildDrillFilesForProject � CNC / DRILL / COMPLETO", () => {
+describe("buildDrillFilesForProject — CNC / DRILL / COMPLETO", () => {
   it("gera CNC + DRILL + PRINCIPAL com caminhos correctos", () => {
     const items = [
       item("cima", { largura: 600, altura: 560 }, shelfHoles, {
@@ -209,7 +209,7 @@ describe("buildDrillFilesForProject � CNC / DRILL / COMPLETO", () => {
     expect(xml).not.toContain("<X1>999.00</X1>");
   });
 
-  it("gaveta DRILL � sem Diameter 5.00; s� cavilhas", () => {
+  it("gaveta DRILL — sem Diameter 5.00; só cavilhas", () => {
     const lat = item(
       "gaveta_lat_dir",
       { largura: 500, altura: 150 },

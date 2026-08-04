@@ -8,7 +8,7 @@ vi.mock("../materials/service", () => ({
 import { listMaterials } from "../materials/service";
 import { getPrecoPorMaterial } from "./pricing";
 
-describe("getPrecoPorMaterial — CRUD SSOT", () => {
+describe("getPrecoPorMaterial â€” CRUD SSOT", () => {
   beforeEach(() => {
     setCentralPricingCacheForTests(getBuiltinCentralPricing());
     vi.mocked(listMaterials).mockReturnValue([]);
@@ -19,7 +19,7 @@ describe("getPrecoPorMaterial — CRUD SSOT", () => {
     vi.clearAllMocks();
   });
 
-  it("usa precoPorM2 do CRUD Gestão de Materiais antes de pricing.json", () => {
+  it("usa precoPorM2 do CRUD GestÃ£o de Materiais antes de pricing.json", () => {
     vi.mocked(listMaterials).mockReturnValue([
       {
         id: "mdf_branco-19",
@@ -34,7 +34,7 @@ describe("getPrecoPorMaterial — CRUD SSOT", () => {
     expect(getPrecoPorMaterial("mdf_branco-19", 19)).toBe(99);
   });
 
-  it("fallback para pricing.json quando material não está no CRUD", () => {
+  it("fallback para pricing.json quando material nÃ£o estÃ¡ no CRUD", () => {
     vi.mocked(listMaterials).mockReturnValue([]);
     expect(getPrecoPorMaterial("mdf_branco", 19)).toBe(31);
   });

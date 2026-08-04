@@ -24,7 +24,7 @@ import {
   minimalBoxWithDrawers,
 } from "../../validation/drawerCertificationTestHelpers";
 
-describe("gaveta industrial � frente DRILL / costa -23 / fundo entradas", () => {
+describe("gaveta industrial — frente DRILL / costa -23 / fundo entradas", () => {
   it("routing: gav_frente* ? DRILL (nunca CNC)", () => {
     expect(resolveXmlMachineTarget("gaveta_frente")).toBe("drill");
     expect(resolveXmlMachineTarget("gaveta_frente_int")).toBe("drill");
@@ -128,7 +128,7 @@ describe("gaveta industrial � frente DRILL / costa -23 / fundo entradas", () =
     expect(groove?.y).toBe(DRAWER_SIDE_BASE_ELEVATION_MM + sideH - 13);
   });
 
-  it("costa: altura lat?23; Y golden 15 / H?15 (n�o latY?23)", () => {
+  it("costa: altura lat?23; Y golden 15 / H?15 (não latY?23)", () => {
     const sideH = 150;
     const costaH = sideH - DRAWER_COSTA_HEIGHT_BELOW_LATERAL_MM;
     expect(costaH).toBe(127);

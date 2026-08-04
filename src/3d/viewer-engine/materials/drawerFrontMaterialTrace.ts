@@ -1,9 +1,9 @@
 import * as THREE from "three";
 
 /**
- * Trace DEV: quem escreve mat�ria na frente da gaveta (ordem temporal).
+ * Trace DEV: quem escreve matéria na frente da gaveta (ordem temporal).
  * Activar no browser: window.__PIMO_TRACE_DRAWER_FRONT__ = true
- * (em import.meta.env.DEV tamb�m imprime por defeito se a flag n�o estiver false)
+ * (em import.meta.env.DEV também imprime por defeito se a flag não estiver false)
  */
 export function shouldTraceDrawerFrontMaterial(): boolean {
   if (typeof window === "undefined") return false;

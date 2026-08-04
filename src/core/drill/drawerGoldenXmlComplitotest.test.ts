@@ -1,5 +1,5 @@
 /**
- * Golden reference � GAVETA 1/XML_COMPLITO (apenas DRILL).
+ * Golden reference — GAVETA 1/XML_COMPLITO (apenas DRILL).
  */
 import { describe, expect, it } from "vitest";
 import { buildDrillStationXmlFilesForProject } from "./drillExport";
@@ -57,12 +57,12 @@ function xmlFor(
   });
 }
 
-describe("golden XML_COMPLITO � laterais", () => {
+describe("golden XML_COMPLITO — laterais", () => {
   const L = 540;
   const W = 195.5;
   const T = 16;
 
-  it("LAT_DIR � TypeNo1 face + TypeNo2 aresta + 2 rasgos", () => {
+  it("LAT_DIR — TypeNo1 face + TypeNo2 aresta + 2 rasgos", () => {
     const holes = computeDrawerLateralStructuralHoles({
       largura: L,
       altura: W,
@@ -100,7 +100,7 @@ describe("golden XML_COMPLITO � laterais", () => {
     expect((xml.match(/<CAD>/g) ?? []).length).toBe(6);
   });
 
-  it("LAT_ESQ � espelho (face X=T/2, aresta X=L)", () => {
+  it("LAT_ESQ — espelho (face X=T/2, aresta X=L)", () => {
     const holes = computeDrawerLateralStructuralHoles({
       largura: L,
       altura: W,
@@ -119,7 +119,7 @@ describe("golden XML_COMPLITO � laterais", () => {
   });
 });
 
-describe("golden XML_COMPLITO � costa", () => {
+describe("golden XML_COMPLITO — costa", () => {
   it("altura = lateral ? 23; Y=15/W-15; Depth 30; topo X=8", () => {
     const sideH = 195.5;
     const costaH = sideH - DRAWER_COSTA_HEIGHT_BELOW_LATERAL_MM;
@@ -158,7 +158,7 @@ describe("golden XML_COMPLITO � costa", () => {
   });
 });
 
-describe("golden XML_COMPLITO � frente inferior pairing laterais", () => {
+describe("golden XML_COMPLITO — frente inferior pairing laterais", () => {
   const L = 798;
   const W = 260.67;
   const T = 19;

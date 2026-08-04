@@ -14,11 +14,11 @@ import {
   minimalBoxWithDrawers,
 } from "../../validation/drawerCertificationTestHelpers";
 
-describe("Etiquetas industriais � invers�o L/R dos lados do m�dulo", () => {
+describe("Etiquetas industriais — inversão L/R dos lados do módulo", () => {
   const projectName = "ProjTest";
   const boxNome = "C1 Armario 1";
 
-  it("SSOT / Viewer / cutlist PRO: nomes correctos (sem invers�o)", () => {
+  it("SSOT / Viewer / cutlist PRO: nomes correctos (sem inversão)", () => {
     expect(getPieceLabel("lateral_esquerda")).toBe("Lateral esquerda");
     expect(getPieceLabel("lateral_direita")).toBe("Lateral direita");
     expect(piecePrefixForCutLayoutPro({ tipo: "lateral_esquerda" })).toBe("lat_esq");
@@ -55,7 +55,7 @@ describe("Etiquetas industriais � invers�o L/R dos lados do m�dulo", () =>
   });
 
   it.each([1, 3] as const)(
-    "m�dulo com %i gaveta(s): cutlist/Viewer correctos; etiqueta invertida",
+    "módulo com %i gaveta(s): cutlist/Viewer correctos; etiqueta invertida",
     (drawerCount) => {
       const { layers } = buildDrawerScenario({
         boxWidth: 600,
@@ -77,7 +77,7 @@ describe("Etiquetas industriais � invers�o L/R dos lados do m�dulo", () =>
       expect(getPieceLabel(latEsq!.tipo)).toBe("Lateral esquerda");
       expect(getPieceLabel(latDir!.tipo)).toBe("Lateral direita");
 
-      // Fura��es intactas no item SSOT (pelo menos presen�a de lista).
+      // Furações intactas no item SSOT (pelo menos presença de lista).
       expect(Array.isArray(latEsq!.drillHoles)).toBe(true);
       expect(Array.isArray(latDir!.drillHoles)).toBe(true);
 

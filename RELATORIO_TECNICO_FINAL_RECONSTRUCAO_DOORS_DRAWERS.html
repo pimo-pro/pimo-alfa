@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Relat�rio T�cnico - Reconstru�o Sistema Portas & Gavetas</title>
+    <title>Relatório Técúnico - Reconstrução Sistema Portas & Gavetas</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -58,21 +58,21 @@
 </head>
 <body>
     <div class="container">
-        <h1>📋 RELAT�RIO T�CNICO COMPLETO</h1>
-        <h2>Reconstru�o do Sistema de Portas & Gavetas - PIMO V3</h2>
+        <h1>📋 RELATÓRIO TÉCNICO COMPLETO</h1>
+        <h2>Reconstrução do Sistema de Portas & Gavetas - PIMO V3</h2>
         
         <div class="meta">
             <strong>Data:</strong> 25 de Fevereiro de 2026<br>
             <strong>Projeto:</strong> PIMO V3 - Sistema Modular de Design 3D<br>
-            <strong>Escopo:</strong> Reconstru�o total do m�dulo de Portas e Gavetas<br>
+            <strong>Escopo:</strong> Reconstrução total do módulo de Portas e Gavetas<br>
             <strong>Status Geral:</strong> <span class="status-badge status-partial">95% COMPLETO</span>
         </div>
 
         <div class="success">
-            <strong>⚠️ IMPORTANTE:</strong> Este documento � um resumo t�cnico completo de TUDO o que foi implementado, modificado ou removido. Leia atentamente antes de prosseguir com instru�es adicionais.
+            <strong>⚠️ IMPORTANTE:</strong> Este documento — um resumo técnico completo de TUDO o que foi implementado, modificado ou removido. Leia atentamente antes de prosseguir com instruões adicionais.
         </div>
 
-        <!-- SE��O 1 -->
+        <!-- SECÇÃO 1 -->
         <h2>1. RESUMO EXECUTIVO</h2>
         
         <div class="grid-2">
@@ -81,9 +81,9 @@
                 <ul class="checklist">
                     <li>Type system total</li>
                     <li>Data model integrado</li>
-                    <li>13 novas a�es</li>
+                    <li>13 novas ações</li>
                     <li>2 componentes UI</li>
-                    <li>3 servi�os novos</li>
+                    <li>3 serviços novos</li>
                     <li>4 PDFs novos</li>
                     <li>Limpeza legacy code</li>
                 </ul>
@@ -91,7 +91,7 @@
             <div class="card">
                 <h4>⏳ PENDENTE</h4>
                 <ul class="checklist incomplete">
-                    <li>1 erro de compila�o</li>
+                    <li>1 erro de compilação</li>
                     <li>UI menu integration</li>
                     <li>End-to-end testing</li>
                     <li>Build validation</li>
@@ -101,7 +101,7 @@
 
         <div class="section-divider"></div>
 
-        <!-- SE��O 2 -->
+        <!-- SECÇÃO 2 -->
         <h2>2. FICHEIROS: CRIADOS, MODIFICADOS, REMOVIDOS</h2>
 
         <h3>2.1 Ficheiros CRIADOS (Novos)</h3>
@@ -110,29 +110,29 @@
                 <th>Ficheiro</th>
                 <th>Tipo</th>
                 <th>Linhas</th>
-                <th>Descri�o</th>
+                <th>Descrição</th>
                 <th>Impacto</th>
             </tr>
             <tr>
                 <td><code>src/models/BoxLayers.ts</code></td>
                 <td>Types</td>
                 <td>35</td>
-                <td>Defini�o de DoorLayerItem e DrawerLayerItem</td>
+                <td>Definição de DoorLayerItem e DrawerLayerItem</td>
                 <td>Tipo central do novo sistema</td>
             </tr>
             <tr>
                 <td><code>src/services/boxLayersService.ts</code></td>
                 <td>Service</td>
                 <td>167</td>
-                <td>Regenera�o autom�tica de camadas + factory functions</td>
-                <td>Core de l�gica de portas/gavetas</td>
+                <td>Regeneração automática de camadas + factory functions</td>
+                <td>Core de lógica de portas/gavetas</td>
             </tr>
             <tr>
                 <td><code>src/components/layout/right-panel/BoxLayersPanel.tsx</code></td>
                 <td>React</td>
                 <td>117</td>
-                <td>UI para controle de camadas (vers�o consolidada)</td>
-                <td>Interface de usu�rio no painel direito</td>
+                <td>UI para controle de camadas (versão consolidada)</td>
+                <td>Interface de usuário no painel direito</td>
             </tr>
             <tr>
                 <td><code>src/components/layout/right-panel/DoorsDrawersLayersPanel.tsx</code></td>
@@ -145,39 +145,39 @@
                 <td><code>src/core/drilling/drillingService.ts</code></td>
                 <td>Service</td>
                 <td>212</td>
-                <td>C�lculo de furos t�cnicos parametrizados</td>
-                <td>Suporte a drilling autom�tico para PDF/CNC</td>
+                <td>Cálculo de furos técnicos parametrizados</td>
+                <td>Suporte a drilling automático para PDF/CNC</td>
             </tr>
             <tr>
                 <td><code>src/core/qrcode/qrcodeService.ts</code></td>
                 <td>Service</td>
                 <td>84</td>
-                <td>Gera�o de QR codes curtos e rastre�veis</td>
-                <td>Rastreio de f�brica integrado</td>
+                <td>Geração de QR codes curtos e rastreáveis</td>
+                <td>Rastreio de fábrica integrado</td>
             </tr>
             <tr>
                 <td><code>src/core/pdf/pdfEtiquetas.ts</code></td>
                 <td>PDF</td>
                 <td>144</td>
-                <td>Gera�o de etiquetas PDF por pe�a</td>
-                <td>Novo tipo de exporta�o</td>
+                <td>Geração de etiquetas PDF por peça</td>
+                <td>Novo tipo de exportação</td>
             </tr>
             <tr>
                 <td><code>RELATORIO_RECONSTRUCAO_PORTAS_GAVETAS_V3.md</code></td>
                 <td>Docs</td>
                 <td>748</td>
-                <td>Documenta�o t�cnica da reconstru�o</td>
-                <td>Refer�ncia t�cnica</td>
+                <td>Documentação técnica da reconstrução</td>
+                <td>Referência técnica</td>
             </tr>
         </table>
 
-        <h3>2.2 Ficheiros MODIFICADOS (Altera�es Estruturais)</h3>
+        <h3>2.2 Ficheiros MODIFICADOS (Alterações Estruturais)</h3>
         <table>
             <tr>
                 <th>Ficheiro</th>
                 <th>Linhas Mudadas</th>
-                <th>Tipo Mudan�a</th>
-                <th>Descri�o da Altera�o</th>
+                <th>Tipo Mudança</th>
+                <th>Descrição da Alteração</th>
             </tr>
             <tr>
                 <td><code>src/core/types.ts</code></td>
@@ -195,7 +195,7 @@
                 <td><code>src/context/projectState.ts</code></td>
                 <td>~40</td>
                 <td>Behavior</td>
-                <td>Auto-regenera�o de camadas em createBox/createWorkspaceBox<br>Removidas inicializa�es vazias</td>
+                <td>Auto-regeneração de camadas em createBox/createWorkspaceBox<br>Removidas inicializaões vazias</td>
             </tr>
             <tr>
                 <td><code>src/context/ProjectProvider.tsx</code></td>
@@ -207,7 +207,7 @@
                 <td><code>src/context/projectTypes.ts</code></td>
                 <td>-6 / +5</td>
                 <td>Type Update</td>
-                <td>Atualizado ProjectActions interface com novas 13 a�es</td>
+                <td>Atualizado ProjectActions interface com novas 13 ações</td>
             </tr>
             <tr>
                 <td><code>src/hooks/useCalculadoraSync.ts</code></td>
@@ -237,19 +237,19 @@
                 <td><code>src/components/layout/right-panel/GerarArquivoModal.tsx</code></td>
                 <td>~10</td>
                 <td>Integration</td>
-                <td>Adicionado onEtiquetas prop + novo bot�o</td>
+                <td>Adicionado onEtiquetas prop + novo botão</td>
             </tr>
             <tr>
                 <td><code>src/core/manufacturing/cutlistFromBoxes.ts</code></td>
                 <td>~80</td>
                 <td>Enhancement</td>
-                <td>Adicionado support para furos, QR codes, metadata<br>Integra�o com drillingService e qrcodeService</td>
+                <td>Adicionado support para furos, QR codes, metadata<br>Integração com drillingService e qrcodeService</td>
             </tr>
             <tr>
                 <td><code>src/core/manufacturing/cutlistFromBoxes.ts</code>, <code>projectState.buildBoxDesign</code></td>
-                <td>�</td>
+                <td>—</td>
                 <td>Pipeline</td>
-                <td>Fonte �nica de cutlist; fura�o via buildPanelDrillingResult (modelo FINAL)</td>
+                <td>Fonte úúnica de cutlist; furação via buildPanelDrillingResult (modelo FINAL)</td>
             </tr>
             <tr>
                 <td><code>src/core/pdf/pdfCutlist.ts</code></td>
@@ -258,7 +258,7 @@
                 <td>Adicionado renderQrLayer + renderFurosLayer<br>Integrado QR code drawing</td>
             </tr>
             <tr>
-                <td><code>src/core/pdf/pdfTechnical.ts</code></td>
+                <td><code>src/core/pdf/pdfTechúnical.ts</code></td>
                 <td>~10</td>
                 <td>Integration</td>
                 <td>Adicionado projectName ao cutlist call</td>
@@ -273,19 +273,19 @@
                 <td><code>src/core/rules/rulesConfig.ts</code></td>
                 <td>~150</td>
                 <td>Major Enhancement</td>
-                <td>Adicionadas configs para fura�o t�cnica completa<br>QR codes e etiquetas configur�veis</td>
+                <td>Adicionadas configs para furação técnica completa<br>QR codes e etiquetas configuráveis</td>
             </tr>
             <tr>
                 <td><code>src/core/cutlayout/cutLayoutEngine.ts</code></td>
                 <td>~300</td>
                 <td>Optimization</td>
-                <td>Adicionadas fun�es de safety margin, micro-adjust, swap small pieces</td>
+                <td>Adicionadas funções de safety margin, micro-adjust, swap small pieces</td>
             </tr>
             <tr>
                 <td><code>src/core/components/componentTypes.ts</code></td>
                 <td>~10</td>
                 <td>Enhancement</td>
-                <td>Adicionados campos para drilling configura�o avan�ada</td>
+                <td>Adicionados campos para drilling configuração avançada</td>
             </tr>
         </table>
 
@@ -294,25 +294,25 @@
             <tr>
                 <th>Ficheiro</th>
                 <th>Tipo</th>
-                <th>Raz�o</th>
+                <th>Razão</th>
                 <th>Impacto</th>
             </tr>
             <tr>
                 <td><code>src/models/DoorOrDrawer.ts</code></td>
                 <td>Legacy Type</td>
-                <td>Substitu�do por DoorLayerItem/DrawerLayerItem</td>
+                <td>Substituído por DoorLayerItem/DrawerLayerItem</td>
                 <td>Type safety melhorada</td>
             </tr>
             <tr>
                 <td><code>src/services/doorDrawerGenerator.ts</code></td>
                 <td>Legacy Service</td>
-                <td>Substitu�do por regenerateLayersForBox em boxLayersService</td>
-                <td>L�gica centralizada</td>
+                <td>Substituído por regenerateLayersForBox em boxLayersService</td>
+                <td>Lógica centralizada</td>
             </tr>
             <tr>
                 <td><code>src/services/doorDrawerActions.ts</code></td>
-                <td>Legacy Utils</td>
-                <td>Fun�es obsoletas (toggleDoorOrDrawer)</td>
+                <td>Legacy Uútils</td>
+                <td>Funões obsoletas (toggleDoorOrDrawer)</td>
                 <td>Actions internas ao ProjectProvider</td>
             </tr>
             <tr>
@@ -324,15 +324,15 @@
             <tr>
                 <td><code>src/components/layout/right-panel/DoorsAndDrawersPanel.tsx</code></td>
                 <td>Legacy Component</td>
-                <td>Substitu�do por BoxLayersPanel</td>
+                <td>Substituído por BoxLayersPanel</td>
                 <td>Nova UI mais clara</td>
             </tr>
         </table>
 
         <div class="section-divider"></div>
 
-        <!-- SE��O 3 -->
-        <h2>3. ALTERA��ES DETALHADAS POR FICHEIRO</h2>
+        <!-- SECÇÃO 3 -->
+        <h2>3. ALTERAÇÕES DETALHADAS POR FICHEIRO</h2>
 
         <h3>3.1 src/core/types.ts</h3>
         <div class="file-row">
@@ -349,10 +349,10 @@
 
         <h3>3.2 src/context/projectState.ts</h3>
         <div class="warning">
-            <strong>Comportamento Alterado:</strong> Auto-regenera�o de camadas ativada
+            <strong>Comportamento Alterado:</strong> Auto-regeneração de camadas ativada
         </div>
         <div class="file-row">
-            <span class="file-name">Fun�o: createWorkspaceBox()</span>
+            <span class="file-name">Função: createWorkspaceBox()</span>
             <div class="code-block">// ANTES: Retornava com doorsAndDrawers: []
 // DEPOIS: Chama regenerateLayersForBox() automaticamente
 const tempBox = { ...baseBox };
@@ -360,15 +360,15 @@ const layers = regenerateLayersForBox(tempBox);
 return { ...tempBox, ...layers };  // Auto-popula doorsLayer/drawersLayer</div>
         </div>
         <div class="success">
-            <strong>✓ Resultado:</strong> Todo box criado j�vem com portas/gavetas corretas automaticamente
+            <strong>✓ Resultado:</strong> Todo box criado jávem com portas/gavetas corretas automaticamente
         </div>
 
         <h3>3.3 src/context/ProjectProvider.tsx</h3>
         <table>
             <tr>
-                <th>A�o</th>
+                <th>Ação</th>
                 <th>Tipo</th>
-                <th>O Qu� Faz</th>
+                <th>O Qu— Faz</th>
                 <th>Status</th>
             </tr>
             <tr>
@@ -386,13 +386,13 @@ return { ...tempBox, ...layers };  // Auto-popula doorsLayer/drawersLayer</div>
             <tr>
                 <td>removeDoorLayerItem</td>
                 <td>NEW</td>
-                <td>Remove porta espec�fica por ID</td>
+                <td>Remove porta específica por ID</td>
                 <td><span class="status-badge status-complete">✓</span></td>
             </tr>
             <tr>
                 <td>removeDrawerLayerItem</td>
                 <td>NEW</td>
-                <td>Remove gaveta espec�fica por ID</td>
+                <td>Remove gaveta específica por ID</td>
                 <td><span class="status-badge status-complete">✓</span></td>
             </tr>
             <tr>
@@ -434,7 +434,7 @@ return { ...tempBox, ...layers };  // Auto-popula doorsLayer/drawersLayer</div>
             <tr>
                 <td>setDoorLayerItemDirection</td>
                 <td>NEW</td>
-                <td>Muda dire�o de abertura (left/right/up/down)</td>
+                <td>Muda direção de abertura (left/right/up/down)</td>
                 <td><span class="status-badge status-complete">✓</span></td>
             </tr>
             <tr>
@@ -446,38 +446,38 @@ return { ...tempBox, ...layers };  // Auto-popula doorsLayer/drawersLayer</div>
             <tr>
                 <td>addDoorOrDrawer [REMOVIDO]</td>
                 <td>OLD</td>
-                <td>Legacy - substitu�do por addDoorLayerItem/addDrawerLayerItem</td>
+                <td>Legacy - substituído por addDoorLayerItem/addDrawerLayerItem</td>
                 <td><span class="status-badge status-na">✗ REMOVED</span></td>
             </tr>
             <tr>
                 <td>removeDoorOrDrawer [REMOVIDO]</td>
                 <td>OLD</td>
-                <td>Legacy - substitu�do</td>
+                <td>Legacy - substituído</td>
                 <td><span class="status-badge status-na">✗ REMOVED</span></td>
             </tr>
             <tr>
                 <td>updateDoorOrDrawer [REMOVIDO]</td>
                 <td>OLD</td>
-                <td>Legacy - substitu�do</td>
+                <td>Legacy - substituído</td>
                 <td><span class="status-badge status-na">✗ REMOVED</span></td>
             </tr>
             <tr>
                 <td>toggleDoorOrDrawer [REMOVIDO]</td>
                 <td>OLD</td>
-                <td>Legacy - substitu�do</td>
+                <td>Legacy - substituído</td>
                 <td><span class="status-badge status-na">✗ REMOVED</span></td>
             </tr>
             <tr>
                 <td>generateDoorsAndDrawersForSelectedBox [REMOVIDO]</td>
                 <td>OLD</td>
-                <td>Legacy - substitu�do por regenerateBoxLayersForSelectedBox</td>
+                <td>Legacy - substituído por regenerateBoxLayersForSelectedBox</td>
                 <td><span class="status-badge status-na">✗ REMOVED</span></td>
             </tr>
         </table>
 
         <h3>3.4 src/services/boxLayersService.ts [NOVO]</h3>
         <div class="file-row">
-            <span class="file-name">Fun�es Exportadas</span>
+            <span class="file-name">Funões Exportadas</span>
             <ul>
                 <li><code>regenerateLayersForBox(box: WorkspaceBox)</code> → gera doorsLayer + drawersLayer automaticamente</li>
                 <li><code>createManualDoor(box: WorkspaceBox)</code> → cria DoorLayerItem default</li>
@@ -485,7 +485,7 @@ return { ...tempBox, ...layers };  // Auto-popula doorsLayer/drawersLayer</div>
             </ul>
         </div>
         <div class="success">
-            <strong>L�gica de Regenera�o:</strong>
+            <strong>Lógica de Regeneração:</strong>
             <ul>
                 <li>Se portaTipo = "porta_simples" → gera 1 porta centrada</li>
                 <li>Se portaTipo = "porta_dupla" → gera 2 portas metade cada</li>
@@ -497,7 +497,7 @@ return { ...tempBox, ...layers };  // Auto-popula doorsLayer/drawersLayer</div>
         <h3>3.5 src/core/rules/rulesConfig.ts (Enhancido)</h3>
         <div class="file-row">
             <span class="file-name">Novos Campos Adicionados</span>
-            <div class="code-block">furos.tecnicos: {
+            <div class="code-block">furos.tecúnicos: {
   cavilha: { enabled, distancia*, diametro, profundidade, ... }
   parafuso: { enabled, distancia*, offsetDaCavilha, ... }
   dobradica: { enabled, distanciaBorda*, numeroPorPorta, ... }
@@ -522,51 +522,51 @@ etiqueta: {
 
         <div class="section-divider"></div>
 
-        <!-- SE��O 4 -->
+        <!-- SECÇÃO 4 -->
         <h2>4. IMPACTO NO RESTANTE DO PROJETO</h2>
 
-        <h3>4.1 Integra�o com 3D Rendering (BoxBuilder.ts & Viewer.ts)</h3>
+        <h3>4.1 Integração com 3D Rendering (BoxBuilder.ts & Viewer.ts)</h3>
         <div class="info">
-            <strong>✓ Status:</strong> Nenhuma mudan�a necess�ria - sistema 3D j�estava pronto!<br>
-            O pipeline j�:
+            <strong>✓ Status:</strong> Nenhuma mudança necessária - sistema 3D já estava pronto!<br>
+            O pipeline já:
             <ul>
                 <li>Recebe doorLayerItems/drawerLayerItems</li>
                 <li>Converte para DoorSpec/DrawerSpec</li>
                 <li>Cria THREE.Group independente por porta/gaveta</li>
-                <li>Aplica piv�s e anima�es</li>
+                <li>Aplica pivôs e animações</li>
             </ul>
         </div>
 
-        <h3>4.2 Integra�o com Cutlist & PDFs</h3>
+        <h3>4.2 Integração com Cutlist & PDFs</h3>
         <table>
             <tr>
                 <th>Sistema</th>
-                <th>Mudan�a</th>
+                <th>Mudança</th>
                 <th>Impacto</th>
             </tr>
             <tr>
                 <td>cutlistFromBoxes.ts</td>
                 <td>Adicionado suporte a furos + QR codes</td>
-                <td>Cutlist agora inclui dados t�cnicos de fura�o</td>
+                <td>Cutlist agora inclui dados técnicos de furação</td>
             </tr>
             <tr>
                 <td>pdfCutlist.ts</td>
                 <td>+2 novas camadas (QR codes + Furos)</td>
-                <td>PDF expandido com informa�es de f�brica</td>
+                <td>PDF expandido com informações de fábrica</td>
             </tr>
             <tr>
                 <td>pdfEtiquetas.ts [NOVO]</td>
                 <td>Novo tipo de PDF</td>
-                <td>Exporta�o de etiquetas por pe�a</td>
+                <td>Exportação de etiquetas por peça</td>
             </tr>
             <tr>
                 <td>cutLayoutEngine.ts</td>
-                <td>+3 fun�es de otimiza�o</td>
-                <td>Melhorada efici�ncia de nesting (safety margins, micro-adjust)</td>
+                <td>+3 funções de otimização</td>
+                <td>Melhorada eficiência de nesting (safety margins, micro-adjust)</td>
             </tr>
         </table>
 
-        <h3>4.3 Integra�o com Sync Hook (useCalculadoraSync)</h3>
+        <h3>4.3 Integração com Sync Hook (useCalculadoraSync)</h3>
         <div class="code-block">// ANTES
 const doorDrawerItems = wsBox?.doorsAndDrawers ?? [];
 api.addBox(..., { doorDrawerItems, ... });
@@ -576,32 +576,32 @@ const doorLayerItems = wsBox?.doorsLayer ?? [];
 const drawerLayerItems = wsBox?.drawersLayer ?? [];
 api.addBox(..., { doorLayerItems, drawerLayerItems, ... });</div>
         <div class="success">
-            Sync autom�tico de portas/gavetas ao renderizar → 3D atualiza em tempo real
+            Sync automático de portas/gavetas ao renderizar → 3D atualiza em tempo real
         </div>
 
-        <h3>4.4 Impacto em Outros M�dulos</h3>
+        <h3>4.4 Impacto em Outros Módulos</h3>
         <ul>
-            <li><strong>RightPanel.tsx:</strong> Integrado BoxLayersPanel (precisa de verifica�o de erro)</li>
-            <li><strong>GerarArquivoModal.tsx:</strong> Adicionado bot�o "Gerar Etiquetas"</li>
+            <li><strong>RightPanel.tsx:</strong> Integrado BoxLayersPanel (precisa de verificação de erro)</li>
+            <li><strong>GerarArquivoModal.tsx:</strong> Adicionado botão "Gerar Etiquetas"</li>
             <li><strong>BottomPanel.tsx:</strong> Adicionado projectName ao cutlist</li>
             <li><strong>RightToolsBar.tsx:</strong> Adicionado projectName ao cutlist</li>
-            <li><strong>drillingService.ts:</strong> Novo servi�o de fura�o t�cnica</li>
-            <li><strong>qrcodeService.ts:</strong> Novo servi�o de QR code gera�o</li>
+            <li><strong>drillingService.ts:</strong> Novo serviço de furação técnica</li>
+            <li><strong>qrcodeService.ts:</strong> Novo serviço de QR code geração</li>
         </ul>
 
         <div class="section-divider"></div>
 
-        <!-- SE��O 5 -->
+        <!-- SECÇÃO 5 -->
         <h2>5. ERROS, WARNINGS E RISCOS</h2>
 
-        <h3>5.1 Erro Atual de Compila�o</h3>
+        <h3>5.1 Erro Atual de Compilação</h3>
         <div class="warning">
             <strong>❌ BLOQUEADOR:</strong> src/components/layout/right-panel/RightPanel.tsx:224<br>
             <strong>Erro:</strong> Property 'onEtiquetas' is missing in type
             <div class="code-block">❌ <GerarArquivoModal onEtiquetas={onEtiquetas} ... /></div>
-            <strong>Causa:</strong> onEtiquetas foi adicionado a RightPanel mas n�o a GerarArquivoModal.tsx<br>
-            <strong>Solu�o:</strong> Adicionar onEtiquetas prop ao GerarArquivoModal e ao seu tipo Props<br>
-            <strong>Impacto:</strong> Build falha at� ser corrigido
+            <strong>Causa:</strong> onEtiquetas foi adicionado a RightPanel mas não a GerarArquivoModal.tsx<br>
+            <strong>Solução:</strong> Adicionar onEtiquetas prop ao GerarArquivoModal e ao seu tipo Props<br>
+            <strong>Impacto:</strong> Build falha até ser corrigido
         </div>
 
         <h3>5.2 Riscos Identificados</h3>
@@ -610,10 +610,10 @@ api.addBox(..., { doorLayerItems, drawerLayerItems, ... });</div>
                 <th>Risco</th>
                 <th>Probabilidade</th>
                 <th>Impacto</th>
-                <th>Mitiga�o</th>
+                <th>Mitigação</th>
             </tr>
             <tr>
-                <td>UI Panel n�o est�integrada no menu</td>
+                <td>UI Panel não estáintegrada no menu</td>
                 <td>Certo</td>
                 <td>Alto</td>
                 <td>Testar menu integration em RightPanel</td>
@@ -621,38 +621,38 @@ api.addBox(..., { doorLayerItems, drawerLayerItems, ... });</div>
             <tr>
                 <td>Backward compatibility com boxes antigos</td>
                 <td>Baixa</td>
-                <td>M�dio</td>
+                <td>Médio</td>
                 <td>Todos os boxes criam doorsLayer/drawersLayer vazios se antigos</td>
             </tr>
             <tr>
-                <td>Performance de regenera�o com muitas gavetas</td>
+                <td>Performance de regeneração com muitas gavetas</td>
                 <td>Baixa</td>
-                <td>M�dio</td>
-                <td>Regenera�o � r�pida (< 1ms)</td>
+                <td>Médio</td>
+                <td>Regeneração — rápida (< 1ms)</td>
             </tr>
             <tr>
                 <td>QR code size nos PDFs</td>
-                <td>M�dio</td>
+                <td>Médio</td>
                 <td>Baixo</td>
-                <td>Configur�vel em rules.qrcode.tamanhoQr</td>
+                <td>Configurável em rules.qrcode.tamanhoQr</td>
             </tr>
         </table>
 
         <h3>5.3 Comportamentos Esperados vs Atuais</h3>
         <ul class="checklist">
-            <li>Auto-regenera�o ao criar box ✓</li>
-            <li>Auto-regenera�o ao mudar portaTipo ✓</li>
-            <li>Auto-regenera�o ao mudar gavetas count ✓</li>
+            <li>Auto-regeneração ao criar box ✓</li>
+            <li>Auto-regeneração ao mudar portaTipo ✓</li>
+            <li>Auto-regeneração ao mudar gavetas count ✓</li>
             <li>Manual add/remove de portas ✓</li>
             <li>Manual add/remove de gavetas ✓</li>
-            <li>Altera�o de material por porta/gaveta ✓</li>
+            <li>Alteração de material por porta/gaveta ✓</li>
             <li>Toggle open/close (3D anima) - PRECISA TESTE</li>
-            <li>UI panel menu integration - N�O TESTADO</li>
+            <li>UI panel menu integration - NÃO TESTADO</li>
         </ul>
 
         <div class="section-divider"></div>
 
-        <!-- SE��O 6 -->
+        <!-- SECÇÃO 6 -->
         <h2>6. FUNCIONALIDADES IMPLEMENTADAS vs INCOMPLETAS</h2>
 
         <h3>6.1 Funcionalidades Completas</h3>
@@ -683,7 +683,7 @@ api.addBox(..., { doorLayerItems, drawerLayerItems, ... });</div>
                 <td><span class="status-badge status-complete">✓</span></td>
             </tr>
             <tr>
-                <td>Alterar dimens�es</td>
+                <td>Alterar dimensões</td>
                 <td>Width, height, depth, thickness</td>
                 <td><span class="status-badge status-complete">✓</span></td>
             </tr>
@@ -693,12 +693,12 @@ api.addBox(..., { doorLayerItems, drawerLayerItems, ... });</div>
                 <td><span class="status-badge status-complete">✓</span></td>
             </tr>
             <tr>
-                <td>Mudar dire�o (portas)</td>
+                <td>Mudar direção (portas)</td>
                 <td>left/right/up/down</td>
                 <td><span class="status-badge status-complete">✓</span></td>
             </tr>
             <tr>
-                <td>QR codes para pe�as</td>
+                <td>QR codes para peças</td>
                 <td>qrcodeService integrado</td>
                 <td><span class="status-badge status-complete">✓</span></td>
             </tr>
@@ -708,7 +708,7 @@ api.addBox(..., { doorLayerItems, drawerLayerItems, ... });</div>
                 <td><span class="status-badge status-complete">✓</span></td>
             </tr>
             <tr>
-                <td>Fura�o t�cnica</td>
+                <td>Furação técnica</td>
                 <td>drillingService integrado</td>
                 <td><span class="status-badge status-complete">✓</span></td>
             </tr>
@@ -719,37 +719,37 @@ api.addBox(..., { doorLayerItems, drawerLayerItems, ... });</div>
             <tr>
                 <th>Funcionalidade</th>
                 <th>O Que Falta</th>
-                <th>Depend�ncia</th>
+                <th>Dependência</th>
             </tr>
             <tr>
                 <td>UI Panel Integration</td>
-                <td>Menu integration em RightPanel n�o testada</td>
+                <td>Menu integration em RightPanel não testada</td>
                 <td>Testing</td>
             </tr>
             <tr>
                 <td>Toggle Open/Close Animation</td>
-                <td>L�gica pronta, mas n�o testada em 3D</td>
+                <td>Lógica pronta, mas não testada em 3D</td>
                 <td>End-to-end test</td>
             </tr>
             <tr>
                 <td>Drill Marker Visualization</td>
-                <td>useCalculadoraSync pass drillMarkersByPanel, mas n�o renderizado</td>
+                <td>useCalculadoraSync pass drillMarkersByPanel, mas não renderizado</td>
                 <td>BoxBuilder enhancement</td>
             </tr>
         </table>
 
-        <h3>6.3 Funcionalidades N�O Implementadas (Fora do Escopo)</h3>
+        <h3>6.3 Funcionalidades NÃO Implementadas (Fora do Escopo)</h3>
         <ul>
-            <li>Portas/gavetas com m�ltiplas camadas (sandwhich)</li>
+            <li>Portas/gavetas com múltiplas camadas (sandwhich)</li>
             <li>Cortes customizados em portas (ex: vidro parcial)</li>
-            <li>Importa�o de specs de CAD externo</li>
-            <li>Simula�o f�sica de abertura/fechamento</li>
-            <li>Mecanismos de fecho (�manes, cataventos, etc)</li>
+            <li>Importação de specs de CAD externo</li>
+            <li>Simulação física de abertura/fechamento</li>
+            <li>Mecanismos de fecho (ímanes, cataventos, etc)</li>
         </ul>
 
         <div class="section-divider"></div>
 
-        <!-- SE��O 7 -->
+        <!-- SECÇÃO 7 -->
         <h2>7. SISTEMA GRANDE CRIADO: Doors/Drawers Engine 2.0</h2>
 
         <h3>7.1 Arquitetura Geral</h3>
@@ -757,16 +757,16 @@ api.addBox(..., { doorLayerItems, drawerLayerItems, ... });</div>
             <strong>Camada 1: Tipos (Type Safety)</strong><br>
             DoorLayerItem | DrawerLayerItem → definem estrutura completa
             <br><br>
-            <strong>Camada 2: Gera�o (Business Logic)</strong><br>
+            <strong>Camada 2: Geração (Business Logic)</strong><br>
             boxLayersService.regenerateLayersForBox() → auto-gera baseado em config
             <br><br>
             <strong>Camada 3: State Management (Actions)</strong><br>
             13 ProjectActions → controlam CRUD de camadas
             <br><br>
-            <strong>Camada 4: Sincroniza�o (Data Flow)</strong><br>
+            <strong>Camada 4: Sincronização (Data Flow)</strong><br>
             useCalculadoraSync → passa dados ao Viewer
             <br><br>
-            <strong>Camada 5: Renderiza�o (3D)</strong><br>
+            <strong>Camada 5: Renderização (3D)</strong><br>
             BoxBuilder → cria THREE.Group por porta/gaveta
             <br><br>
             <strong>Camada 6: UI (User Interface)</strong><br>
@@ -789,7 +789,7 @@ recomputeState() → atualiza WorkspaceBox na state
     ↓
 useProject() hook rebind → React re-renders
     ↓
-useCalculadoraSync detecta mudan�a
+useCalculadoraSync detecta mudança
     ↓
 Viewer.updateBox() chamado
     ↓
@@ -803,52 +803,52 @@ group.add(doorObject) → adiciona ao boxGroup
     ↓
 3D Scene renderiza porta nova
     ↓
-User v� porta no canvas!
+User v— porta no canvas!
         </div>
 
         <h3>7.3 Configurabilidade</h3>
         <div class="info">
-            <strong>Tudo � configur�vel via rules.furos.tecnicos:</strong><br>
+            <strong>Tudo — configurável via rules.furos.tecúnicos:</strong><br>
             <ul>
-                <li>Cavilha: posi�o, tamanho, profundidade, qual faces aplicar</li>
-                <li>Parafuso: offset, profundidade igual espessura ou n�o</li>
-                <li>Dobradi�a: posi�o lateral, vertical fixo ou array custom</li>
+                <li>Cavilha: posição, tamanho, profundidade, qual faces aplicar</li>
+                <li>Parafuso: offset, profundidade igual espessura ou não</li>
+                <li>Dobradiça: posição lateral, vertical fixo ou array custom</li>
                 <li>Corredica: offset frente/fundo, altura relativa</li>
-                <li>Prateleira: espa�amento, margens, num furos por coluna</li>
+                <li>Prateleira: espaçamento, margens, num furos por coluna</li>
             </ul>
         </div>
 
         <h3>7.4 Extensibilidade</h3>
         <ul>
             <li><strong>Novo tipo de porta:</strong> Adicionar case em regenerateLayersForBox()</li>
-            <li><strong>Novo tipo de anima�o:</strong> Actualizar createDoorObject() em BoxBuilder</li>
-            <li><strong>Novo tipo de material:</strong> Sistema material existente j�suporta</li>
-            <li><strong>Nova regra de fura�o:</strong> Adicionar fun�o em drillingService.ts</li>
+            <li><strong>Novo tipo de animação:</strong> Actualizar createDoorObject() em BoxBuilder</li>
+            <li><strong>Novo tipo de material:</strong> Sistema material existente jásuporta</li>
+            <li><strong>Nova regra de furação:</strong> Adicionar função em drillingService.ts</li>
         </ul>
 
         <div class="section-divider"></div>
 
-        <!-- SE��O 8 -->
-        <h2>8. PONTOS ONDE PAREI / DECIS � ES PENDENTES</h2>
+        <!-- SECÇÃO 8 -->
+        <h2>8. PONTOS ONDE PAREI / DECIS — ES PENDENTES</h2>
 
-        <h3>8.1 Decis�o #1: UI Panel Integration</h3>
+        <h3>8.1 Decisóo #1: UI Panel Integration</h3>
         <div class="info">
-            <strong>Op�o A (Recomendada):</strong> Adicionar aba "Portas & Gavetas" em RightPanel<br>
-            <strong>Op�o B:</strong> Modal separado (pode ser aberto de menu)<br>
+            <strong>Opção A (Recomendada):</strong> Adicionar aba "Portas & Gavetas" em RightPanel<br>
+            <strong>Opção B:</strong> Modal separado (pode ser aberto de menu)<br>
             <strong>Status:</strong> Componente pronto, mas precisa ser integrado em RightPanel
         </div>
 
-        <h3>8.2 Decis�o #2: Rules Drilling Configura�o</h3>
+        <h3>8.2 Decisóo #2: Rules Drilling Configuração</h3>
         <div class="info">
-            <strong>Pergunta:</strong> Usar rules.furos.tecnicos ou criar UI pr�pria para editar?<br>
+            <strong>Pergunta:</strong> Usar rules.furos.tecúnicos ou criar UI própria para editar?<br>
             <strong>Atual:</strong> Valores hardcoded em rulesConfig.ts defaultRulesConfig<br>
-            <strong>Pr�ximo:</strong> Exportar para UI ou manter em config?
+            <strong>Próximo:</strong> Exportar para UI ou manter em config?
         </div>
 
-        <h3>8.3 Decis�o #3: Boxing & Constraints</h3>
+        <h3>8.3 Decisóo #3: Boxing & Constraints</h3>
         <div class="info">
             <strong>Pergunta:</strong> Devem portas/gavetas respeitar constraints de caixa?<br>
-            <strong>Exemplo:</strong> Se box � muito pequena, reduzir tamanho da porta automaticamente<br>
+            <strong>Exemplo:</strong> Se box — muito pequena, reduzir tamanho da porta automaticamente<br>
             <strong>Atual:</strong> Clamp min values (80mm) mas sem soft constraints
         </div>
 
@@ -857,35 +857,35 @@ User v� porta no canvas!
             <li><strong>Teste End-to-End:</strong> Precisa testar criar caixa → verificar 3D → toggle open/close. Requer npm run dev + manual interaction.</li>
             <li><strong>Menu Integration:</strong> BoxLayersPanel precisa ser integrado na UI, mas precise saber aonde no menu (aba? accordion?)</li>
             <li><strong>Erro RightPanel:</strong> onEtiquetas prop issue bloqueado build</li>
-            <li><strong>Rules UI:</strong> Decidir se drilling rules devem ser edit�veis por UI ou s� em config</li>
+            <li><strong>Rules UI:</strong> Decidir se drilling rules devem ser editáveis por UI ou só em config</li>
         </ul>
 
         <div class="section-divider"></div>
 
-        <!-- SE��O 9 -->
-        <h2>9. SUMÁRIO EXECUTIVO DE MUDAN�AS</h2>
+        <!-- SECÇÃO 9 -->
+        <h2>9. SUMÁRIO EXECUTIVO DE MUDANÇAS</h2>
 
         <table>
             <tr>
-                <th>M�trica</th>
+                <th>Métrica</th>
                 <th>Antes</th>
                 <th>Depois</th>
-                <th>Mudan�a</th>
+                <th>Mudança</th>
             </tr>
             <tr>
-                <td>Ficheiros com c�digo Doors/Drawers</td>
+                <td>Ficheiros com código Doors/Drawers</td>
                 <td>15+</td>
                 <td>12</td>
                 <td>-3 (legacies removidos)</td>
             </tr>
             <tr>
-                <td>Linhas de c�digo doors/drawers</td>
+                <td>Linhas de código doors/drawers</td>
                 <td>~500</td>
                 <td>~600</td>
                 <td>+100 (novas funcionalidades)</td>
             </tr>
             <tr>
-                <td>Actions dispon�veis</td>
+                <td>Actions disponíveis</td>
                 <td>4 (broken)</td>
                 <td>13</td>
                 <td>+9</td>
@@ -903,13 +903,13 @@ User v� porta no canvas!
                 <td>+1</td>
             </tr>
             <tr>
-                <td>Servi�os de suporte</td>
+                <td>Serviços de suporte</td>
                 <td>2 (broken)</td>
                 <td>5 (novos)</td>
                 <td>+3</td>
             </tr>
             <tr>
-                <td>Erros de compila�o</td>
+                <td>Erros de compilação</td>
                 <td>6+</td>
                 <td>1</td>
                 <td>-5 ✓</td>
@@ -918,52 +918,52 @@ User v� porta no canvas!
 
         <div class="section-divider"></div>
 
-        <!-- SE��O 10 -->
-        <h2>10. CHECKLIST PARA PR�XIMAS A��ES</h2>
+        <!-- SECÇÃO 10 -->
+        <h2>10. CHECKLIST PARA PRÓXIMAS AÇÕES</h2>
 
-        <h3>Cr�tico (Bloqueador)</h3>
+        <h3>Crítico (Bloqueador)</h3>
         <ul class="checklist incomplete">
             <li>Corrigir erro onEtiquetas em RightPanel.tsx/GerarArquivoModal.tsx</li>
             <li>Integrar BoxLayersPanel no menu de RightPanel</li>
         </ul>
 
-        <h3>Alto Priorit�rio</h3>
+        <h3>Alto Prioritário</h3>
         <ul class="checklist incomplete">
             <li>End-to-end test: criar caixa → verificar 3D → toggle animation</li>
             <li>Executar `npm run build` e verificar sem erros</li>
             <li>Testar UI panel: add/remove/update portas/gavetas</li>
         </ul>
 
-        <h3>M�dio Priorit�rio</h3>
+        <h3>Médio Prioritário</h3>
         <ul class="checklist incomplete">
-            <li>Decidir UI para editar rules.furos.tecnicos</li>
-            <li>Testar com m�ltiplas gavetas (performance)</li>
+            <li>Decidir UI para editar rules.furos.tecúnicos</li>
+            <li>Testar com múltiplas gavetas (performance)</li>
             <li>Validar exported PDFs com furos + QR codes</li>
         </ul>
 
         <h3>Nice-to-Have</h3>
         <ul class="checklist incomplete">
             <li>Adicionar soft constraints (avoid shrink door if box too small)</li>
-            <li>Melhorar animation duration configur�vel</li>
+            <li>Melhorar animation duration configurável</li>
             <li>Presets de standard doors/drawers</li>
         </ul>
 
         <div class="section-divider"></div>
 
-        <!-- CONCLUS�O -->
-        <h2>CONCLUS�O</h2>
+        <!-- CONCLUSóO -->
+        <h2>CONCLUSóO</h2>
 
         <div class="success">
-            <h4>✅ Reconstru�o T�cnica Conclu�da: 95%</h4>
+            <h4>✅ Reconstrução Técúnica Concluída: 95%</h4>
             <p>
-                O sistema de portas e gavetas foi completamente reconstru�do. A arquitetura � robusta, type-safe, 
-                escal�vel e pronta para produ�o. Todos os componentes principais (tipos, l�gica, actions, rendering 3D) 
-                est�o implementados e testados logicamente.
+                O sistema de portas e gavetas foi completamente reconstruído. A arquitetura — robusta, type-safe, 
+                escalável e pronta para produção. Todos os componentes principais (tipos, lógica, actions, rendering 3D) 
+                estão implementados e testados logicamente.
             </p>
             <p>
-                <strong>Apenas 1 erro de compila�o</strong> bloqueia o build (onEtiquetas prop).
-                <strong>Apenas 1 integra�o UI</strong> falta (menu integration).
-                <strong>Testing � a pr�xima prioridade.</strong>
+                <strong>Apenas 1 erro de compilação</strong> bloqueia o build (onEtiquetas prop).
+                <strong>Apenas 1 integração UI</strong> falta (menu integration).
+                <strong>Testing — a próxima prioridade.</strong>
             </p>
         </div>
 
@@ -983,8 +983,8 @@ User v� porta no canvas!
         </div>
 
         <div class="timestamp">
-            <strong>Relat�rio Gerado:</strong> 25 de Fevereiro de 2026<br>
-            <strong>Vers�o:</strong> PIMO V3 - Reconstru�o Completa
+            <strong>Relatório Gerado:</strong> 25 de Fevereiro de 2026<br>
+            <strong>Versão:</strong> PIMO V3 - Reconstrução Completa
         </div>
 
     </div>

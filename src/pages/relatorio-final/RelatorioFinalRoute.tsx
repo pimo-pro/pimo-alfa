@@ -8,7 +8,7 @@ import {
 import RelatorioFinalProjeto from "./RelatorioFinalProjeto";
 
 /**
- * Rota pùblica /relatorio-final/:project
+ * Rota p√∫blica /relatorio-final/:project
  * Redirect: pimo-* / local-* / UUID ? slug resolvido.
  */
 export default function RelatorioFinalRoute() {

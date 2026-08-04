@@ -1,6 +1,6 @@
 /**
- * Pairing industrial de cavilhas em m�dulos cl�ssicos (CIMA/FUNDO ? laterais).
- * Regra global: 10�30 (espessura lateral) ? 10�13 (face cima/fundo) + CAVILHA_10x40.
+ * Pairing industrial de cavilhas em módulos clêssicos (CIMA/FUNDO ? laterais).
+ * Regra global: 10–30 (espessura lateral) ? 10–13 (face cima/fundo) + CAVILHA_10x40.
  */
 
 import type { PanelDrillHole, TechnicalDrillHole, DrillFace } from "../types";
@@ -24,7 +24,7 @@ export type ModuleCavilhaSide = "le" | "ld";
 export type ModuleCavilhaEdge = "top" | "bottom";
 export type ModuleCavilhaDepthEnd = "front" | "back";
 
-/** Chave est�vel do par lateral ? cima/fundo. */
+/** Chave estável do par lateral ? cima/fundo. */
 export function moduleCavilhaPairKey(
   side: ModuleCavilhaSide,
   edge: ModuleCavilhaEdge,
@@ -90,7 +90,7 @@ export function buildModuleLateralEdgeCavilhaHoles(params: {
 }
 
 /**
- * Furos 10�13 na face de CIMA/FUNDO � pares das arestas das laterais.
+ * Furos 10–13 na face de CIMA/FUNDO — pares das arestas das laterais.
  * CIMA ? edge "top"; FUNDO ? edge "bottom".
  */
 export function buildModuleTopBottomFaceCavilhaHoles(params: {

@@ -1,5 +1,5 @@
 /**
- * M�dulos cl�ssicos � pairing CIMA/FUNDO ? laterais (CAVILHA_10x40).
+ * Módulos clêssicos — pairing CIMA/FUNDO ? laterais (CAVILHA_10x40).
  */
 import { describe, expect, it } from "vitest";
 import {
@@ -29,8 +29,8 @@ import {
   makeDivSepTestBox,
 } from "../divSep/divSepTestHelpers";
 
-describe("moduleClassicCavilha � SSOT m�dulos", () => {
-  it("laterais 10�30 + cima/fundo 10�13 partilham pairedHoleKey", () => {
+describe("moduleClassicCavilha — SSOT módulos", () => {
+  it("laterais 10–30 + cima/fundo 10–13 partilham pairedHoleKey", () => {
     const le = buildModuleLateralEdgeCavilhaHoles({
       panelDepthMm: 560,
       panelHeightMm: 720,
@@ -98,7 +98,7 @@ describe("moduleClassicCavilha � SSOT m�dulos", () => {
     expect(countCavilha10x40FromEdgeHoles([...le, ...ld])).toBe(8);
   });
 
-  it("calcCavilha (drillingService) j� n�o gera profundidade 10", () => {
+  it("calcCavilha (drillingService) já não gera profundidade 10", () => {
     const holes = calculateTechnicalDrillingsForPiece(
       { tipo: "cima", largura: 600, altura: 560, espessura: 19 },
       defaultRulesConfig
@@ -170,7 +170,7 @@ describe("moduleClassicCavilha � SSOT m�dulos", () => {
     expect(latXml).toContain(`<Depth>${CAVILHA_EDGE_DEPTH_MM}.00</Depth>`);
   });
 
-  it("DIV/SEP: cada 10�30 tem par 10�13 com a mesma pairedHoleKey", () => {
+  it("DIV/SEP: cada 10–30 tem par 10–13 com a mesma pairedHoleKey", () => {
     const sep = defaultSeparadorItem({ id: "sep-1", positionMm: 400 });
     const div = defaultDivisorItem({
       id: "div-1",

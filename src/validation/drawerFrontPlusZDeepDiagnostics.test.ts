@@ -1,5 +1,5 @@
 /**
- * Diagn�stico profundo: faces, normals, groups, raycast +Z/?Z da gav_frente.
+ * Diagnóstico profundo: faces, normals, groups, raycast +Z/?Z da gav_frente.
  * Paridade portas: singleMaterial, sem cap.
  */
 import { describe, expect, it, vi } from "vitest";
@@ -86,8 +86,8 @@ function raycastFaceMaterial(mesh: THREE.Mesh, fromZ: number) {
   };
 }
 
-describe("diagn�stico profundo gav_frente +Z/?Z", () => {
-  it("createDrawerObject singleMaterial + apply � sem cap; +Z/?Z mesma mat�ria", () => {
+describe("diagnóstico profundo gav_frente +Z/?Z", () => {
+  it("createDrawerObject singleMaterial + apply — sem cap; +Z/?Z mesma matéria", () => {
     const factory = new PanelFactory({
       resolvePanelMaterialOptions: (options) => {
         if (options && typeof options === "object" && "edgeMaterial" in options) return options;

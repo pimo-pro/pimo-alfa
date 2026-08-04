@@ -1,16 +1,16 @@
 export type AppTopBarKind = 'navbar' | 'trak' | 'none';
 
 export type AppChromeConfig = {
-  /** Header PIMO-PRO (PiMo Studio) do AppChromeLayout ó sempre true. */
+  /** Header PIMO-PRO (PiMo Studio) do AppChromeLayout ‚Äî sempre true. */
   showProHeader: boolean;
-  /** Barra secund·ria: Navbar, TopBar TRK, ou nenhuma (abaixo do Header). */
+  /** Barra secund√°ria: Navbar, TopBar TRK, ou nenhuma (abaixo do Header). */
   topBar: AppTopBarKind;
 };
 
 /**
- * Chrome por mÛdulo.
- * Header PRO + Footer est„o sempre no AppChromeLayout.
- * TopBarTrak / Navbar ficam ABAIXO do Header, nunca em substituiÁ„o.
+ * Chrome por m√≥dulo.
+ * Header PRO + Footer est√£o sempre no AppChromeLayout.
+ * TopBarTrak / Navbar ficam ABAIXO do Header, nunca em substitui√ß√£o.
  */
 export function resolveAppChrome(pathname: string): AppChromeConfig {
   const path = pathname.replace(/\/+$/, '') || '/';

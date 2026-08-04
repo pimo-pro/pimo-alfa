@@ -26,13 +26,13 @@ body = body
   )
   .replace(/ as const/g, "");
 
-console.log("Funda��o", body.includes("Funda��o"));
-console.log("Visualiza��o", body.includes("Visualiza��o"));
-console.log("mojibake", body.includes("?�"));
+console.log("Fundação", body.includes("Fundação"));
+console.log("Visualização", body.includes("Visualização"));
+console.log("mojibake", body.includes("…"));
 
 const header = `/**
  * Secoes de progresso migradas do antigo ProjectProgress.tsx (Fase 9).
- * Conteudo 1:1 � sem reescrita. Gravado UTF-8 sem BOM.
+ * Conteudo 1:1 — sem reescrita. Gravado UTF-8 sem BOM.
  */
 
 export type ProgressoItemStatus = "completed" | "in-progress" | "planned";

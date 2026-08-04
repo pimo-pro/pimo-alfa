@@ -8,7 +8,7 @@ import {
 import IndustrialSupervisorDashboardPage from './index';
 
 /**
- * /industrial/supervisor/:project — pré-selecciona o projecto no dashboard.
+ * /industrial/supervisor/:project â€” prÃ©-selecciona o projecto no dashboard.
  */
 export default function SupervisorProjectPage() {
   const { project } = useParams<{ project: string }>();

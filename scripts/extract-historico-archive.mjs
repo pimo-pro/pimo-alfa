@@ -205,7 +205,7 @@ fs.writeFileSync(
 
 const typesTs = `/**
  * Tipos do arquivo historico (Fase 4).
- * Conteudo migrado de DocumentacaoSistemaLegacy � so leitura.
+ * Conteudo migrado de DocumentacaoSistemaLegacy — so leitura.
  */
 
 export type HistoricalDocKind =
@@ -227,7 +227,7 @@ export type HistoricalDocEntry = {
 
 const docsTs =
   `/**
- * Entradas historicas tipadas � migracao 1:1 do legado Documentacao.tsx.
+ * Entradas historicas tipadas — migracao 1:1 do legado Documentacao.tsx.
  * Gerado a partir de DocumentacaoSistemaLegacy.tsx.bak (Fase 4).
  */
 

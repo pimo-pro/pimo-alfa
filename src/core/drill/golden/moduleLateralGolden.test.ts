@@ -1,7 +1,7 @@
 /**
- * Golden laterais de MùDULO ù contrato + paridade de export.
+ * Golden laterais de M√óDULO ‚Äî contrato + paridade de export.
  *
- * PROTECùùO: nùo importa DrawerDrillingRules / drawerDowelInterlock /
+ * PROTEC√á√ÉO: n√£o importa DrawerDrillingRules / drawerDowelInterlock /
  * resolveGavetaLateralXmlHoles / gaveta_lat_*.
  */
 import { describe, expect, it } from "vitest";
@@ -22,8 +22,8 @@ import { buildDrillStationXmlFilesForProject } from "../drillExport";
 import { defaultRulesConfig } from "../../rules/rulesConfig";
 import type { CutListItemComPreco } from "../../types";
 
-describe("golden module lateral ù protecùùo de ùmbito", () => {
-  it("sù lateral_esquerda / lateral_direita sùo alvo", () => {
+describe("golden module lateral ‚Äî protec√ß√£o de ‚Äîmbito", () => {
+  it("s√≥ lateral_esquerda / lateral_direita s√≥o alvo", () => {
     expect(MODULE_LATERAL_TIPOS).toEqual(["lateral_esquerda", "lateral_direita"]);
     expect(isLateralPanel({ tipo: "lateral_esquerda" } as never)).toBe(true);
     expect(isLateralPanel({ tipo: "gaveta_lat_esq" } as never)).toBe(false);
@@ -38,12 +38,12 @@ describe("golden module lateral ù protecùùo de ùmbito", () => {
   });
 });
 
-describe("golden module lateral ù fixture MODULE_LATERAL_ESQ", () => {
+describe("golden module lateral ‚Äî fixture MODULE_LATERAL_ESQ", () => {
   it("ficheiros golden presentes", () => {
     expect(moduleLateralGoldenFileReady(MODULE_LATERAL_GOLDEN_ESQ_PATH)).toBe(true);
   });
 
-  it("contrato: L=862 W=351 T=15; 4ù TypeNo2 ù10 Depth=30 X?{0,L}", () => {
+  it("contrato: L=862 W=351 T=15; 4‚Äî TypeNo2 ‚Äî10 Depth=30 X?{0,L}", () => {
     const contract = loadModuleLateralGoldenFile(MODULE_LATERAL_GOLDEN_ESQ_PATH)!;
     expect(contract.panelLength).toBe(862);
     expect(contract.panelWidth).toBe(351);
@@ -63,7 +63,7 @@ describe("golden module lateral ù fixture MODULE_LATERAL_ESQ", () => {
     );
   });
 
-  it("export sintùtico lateral_esquerda ? golden (L/W + 4 cavilhas)", () => {
+  it("export sint√©tico lateral_esquerda ? golden (L/W + 4 cavilhas)", () => {
     const golden = loadModuleLateralGoldenFile(MODULE_LATERAL_GOLDEN_ESQ_PATH)!;
     const L = golden.panelLength;
     const W = golden.panelWidth;
@@ -117,7 +117,7 @@ describe("golden module lateral ù fixture MODULE_LATERAL_ESQ", () => {
     }
   });
 
-  it("gaveta_lat_esq NùO usa referencial L=altura do mùdulo", () => {
+  it("gaveta_lat_esq N√ÉO usa referencial L=altura do m√≥dulo", () => {
     const item: CutListItemComPreco = {
       id: "gav-lat",
       nome: "gav",
@@ -141,7 +141,7 @@ describe("golden module lateral ù fixture MODULE_LATERAL_ESQ", () => {
       rules: defaultRulesConfig,
     });
     const xml = files[0]!.xml;
-    // SSOT gaveta: L=largura (profundidade), W=altura ù sem swap de mùdulo
+    // SSOT gaveta: L=largura (profundidade), W=altura ‚Äî sem swap de m√≥dulo
     expect(xml).toContain("<PanelLength>351.00</PanelLength>");
     expect(xml).toContain("<PanelWidth>195.50</PanelWidth>");
     expect(xml).not.toContain("<PanelLength>195.50</PanelLength>");

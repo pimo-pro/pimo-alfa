@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { backupLayerMaterials, restoreLayerMaterials } from "../core/viewer/materialPreservation";
 import type { DoorLayerItem, DrawerLayerItem } from "../models/BoxLayers";
 
-describe("materialPreservation � frentes gaveta", () => {
-  it("restaura materialId/material e metadata.frontMaterial ap�s regenera��o", () => {
+describe("materialPreservation — frentes gaveta", () => {
+  it("restaura materialId/material e metadata.frontMaterial após regeneração", () => {
     const drawersBefore: DrawerLayerItem[] = [
       {
         id: "d1",

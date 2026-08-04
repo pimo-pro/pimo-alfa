@@ -1,18 +1,18 @@
 /**
- * Fase 2 — montagem por gaveta (bucket financeiro «Gavetas»).
- * Madeira das peças vai para Painéis; este módulo só resolve tarifa × quantidade.
+ * Fase 2 â€” montagem por gaveta (bucket financeiro â€”GavetasÃ³).
+ * Madeira das peÃ§as vai para PainÃ©is; este mÃ³dulo sÃ³ resolve tarifa â€” quantidade.
  */
 
 import { resolveActiveGavetasCount } from "../drawers/drawerModeloAGate";
 import { getSettings } from "../settings/settingsService";
 import type { BoxModule } from "../types";
 
-/** Default de fábrica — Orçamentos / pricing.json `maoDeObra.montagem_gaveta`. */
+/** Default de fÃ¡brica â€” OrÃ§amentos / pricing.json `maoDeObra.montagem_gaveta`. */
 export const CUSTO_MONTAGEM_POR_GAVETA_DEFAULT_EUR = 22;
 
 /**
- * Tarifa €/gaveta a partir de Orçamentos (`custoMontagemPorPeca` = montagem por gaveta).
- * Fallback: 22 €.
+ * Tarifa â€”/gaveta a partir de OrÃ§amentos (`custoMontagemPorPeca` = montagem por gaveta).
+ * Fallback: 22 â€”.
  */
 export function resolveCustoMontagemPorGavetaEur(
   overrideEur?: number | null

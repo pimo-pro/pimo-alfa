@@ -1,5 +1,5 @@
 /**
- * gav_lat_esq / gav_lat_dir � sem swap X?Y no nesting CNC nem no XML DRILL.
+ * gav_lat_esq / gav_lat_dir — sem swap X?Y no nesting CNC nem no XML DRILL.
  */
 import { describe, expect, it } from "vitest";
 import { cutlistToPieces } from "../cutlayout/cutLayoutEngine";
@@ -14,7 +14,7 @@ const HOLES: PanelDrillHole[] = [
   { x: 250, y: 111, diameter: 10, depth: 14, holeType: "cavilha" },
 ];
 
-/** Caso cr�tico: altura > largura � antes activava dimensionsSwapped e invertia furos. */
+/** Caso crítico: altura > largura — antes activava dimensionsSwapped e invertia furos. */
 function tallGavLat(tipo: "gaveta_lat_esq" | "gaveta_lat_dir"): CutListItemComPreco {
   return {
     id: tipo,
@@ -32,7 +32,7 @@ function tallGavLat(tipo: "gaveta_lat_esq" | "gaveta_lat_dir"): CutListItemComPr
   };
 }
 
-describe("gav_lat � sem swap X?Y (CNC nesting + XML DRILL)", () => {
+describe("gav_lat — sem swap X?Y (CNC nesting + XML DRILL)", () => {
   it.each(["gaveta_lat_esq", "gaveta_lat_dir"] as const)(
     "%s cutlistToPieces preserva X/Y SSOT mesmo com altura > largura",
     (tipo) => {
@@ -65,11 +65,11 @@ describe("gav_lat � sem swap X?Y (CNC nesting + XML DRILL)", () => {
     expect(xml).toContain("<Y1>39.00</Y1>");
     expect(xml).toContain("<Y1>111.00</Y1>");
     expect(xml).toContain("<Y1>120.00</Y1>");
-    // N�o deve ter o remap antigo Y?X (ex.: X1=30 com painel L=250)
+    // Não deve ter o remap antigo Y?X (ex.: X1=30 com painel L=250)
     expect(xml).not.toContain("<X1>30.00</X1>");
   });
 
-  it("outras pe�as (m�dulo lateral) ainda podem usar sort/swap � n�o regress�o", () => {
+  it("outras peças (módulo lateral) ainda podem usar sort/swap — não regressóo", () => {
     const mod: CutListItemComPreco = {
       id: "mod",
       nome: "lat",
@@ -84,7 +84,7 @@ describe("gav_lat � sem swap X?Y (CNC nesting + XML DRILL)", () => {
       precoTotal: 0,
     };
     const pieces = cutlistToPieces([mod]);
-    // Module lateral com L<A: sort + swap de furos mant�m-se
+    // Module lateral com L<A: sort + swap de furos mantém-se
     expect(pieces[0]!.largura_mm).toBe(800);
     expect(pieces[0]!.altura_mm).toBe(300);
     expect(pieces[0]!.drillHoles?.[0]?.x).toBe(200);

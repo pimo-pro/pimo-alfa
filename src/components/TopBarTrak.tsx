@@ -22,7 +22,7 @@ function isStation(value: string | undefined): value is IndustrialStation {
 }
 
 /**
- * Barra TRK abaixo do Header PRO — nunca substitui o Header.
+ * Barra TRK abaixo do Header PRO â€” nunca substitui o Header.
  */
 export default function TopBarTrak() {
   const { pathname } = useLocation();

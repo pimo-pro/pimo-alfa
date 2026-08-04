@@ -22,7 +22,7 @@ export const PROJECT_DISPLAY_FALLBACK = "\u2014";
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-/** ID interno (API pimo-*, local-*, UUID) — nunca usar como nome/display. */
+/** ID interno (API pimo-*, local-*, UUID) â€” nunca usar como nome/display. */
 export function isInternalProjectId(value: string | null | undefined): boolean {
   const v = String(value ?? "").trim();
   if (!v) return false;

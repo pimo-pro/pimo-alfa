@@ -1,5 +1,5 @@
 /**
- * Industrial: sem pelcula drawer-click-* na frente das gavetas.
+ * Industrial: sem pelÃªcula drawer-click-* na frente das gavetas.
  * Frente real (drawerPart=front) permanece click-target de picking.
  */
 import { describe, expect, it } from "vitest";
@@ -41,8 +41,8 @@ function minimalDrawerSpec(id = "d1"): DrawerSpec {
   };
 }
 
-describe("drawer click-target ghost (pelcula)", () => {
-  it("createDrawerObject no cria drawer-click-*", () => {
+describe("drawer click-target ghost (pelÃªcula)", () => {
+  it("createDrawerObject nÃ£o cria drawer-click-*", () => {
     const frontMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b });
     const bodyMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
     const group = createDrawerObject(minimalDrawerSpec(), {
@@ -65,7 +65,7 @@ describe("drawer click-target ghost (pelcula)", () => {
     expect(fronts[0]!.name.startsWith("drawer-front-ext-")).toBe(true);
   });
 
-  it("frente real mantm identidade de clique; ghost legado  reconhecido", () => {
+  it("frente real mantÃ©m identidade de clique; ghost legado â€” reconhecido", () => {
     const front = new THREE.Mesh();
     front.name = "drawer-front-ext-x";
     front.userData.drawerPart = "front";

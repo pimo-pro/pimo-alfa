@@ -10,7 +10,7 @@ function isStation(value: string | undefined): value is IndustrialStation {
 }
 
 /**
- * Estação filtrada por projecto:
+ * EstaÃ§Ã£o filtrada por projecto:
  * /industrial/work-orders/{station}/{project}
  */
 export default function StationProjectPage() {
