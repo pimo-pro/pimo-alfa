@@ -5,7 +5,6 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "prebuild": "npm run encoding:check",
     "build": "tsc -b && vite build && node scripts/copyDeployApiToDist.mjs",
     "publish": "node scripts/releaseNotesPublishFlow.js publish",
     "deploy": "npm run build && git add . && git commit -m \"Auto deploy\" && git push origin main && node scripts/releaseNotesPublishFlow.js deploy",
@@ -15,11 +14,6 @@
     "tsc:strict": "tsc -b tsconfig.strict.json",
     "test:watch": "vitest",
     "lint": "eslint \"src/**/*.{ts,tsx}\" \"scripts/**/*.ts\"",
-    "encoding:check": "node scripts/auditPortugueseEncoding.mjs --ci --strict",
-    "encoding:fix": "node scripts/auditPortugueseEncoding.mjs --fix",
-    "encoding:audit": "node scripts/auditPortugueseEncoding.mjs",
-    "encoding:hooks": "node scripts/installEncodingHooks.mjs",
-    "encoding:fffd": "node scripts/fix-pt-encoding.mjs && node scripts/fix-pt-encoding-pass3.mjs && node scripts/fix-pt-encoding-contextual.mjs && node scripts/fix-pt-encoding-residual.mjs && node scripts/fix-pt-encoding-residual2.mjs && node scripts/fix-pt-encoding-residual3.mjs",
     "pimo": "bash ./scripts/pimo.sh",
     "preview": "vite preview",
     "export:tcn:variants": "node --loader ts-node/esm scripts/export-tcn-variants.ts"

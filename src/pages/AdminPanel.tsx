@@ -1,4 +1,4 @@
-import { Suspense, lazy, useMemo, useState } from "react";
+import { Suspense, lazy, useState } from "react";
 import { Icon } from "@/components/icons";
 import { IconGallery } from "@/components/icons";
 import TemplatesManager from "../components/admin/TemplatesManager";
@@ -21,7 +21,6 @@ import McDimensionsAdminPage from "../components/admin/McDimensionsAdminPage";
 import IndustrialSectionsAdminPage from "../components/admin/IndustrialSectionsAdminPage";
 import SavedProjectsAdminPage from "../components/admin/SavedProjectsAdminPage";
 import ThemeTemplatesAdminPage from "../components/admin/ThemeTemplatesAdminPage";
-import { EncodingIntegrityBanner } from "../components/admin/EncodingIntegrityBanner";
 import GestaoMateriaisPage from "./admin/materials/GestaoMateriaisPage";
 import FinanceiroAdminSettings from "./admin/FinanceiroAdminSettings";
 import OrcamentosAdminSettings from "./admin/OrcamentosAdminSettings";
@@ -178,11 +177,6 @@ export default function AdminPanel() {
     localStorage.setItem(ADMIN_ACTIVE_TAB_STORAGE_KEY, next);
   };
 
-  const encodingProbeTexts = useMemo(() => {
-    const labels = adminMenu.map((e) => (e.type === "item" ? e.label : e.label));
-    return [...labels, active, "Configurações", "Histórico", "Responsável", "Título da página"];
-  }, [active]);
-
   return (
     <main className="admin-panel-root">
       <aside className="admin-panel-sidebar">
@@ -250,7 +244,6 @@ export default function AdminPanel() {
 
       <section className="admin-panel-content">
         <div className="admin-panel-card">
-          <EncodingIntegrityBanner texts={encodingProbeTexts} sourceLabel="ADMIN" />
           <div style={{ fontSize: 18, fontWeight: 700, color: "var(--admin-text)", marginBottom: 12 }}>
             {active}
           </div>

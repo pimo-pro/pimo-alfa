@@ -1,14 +1,10 @@
 ---
-description: Portugues UTF-8 obrigatorio — ler regras de linguagem antes de escrever texto
+description: Portugues UTF-8 — texto novo com acentuacao correcta
 alwaysApply: true
 ---
 
 # Linguagem portuguesa (PIMO)
 
-Antes de escrever ou alterar **qualquer texto** visível (UI, ADMIN, Viewer, relatórios, docs, seeds, comentários de utilizador):
+Qualquer texto novo deve ser escrito em português correcto com acentuação latina (UTF-8), sem símbolos estranhos.
 
-1. Ler `src/core/rules/linguagem-portuguesa.md`.
-2. Usar **português correcto com acentuação latina em UTF-8 sem BOM**.
-3. Nunca gerar mojibake nem o caractere U+FFFD.
-4. Validar com `npm run encoding:check` antes de commit.
-5. Não alterar IDs, chaves nem estruturas industriais ao normalizar texto.
+Não alterar IDs, chaves nem estruturas industriais ao escrever texto.

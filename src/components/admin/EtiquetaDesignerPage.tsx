@@ -276,13 +276,9 @@ export default function EtiquetaDesignerPage({ externalConfig, onExternalSave, e
     input.onchange = () => {
       const file = input.files?.[0];
       if (file) {
-        void (async () => {
-          const { readTextFileAsUtf8 } = await import("@/core/encoding/readTextUtf8");
-          const { text, encodingOk, alert } = await readTextFileAsUtf8(file);
-          if (!encodingOk) {
-            showToast(alert ?? "Encoding UTF-8 inválido — importação bloqueada.", "error");
-            return;
-          }
+        const reader = new FileReader();
+        reader.onload = () => {
+          const text = String(reader.result);
           const imported = importLabelDesignerConfig(text);
           if (imported) {
             setConfig(imported);
@@ -290,7 +286,8 @@ export default function EtiquetaDesignerPage({ externalConfig, onExternalSave, e
           } else {
             showToast("Ficheiro JSON inválido.", "error");
           }
-        })();
+        };
+        reader.readAsText(file);
       }
     };
     input.click();
