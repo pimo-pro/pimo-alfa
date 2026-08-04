@@ -1,5 +1,7 @@
 import JSZip from "jszip";
 import type { ProjectSnapshot } from "../../context/projectTypes";
+import { assertViewerUtf8Text } from "@/viewer/encoding/viewerUtf8Guard";
+import { decodeUtf8Bytes } from "@/core/encoding/readTextUtf8";
 
 export type PimoImportFile = {
   path: string;
@@ -26,6 +28,16 @@ const MAIN_JSON_BASENAMES = ["project.json", "state.json"] as const;
 
 function normalizePath(path: string): string {
   return path.replace(/\\/g, "/").replace(/^\/+/, "");
+}
+
+/** Leitura exclusiva UTF-8 — sem fallback Latin-1/CP1252 (Viewer/ADMIN). */
+async function readJsonFileUtf8(file: Blob, label: string): Promise<string> {
+  const result = decodeUtf8Bytes(await file.arrayBuffer());
+  if (!result.encodingOk) {
+    throw new Error(result.alert ?? `Encoding UTF-8 invalido (${label}).`);
+  }
+  assertViewerUtf8Text(result.text, label);
+  return result.text;
 }
 
 function basename(path: string): string {
@@ -238,7 +250,7 @@ export async function readPimoImportFilesFromFileList(fileList: FileList | File[
     out.push({
       path: normalizePath(relativePath),
       name: file.name,
-      text: await file.text(),
+      text: await readJsonFileUtf8(file, file.name),
     });
   }
 
@@ -252,10 +264,16 @@ export async function readPimoImportFilesFromZip(file: File): Promise<PimoImport
   for (const [path, entry] of Object.entries(zip.files)) {
     if (entry.dir) continue;
     if (!path.toLowerCase().endsWith(".json")) continue;
+    const bytes = await entry.async("uint8array");
+    const result = decodeUtf8Bytes(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
+    if (!result.encodingOk) {
+      throw new Error(result.alert ?? `Encoding UTF-8 invalido (${path}).`);
+    }
+    assertViewerUtf8Text(result.text, path);
     out.push({
       path: normalizePath(path),
       name: basename(path),
-      text: await entry.async("string"),
+      text: result.text,
     });
   }
 
@@ -286,7 +304,7 @@ export async function readPimoImportFilesFromDirectoryHandle(
     out.push({
       path: normalizePath(path),
       name,
-      text: await file.text(),
+      text: await readJsonFileUtf8(file, name),
     });
   }
 

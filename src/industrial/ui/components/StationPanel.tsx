@@ -1,4 +1,4 @@
-﻿import type { CSSProperties, FormEvent, ReactNode, Ref } from 'react';
+import type { CSSProperties, FormEvent, ReactNode, Ref } from 'react';
 
 import type { IndustrialWorkOrderTask } from '@/industrial/work-orders/types';
 import {

@@ -1,4 +1,4 @@
-﻿import type { StationToolMode } from './stationTypes';
+import type { StationToolMode } from './stationTypes';
 import {
   INDUSTRIAL_CONTROL_CLASS,
   ensureIndustrialInteractionStyles,

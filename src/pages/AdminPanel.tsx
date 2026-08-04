@@ -1,4 +1,4 @@
-import { Suspense, lazy, useState } from "react";
+import { Suspense, lazy, useMemo, useState } from "react";
 import { Icon } from "@/components/icons";
 import { IconGallery } from "@/components/icons";
 import TemplatesManager from "../components/admin/TemplatesManager";
@@ -21,6 +21,7 @@ import McDimensionsAdminPage from "../components/admin/McDimensionsAdminPage";
 import IndustrialSectionsAdminPage from "../components/admin/IndustrialSectionsAdminPage";
 import SavedProjectsAdminPage from "../components/admin/SavedProjectsAdminPage";
 import ThemeTemplatesAdminPage from "../components/admin/ThemeTemplatesAdminPage";
+import { EncodingIntegrityBanner } from "../components/admin/EncodingIntegrityBanner";
 import GestaoMateriaisPage from "./admin/materials/GestaoMateriaisPage";
 import FinanceiroAdminSettings from "./admin/FinanceiroAdminSettings";
 import OrcamentosAdminSettings from "./admin/OrcamentosAdminSettings";
@@ -98,16 +99,16 @@ const adminMenu: AdminMenuEntry[] = [
   { type: "item", id: "Dimensões Técnicas (MC Overlay)", label: "Dimensões Técnicas (MC Overlay)", adminOnly: true },
   { type: "item", id: "Projetos Salvos", label: "Projetos Salvos" },
   { type: "item", id: "Secções Industriais (Viewer)", label: "Secções Industriais (Viewer)" },
+  { type: "item", id: "Project Progress", label: "Project Progress" },
+  { type: "item", id: "Painel Referência", label: "Painel Referência" },
+  { type: "group", label: "Sistema" },
+  { type: "item", id: "Temas (Aparência)", label: "Temas (Aparência)" },
   {
     type: "item",
     id: "Financeiro (ADM / Montagem / Portes)",
     label: "Financeiro (ADM / Montagem / Portes)",
     adminOnly: true,
   },
-  { type: "item", id: "Project Progress", label: "Project Progress" },
-  { type: "item", id: "Painel Referência", label: "Painel Referência" },
-  { type: "group", label: "Sistema" },
-  { type: "item", id: "Temas (Aparência)", label: "Temas (Aparência)" },
   { type: "item", id: "Orçamentos", label: "Orçamentos", adminOnly: true },
   { type: "item", id: "Deploy Info", label: "Deploy Info", adminOnly: true },
   { type: "item", id: "icons", label: "Biblioteca de Ícones" },
@@ -177,6 +178,11 @@ export default function AdminPanel() {
     localStorage.setItem(ADMIN_ACTIVE_TAB_STORAGE_KEY, next);
   };
 
+  const encodingProbeTexts = useMemo(() => {
+    const labels = adminMenu.map((e) => (e.type === "item" ? e.label : e.label));
+    return [...labels, active, "Configurações", "Histórico", "Responsável", "Título da página"];
+  }, [active]);
+
   return (
     <main className="admin-panel-root">
       <aside className="admin-panel-sidebar">
@@ -244,6 +250,7 @@ export default function AdminPanel() {
 
       <section className="admin-panel-content">
         <div className="admin-panel-card">
+          <EncodingIntegrityBanner texts={encodingProbeTexts} sourceLabel="ADMIN" />
           <div style={{ fontSize: 18, fontWeight: 700, color: "var(--admin-text)", marginBottom: 12 }}>
             {active}
           </div>

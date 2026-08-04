@@ -1,0 +1,21 @@
+#!/usr/bin/env sh
+# Pre-commit: bloqueia acentuacao portuguesa partida / BOM.
+# Instalar: npm run encoding:hooks  (em pimo-criativo)
+# Ver: src/core/rules/linguagem-portuguesa.md
+
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+APP="$ROOT/pimo-criativo"
+if [ ! -f "$APP/scripts/auditPortugueseEncoding.mjs" ]; then
+  APP="$ROOT"
+fi
+
+cd "$APP" || exit 1
+node scripts/auditPortugueseEncoding.mjs --ci
+status=$?
+if [ "$status" -ne 0 ]; then
+  echo ""
+  echo "[encoding] Commit bloqueado. Corrija com: npm run encoding:fix"
+  echo "[encoding] Regras: src/core/rules/linguagem-portuguesa.md"
+  exit "$status"
+fi
+exit 0
