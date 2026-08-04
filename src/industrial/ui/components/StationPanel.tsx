@@ -43,6 +43,7 @@ interface StationPanelProps {
   onToggleTaskSelection: (taskId: string) => void;
   onRemoveFromSelection: (taskId: string) => void;
   onClearSelection: () => void;
+  onSelectAllTasks?: () => void;
   onBulkAction: (action: StationBulkAction) => void;
   actionFeedback?: StationActionFeedback | null;
   confirmLabel: string;
@@ -105,6 +106,7 @@ export default function StationPanel({
   onToggleTaskSelection,
   onRemoveFromSelection,
   onClearSelection,
+  onSelectAllTasks,
   onBulkAction,
   actionFeedback,
   confirmLabel,
@@ -142,6 +144,10 @@ export default function StationPanel({
 
   const hasSelection = selectedTaskIds.length > 0;
   const selectionCount = selectedTaskIds.length;
+  const selectableCount = sections.reduce(
+    (total, section) => total + section.items.filter((item) => Boolean(item.taskId)).length,
+    0,
+  );
   const qrVisual: 'válido' | 'inválido' | 'pendente' = error
     ? 'inválido'
     : hasSelection || selectedTask
@@ -235,6 +241,37 @@ export default function StationPanel({
         </div>
       </form>
 
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+        <button
+          type="button"
+          disabled={busy || !onSelectAllTasks || selectableCount === 0}
+          onClick={() => onSelectAllTasks?.()}
+          style={{
+            ...actionBtnStyle,
+            padding: '6px 10px',
+            opacity: busy || !onSelectAllTasks || selectableCount === 0 ? 0.45 : 1,
+            cursor: busy || !onSelectAllTasks || selectableCount === 0 ? 'not-allowed' : 'pointer',
+          }}
+          title="Seleccionar todas as peças activas desta ordem / estação"
+        >
+          Seleccionar tudo
+        </button>
+        <button
+          type="button"
+          disabled={!hasSelection || busy}
+          onClick={onClearSelection}
+          style={{
+            ...actionBtnStyle,
+            padding: '6px 10px',
+            opacity: !hasSelection || busy ? 0.45 : 1,
+            cursor: !hasSelection || busy ? 'not-allowed' : 'pointer',
+          }}
+          title="Desmarcar todas as peças seleccionadas"
+        >
+          Desmarcar tudo
+        </button>
+      </div>
+
       {hasSelection ? (
         <div
           style={{
@@ -247,7 +284,7 @@ export default function StationPanel({
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
             <h3 style={{ ...sectionTitleStyle, margin: 0 }}>Peças seleccionadas ({selectionCount})</h3>
-            <button type="button" onClick={onClearSelection} style={actionBtnStyle}>
+            <button type="button" onClick={onClearSelection} style={actionBtnStyle} title="Limpar selecção">
               Limpar
             </button>
           </div>

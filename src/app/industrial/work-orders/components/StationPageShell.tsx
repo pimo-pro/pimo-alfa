@@ -98,6 +98,7 @@ export default function StationPageShell({
           onToggleTaskSelection={page.toggleTaskSelection}
           onRemoveFromSelection={page.removeFromSelection}
           onClearSelection={page.clearSelection}
+          onSelectAllTasks={page.selectAllTasks}
           onBulkAction={(action) => void page.handleBulkAction(action)}
           actionFeedback={page.actionFeedback}
           confirmLabel={page.config.confirmLabel}

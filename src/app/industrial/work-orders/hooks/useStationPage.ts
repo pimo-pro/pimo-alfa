@@ -371,6 +371,15 @@ export function useStationPage(station: IndustrialStation, options: UseStationPa
     setActionFeedback(null);
   }, [focusTask]);
 
+  /** Marca todas as tarefas activas do filtro actual (ordem / projecto / estação). */
+  const selectAllTasks = useCallback(() => {
+    const ids = activeTasks.map((task) => task.id);
+    setSelectedTaskIds(ids);
+    focusTask(activeTasks[activeTasks.length - 1] ?? null);
+    setError(null);
+    setActionFeedback(null);
+  }, [activeTasks, focusTask]);
+
   const addCodeToSelection = useCallback(
     (raw?: string) => {
       setError(null);
@@ -658,6 +667,7 @@ export function useStationPage(station: IndustrialStation, options: UseStationPa
     toggleTaskSelection,
     removeFromSelection,
     clearSelection,
+    selectAllTasks,
     togglePieceOnCanvas,
     stationOnline: realtime.stationOnline,
     realtimeConnected: realtime.connected,
