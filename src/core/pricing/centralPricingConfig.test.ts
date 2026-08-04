@@ -55,7 +55,7 @@ describe("centralPricingConfig", () => {
       chapas: { MDF_BRANCO_LAMINADO_19: 31, MDF_CRU_19: 20 },
       operacoes: { furo_cnc: 0.0225 },
       desperdicio: { percentual: 0.18 },
-      maoDeObra: { montagem_caixa_m2: 17, montagem_gaveta: 22 },
+      maoDeObra: { montagem_caixa_m2: 17, montagem_gaveta: 15 },
       custosAdicionais: { serragem: 0.8, adm_percentual: 0.05, logistica: 5 },
       portes: { ativoSomenteComEscolha: true, local_kg: 3.5 },
       orcamentos: {

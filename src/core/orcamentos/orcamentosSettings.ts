@@ -67,7 +67,7 @@ export function defaultOrcamentosSettings(): OrcamentosSettings {
       custoOperacoesEspeciais: 0,
       valorHoraMaquina: 0,
       custoLogisticaPorKg: 0,
-      custoMontagemPorPeca: 22,
+      custoMontagemPorPeca: 15,
       materialCostMode: "por_peca",
       enableDesperdicio: false,
       enableSerragem: false,

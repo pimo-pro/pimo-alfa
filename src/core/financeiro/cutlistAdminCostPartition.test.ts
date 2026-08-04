@@ -52,8 +52,8 @@ describe("cutlistAdminCostPartition — Painéis inclui portas e madeira de gave
 });
 
 describe("drawerAssemblyCost — montagem por gaveta", () => {
-  it("default de fábrica é 22 €", () => {
-    expect(CUSTO_MONTAGEM_POR_GAVETA_DEFAULT_EUR).toBe(22);
+  it("default de fábrica é 15 EUR", () => {
+    expect(CUSTO_MONTAGEM_POR_GAVETA_DEFAULT_EUR).toBe(15);
     expect(resolveCustoMontagemPorGavetaEur(null)).toBeGreaterThanOrEqual(0);
   });
 
@@ -64,9 +64,9 @@ describe("drawerAssemblyCost — montagem por gaveta", () => {
       },
       { gavetas: 1, drawersLayer: [] },
     ];
-    const r = computeMontagemGavetasEur(boxes, 22);
+    const r = computeMontagemGavetasEur(boxes, 15);
     expect(r.gavetasCount).toBe(3);
-    expect(r.custoUnitario).toBe(22);
-    expect(r.total).toBe(66);
+    expect(r.custoUnitario).toBe(15);
+    expect(r.total).toBe(45);
   });
 });

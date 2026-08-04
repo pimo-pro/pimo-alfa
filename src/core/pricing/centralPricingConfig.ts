@@ -152,7 +152,7 @@ const MARKET_BUILTIN_RAW: CentralPricingFile = {
   desperdicio: { percentual: 0.18 },
   maoDeObra: {
     montagem_caixa_m2: 17,
-    montagem_gaveta: 22,
+    montagem_gaveta: 15,
     montagem_remate_metro: 25,
   },
   custosAdicionais: {
@@ -229,7 +229,7 @@ function mapMarketToLegacy(src: CentralPricingFile): {
     custoOperacoesEspeciais: 0,
     valorHoraMaquina: enableMaoDeObraCentral ? 35 : 0,
     custoLogisticaPorKg: num(portes.local_kg, 3.5),
-    custoMontagemPorPeca: num(mao.montagem_gaveta, 22),
+    custoMontagemPorPeca: num(mao.montagem_gaveta, 15),
     materialCostMode: "por_peca" as const,
     enableDesperdicio: despPct > 0,
     enableSerragem: serragem > 0,
@@ -352,7 +352,7 @@ export function normalizeCentralPricing(raw: unknown): CentralPricingFile {
       },
       maoDeObra: {
         montagem_caixa_m2: num(src.maoDeObra?.montagem_caixa_m2, 17),
-        montagem_gaveta: num(src.maoDeObra?.montagem_gaveta, 22),
+        montagem_gaveta: num(src.maoDeObra?.montagem_gaveta, 15),
         montagem_remate_metro: num(src.maoDeObra?.montagem_remate_metro, 25),
       },
       custosAdicionais: {
