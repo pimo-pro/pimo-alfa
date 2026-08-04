@@ -65,6 +65,8 @@ export function chapasAndConsumoFromCutLayout(layout: CutLayoutResult): {
     totalWastePct: totalArea > 0 ? (totalWaste / totalArea) * 100 : 0,
     sheets,
     layout,
+    mode: sheets.length > 0 ? "real" : "vazio",
+    diagnostics: sheets.length > 0 ? [] : ["nesting-v3: sem sheets no layout exportado"],
   };
 
   const porChapa = sheets.map((s) => ({

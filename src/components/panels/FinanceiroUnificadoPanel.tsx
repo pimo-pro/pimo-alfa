@@ -125,6 +125,22 @@ export default function FinanceiroUnificadoPanel({ embedded }: { embedded?: bool
                 );
               })}
             </div>
+            {snap.chapas.mode === "estimado" ||
+            (snap.custosAvancadosWarnings && snap.custosAvancadosWarnings.length > 0) ? (
+              <div style={{ marginTop: 10, display: "grid", gap: 4 }}>
+                {snap.chapas.mode === "estimado" ? (
+                  <p style={{ ...microMuted, color: "#ea580c", fontWeight: 600 }}>
+                    Chapas em modo estimado: custo «Chapas reais» = 0 € até haver nesting real
+                    (sheets[]).
+                  </p>
+                ) : null}
+                {(snap.custosAvancadosWarnings ?? []).slice(0, 4).map((w) => (
+                  <p key={w} style={{ ...microMuted, lineHeight: 1.4 }}>
+                    {w}
+                  </p>
+                ))}
+              </div>
+            ) : null}
           </div>
 
           <div style={cardStyle}>

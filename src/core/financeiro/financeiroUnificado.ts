@@ -363,7 +363,7 @@ export function computeFinanceiroUnificado(
 
   // Chapas reais 1× — métricas + desperdício € + F3c avançados
   const chapasReal = computeChapasReal(cutlist, projectName, boxes);
-  const isReal = chapasReal.sheets.length > 0;
+  const isReal = chapasReal.mode === "real" && chapasReal.sheets.length > 0;
   const derivedChapa = deriveCustoChapaReal({ cutlist });
   const wasteM2 = isReal ? chapasReal.totalWasteMm2 / 1_000_000 : 0;
   const serragemM2 = estimateSerragemM2(cutlist);
@@ -403,7 +403,21 @@ export function computeFinanceiroUnificado(
   custosComputed.chapasReais = avancados.precoChapasReais;
   custosComputed.maoDeObra = avancados.precoMaoDeObra;
   custosComputed.logistica = avancados.precoLogistica;
-  const custosAvancadosWarnings = [...derivedChapa.warnings, ...avancados.warnings];
+
+  const chapasNestingWarnings: string[] = [];
+  if (!isReal && chapasReal.mode === "estimado") {
+    chapasNestingWarnings.push(
+      `chapasMode=estimado (N≈${chapasReal.totalSheets}): chapasReais€=0 — nesting fast sem sheets[]`
+    );
+  }
+  if (chapasReal.diagnostics.length > 0) {
+    chapasNestingWarnings.push(...chapasReal.diagnostics.slice(0, 6));
+  }
+  const custosAvancadosWarnings = [
+    ...chapasNestingWarnings,
+    ...derivedChapa.warnings,
+    ...avancados.warnings,
+  ];
 
   const opsAvancadas = computeOperacoesIndustriaisAvancadas(cutlist);
   custosComputed.operacoesAvancadas = opsAvancadas.precoTotal;
@@ -512,6 +526,7 @@ export function computeFinanceiroUnificado(
     chapas: {
       count: isReal ? chapasReal.totalSheets : chapasEstimadas,
       mode: isReal ? "real" : "estimado",
+      diagnostics: chapasReal.diagnostics.length > 0 ? chapasReal.diagnostics : undefined,
     },
     desperdicioTotalM2: wasteM2,
     serragemTotalM2: serragemM2,

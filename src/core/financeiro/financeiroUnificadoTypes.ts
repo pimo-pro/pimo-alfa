@@ -72,7 +72,12 @@ export type FinanceiroUnificadoSnapshot = {
   pesoTotalKg: number;
   /** Volume externo das caixas montadas (transporte). */
   areaTotalMontadoM3: number;
-  chapas: { count: number; mode: FinanceiroChapasMode };
+  chapas: {
+    count: number;
+    mode: FinanceiroChapasMode;
+    /** Diagnósticos do nesting fast (fallback / grupos sem layout). */
+    diagnostics?: string[];
+  };
   desperdicioTotalM2: number;
   serragemTotalM2: number;
   ferragensTotais: number;

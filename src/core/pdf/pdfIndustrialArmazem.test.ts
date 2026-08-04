@@ -14,6 +14,8 @@ describe("buildIndustrialArmazemPdf", () => {
       totalSheets: 2,
       totalWasteMm2: 100000,
       totalWastePct: 10,
+      mode: "real",
+      diagnostics: [],
       sheets: [
         {
           sheetIndex: 1,

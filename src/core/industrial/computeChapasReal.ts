@@ -36,18 +36,40 @@ export type ChapasRealSheetRow = {
   pieces: Array<{ nome: string; boxId: string; largura: number; altura: number }>;
 };
 
+/** real = sheets[] do nesting fast; estimado = fallback por área; vazio = sem peças. */
+export type ChapasRealMode = "real" | "estimado" | "vazio";
+
 export type ChapasRealSummary = {
   totalSheets: number;
   totalWasteMm2: number;
   totalWastePct: number;
   sheets: ChapasRealSheetRow[];
   layout: CutLayoutResult | null;
+  mode: ChapasRealMode;
+  /** Motivos de fallback / grupos sem layout (observabilidade Fase 5B). */
+  diagnostics: string[];
 };
+
+function emptySummary(
+  partial: Partial<ChapasRealSummary> & Pick<ChapasRealSummary, "mode" | "diagnostics">
+): ChapasRealSummary {
+  return {
+    totalSheets: 0,
+    totalWasteMm2: 0,
+    totalWastePct: 0,
+    sheets: [],
+    layout: null,
+    ...partial,
+  };
+}
 
 /**
  * Contagem de chapas alinhada ao agrupamento TCN (material + espessura).
  * Usa opções CNC "fast" na thread principal — as metaheurísticas PRO bloqueariam o browser.
  * O nesting PRO/TCN continua no worker via buildCncBundlesPerThickness.
+ *
+ * Fase 5B: em fallback (sheets=[]), mantém N estimado mas mode="estimado" + diagnostics.
+ * O financeiro só monetiza chapas quando mode="real".
  */
 export function computeChapasReal(
   items: CutListItemComPreco[],
@@ -55,7 +77,10 @@ export function computeChapasReal(
   boxes: Array<{ id: string; nome?: string }>
 ): ChapasRealSummary {
   if (items.length === 0) {
-    return { totalSheets: 0, totalWasteMm2: 0, totalWastePct: 0, sheets: [], layout: null };
+    return emptySummary({
+      mode: "vazio",
+      diagnostics: ["cutlist vazio — sem chapas para calcular"],
+    });
   }
 
   const sheetDef = getSheetDefinitionFromSettings();
@@ -80,7 +105,12 @@ export function computeChapasReal(
 
   const sheets: ChapasRealSheetRow[] = [];
   const mergedLayoutSheets: CutLayoutResult["sheets"] = [];
+  const diagnostics: string[] = [];
   let sheetIndex = 0;
+
+  if (groupKeys.length === 0) {
+    diagnostics.push("nenhum grupo material+espessura após resolução de espessuras");
+  }
 
   for (const groupKey of groupKeys) {
     const groupItems = groups.get(groupKey)!;
@@ -89,14 +119,25 @@ export function computeChapasReal(
     const sample = groupItems[0]!;
     const materialLabel = resolveMaterialLabelForCutlistItem(sample, materials);
     const thicknessMm = inferCutlistItemThicknessMm(sample);
+    const groupLabel = `${materialLabel} ${thicknessMm || "?"}mm`;
 
     let groupLayout: CutLayoutResult | null = null;
     try {
       const rawPieces = cutlistToPieces(groupItems, { projectName, boxes });
-      if (rawPieces.length === 0) continue;
+      if (rawPieces.length === 0) {
+        diagnostics.push(`grupo "${groupLabel}": cutlistToPieces devolveu 0 peças`);
+        continue;
+      }
       const pieces = enrichPiecesWithMaterialSheetDimensions(rawPieces);
       groupLayout = runCutLayout(pieces, sheetDef, layoutOptions);
-    } catch {
+      if (!groupLayout?.sheets?.length) {
+        diagnostics.push(
+          `grupo "${groupLabel}": runCutLayout (fast) sem sheets — ${pieces.length} peça(s)`
+        );
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "erro desconhecido";
+      diagnostics.push(`grupo "${groupLabel}": falha no nesting fast — ${msg}`);
       groupLayout = null;
     }
 
@@ -141,19 +182,27 @@ export function computeChapasReal(
   }
 
   if (sheets.length === 0) {
-    const sheetArea = (sheetDef.largura_mm || CHAPA_PADRAO_LARGURA) * (sheetDef.altura_mm || CHAPA_PADRAO_ALTURA);
+    const sheetArea =
+      (sheetDef.largura_mm || CHAPA_PADRAO_LARGURA) * (sheetDef.altura_mm || CHAPA_PADRAO_ALTURA);
     const used = preparedItems.reduce(
       (s, i) => s + i.dimensoes.largura * i.dimensoes.altura * (i.quantidade ?? 1),
       0
     );
     const estSheets = Math.max(1, Math.ceil(used / sheetArea));
+    diagnostics.unshift(
+      `fallback estimado: nesting fast sem sheets[] — N≈${estSheets} por área (chapasReais€=0)`
+    );
     return {
       totalSheets: estSheets,
       totalWasteMm2: estSheets * sheetArea - used,
       totalWastePct:
-        estSheets * sheetArea > 0 ? ((estSheets * sheetArea - used) / (estSheets * sheetArea)) * 100 : 0,
+        estSheets * sheetArea > 0
+          ? ((estSheets * sheetArea - used) / (estSheets * sheetArea)) * 100
+          : 0,
       sheets: [],
       layout: null,
+      mode: "estimado",
+      diagnostics,
     };
   }
 
@@ -167,5 +216,7 @@ export function computeChapasReal(
     totalWastePct: totalArea > 0 ? (totalWaste / totalArea) * 100 : 0,
     sheets,
     layout,
+    mode: "real",
+    diagnostics: diagnostics.length > 0 ? diagnostics : [],
   };
 }

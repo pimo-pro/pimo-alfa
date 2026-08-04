@@ -167,4 +167,33 @@ describe("computeChapasReal - parity with TCN grouping", () => {
       expect(actualByLabel.get(label)).toBe(qty);
     }
   });
+
+  it("cutlist vazio → mode vazio + diagnostics", () => {
+    const result = computeChapasReal([], "Vazio", []);
+    expect(result.mode).toBe("vazio");
+    expect(result.sheets).toEqual([]);
+    expect(result.totalSheets).toBe(0);
+    expect(result.diagnostics.some((d) => d.includes("vazio"))).toBe(true);
+  });
+
+  it("resultado real expõe mode=real", () => {
+    const items: CutListItemComPreco[] = [
+      makeItem({
+        nome: "Lat_A",
+        material: "MDF Branco 19",
+        materialId: "mdf_branco-19",
+        espessura: 19,
+        largura: 600,
+        altura: 400,
+      }),
+    ];
+    const result = computeChapasReal(items, "TesteMode", [{ id: "box-1", nome: "Caixa 1" }]);
+    if (result.sheets.length > 0) {
+      expect(result.mode).toBe("real");
+    } else {
+      expect(result.mode).toBe("estimado");
+      expect(result.diagnostics.length).toBeGreaterThan(0);
+      expect(result.diagnostics[0]).toMatch(/fallback estimado|chapasReais€=0/);
+    }
+  });
 });

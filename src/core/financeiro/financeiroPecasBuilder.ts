@@ -322,7 +322,7 @@ export function buildFinanceiroPecasRows(
   const orlaByPiece = buildOrlaCustoByPieceId(project);
   const opsFinanceiras = computeOperacoesFinanceiras(cutlist);
   const chapasReal = computeChapasReal(cutlist, projectName, boxes);
-  const isReal = chapasReal.sheets.length > 0;
+  const isReal = chapasReal.mode === "real" && chapasReal.sheets.length > 0;
   const wasteM2 = isReal ? chapasReal.totalWasteMm2 / 1_000_000 : 0;
   const despSerr = computeDesperdicioSerragemFinanceiras({
     cutlist,
