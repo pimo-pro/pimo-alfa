@@ -18,24 +18,63 @@ type Props = {
   onSaved: () => void;
 };
 
-const CUSTO_FIELDS: { key: FinanceiroCustoKey; label: string }[] = [
-  { key: "paineis", label: "Painéis" },
-  { key: "portas", label: "Portas" },
-  { key: "gavetas", label: "Gavetas" },
-  { key: "ferragens", label: "Ferragens" },
-  { key: "orla", label: "Orla" },
-  { key: "remates", label: "Remates / Rodapes" },
-  { key: "operacoes", label: "Operações (CNC/Drill)" },
-  { key: "desperdicio", label: "Desperdício" },
-  { key: "serragem", label: "Serragem" },
-  { key: "chapasReais", label: "Chapas reais" },
-  { key: "maoDeObra", label: "Mão de obra" },
-  { key: "logistica", label: "Logística" },
-  { key: "operacoesAvancadas", label: "Ops avançadas" },
-  { key: "adm", label: "ADM" },
-  { key: "montagem", label: "Montagem" },
-  { key: "portes", label: "Portes" },
+const CUSTO_FIELD_KEYS: FinanceiroCustoKey[] = [
+  "paineis",
+  "portas",
+  "gavetas",
+  "ferragens",
+  "orla",
+  "remates",
+  "operacoes",
+  "desperdicio",
+  "serragem",
+  "chapasReais",
+  "maoDeObra",
+  "logistica",
+  "operacoesAvancadas",
+  "adm",
+  "montagem",
+  "portes",
 ];
+
+function custoFieldLabel(key: FinanceiroCustoKey, snap: FinanceiroUnificadoSnapshot): string {
+  if (key === "paineis") {
+    if (
+      snap.materialCostMode === "por_chapas_reais" &&
+      (snap.custosEffective.paineis ?? 0) === 0
+    ) {
+      return "Painéis (substituídos por chapas)";
+    }
+    return "Painéis";
+  }
+  if (key === "chapasReais") {
+    const meta = snap.chapasReaisMeta;
+    const n = meta?.countMonetizado ?? 0;
+    const unit = meta?.custoChapaDerived ?? 0;
+    const valor = snap.custosEffective.chapasReais ?? 0;
+    if (snap.materialCostMode === "por_chapas_reais" && valor > 0 && n > 0 && unit > 0) {
+      return `Chapas reais (${n} × ${unit.toFixed(2)} €)`;
+    }
+    return "Chapas reais";
+  }
+  if (key === "remates") return "Remates / Rodapés";
+  if (key === "operacoes") return "Operações (CNC/Drill)";
+  if (key === "desperdicio") return "Desperdício";
+  if (key === "maoDeObra") return "Mão de obra";
+  if (key === "logistica") return "Logística";
+  if (key === "operacoesAvancadas") return "Ops avançadas";
+  const staticLabels: Partial<Record<FinanceiroCustoKey, string>> = {
+    portas: "Portas",
+    gavetas: "Gavetas",
+    ferragens: "Ferragens",
+    orla: "Orla",
+    serragem: "Serragem",
+    adm: "ADM",
+    montagem: "Montagem",
+    portes: "Portes",
+  };
+  return staticLabels[key] ?? key;
+}
 
 function parseOptionalNumber(raw: string): number | undefined {
   const t = raw.trim();
@@ -217,15 +256,28 @@ export default function FinanceiroUnificadoEditPanel({ snap, onCancel, onSaved }
         Incluir portes (transporte) — sem isto, Portes = 0€
       </label>
 
+      {snap.materialCostMode === "por_chapas_reais" ? (
+        <p
+          style={{
+            fontSize: 12,
+            marginBottom: 12,
+            color: "#0369a1",
+            fontWeight: 600,
+          }}
+        >
+          Modo material: por chapas reais (Painéis a 0 € — anti double-count)
+        </p>
+      ) : null}
+
       <div style={{ marginBottom: 12 }}>
         <div style={{ ...fieldStyle, fontWeight: 700, color: "var(--text-muted)" }}>
           <span>Custo</span>
           <span>Calculado</span>
           <span>Override €</span>
         </div>
-        {CUSTO_FIELDS.map(({ key, label }) => (
+        {CUSTO_FIELD_KEYS.map((key) => (
           <div key={key} style={fieldStyle}>
-            <span>{label}</span>
+            <span>{custoFieldLabel(key, snap)}</span>
             <span>
               {formatCurrency(
                 key === "portes" ? preview.effective.portes : snap.custosComputed[key]

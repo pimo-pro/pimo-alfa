@@ -117,6 +117,15 @@ export type FinanceiroUnificadoSnapshot = {
   /** P3.9 F3c — chapas reais / MO / logística (warnings + modo). */
   custosAvancadosWarnings?: string[];
   materialCostMode?: import("../orcamentos").OrcamentosMaterialCostMode;
+  /**
+   * Detalhe para labels UI/PDF: N monetizado × €/chapa derivado.
+   * countMonetizado = 0 se nesting estimado (chapasReais€=0).
+   */
+  chapasReaisMeta?: {
+    countMonetizado: number;
+    custoChapaDerived: number;
+    nestingMode: FinanceiroChapasMode;
+  };
 
   /** P3.9 F4 — breakdown ops industriais avançadas. */
   operacoesAvancadasBreakdown?: {

@@ -547,6 +547,11 @@ export function computeFinanceiroUnificado(
     desperdicioSerragemWarnings,
     custosAvancadosWarnings,
     materialCostMode: avancados.materialCostMode,
+    chapasReaisMeta: {
+      countMonetizado: isReal ? chapasReal.totalSheets : 0,
+      custoChapaDerived: derivedChapa.custoChapaReal,
+      nestingMode: isReal ? "real" : "estimado",
+    },
     operacoesAvancadasBreakdown,
     ferragensUnificacao,
   };
@@ -556,7 +561,7 @@ export function computeFinanceiroUnificado(
 export function financeiroMetricRows(snap: FinanceiroUnificadoSnapshot): Array<[string, string]> {
   const chapasLabel =
     snap.chapas.mode === "real" ? `Nº de chapas (Real)` : `Nº de chapas (Estimado)`;
-  return [
+  const rows: Array<[string, string]> = [
     ["Caixas", String(snap.caixas)],
     ["Peças totais", String(snap.pecasTotais)],
     ["Área total", `${snap.areaTotalM2.toFixed(3)} m²`],
@@ -569,6 +574,40 @@ export function financeiroMetricRows(snap: FinanceiroUnificadoSnapshot): Array<[
     ["Orla total", `${snap.orlaTotalM.toFixed(2)} m`],
     ["Distância (portes)", `${snap.distanciaKm.toFixed(1)} km`],
   ];
+  if (snap.materialCostMode === "por_chapas_reais") {
+    rows.push(["Modo material", "Por chapas reais (exclusivo)"]);
+  }
+  return rows;
+}
+
+function labelChapasReais(snap: FinanceiroUnificadoSnapshot): string {
+  const meta = snap.chapasReaisMeta;
+  const n = meta?.countMonetizado ?? 0;
+  const unit = meta?.custoChapaDerived ?? 0;
+  const valor = snap.custosEffective.chapasReais ?? 0;
+  if (snap.materialCostMode !== "por_chapas_reais") {
+    return "Chapas reais";
+  }
+  if (valor > 0 && n > 0 && unit > 0) {
+    return `Chapas reais (${n} × ${unit.toFixed(2)} €)`;
+  }
+  if (meta?.nestingMode === "estimado") {
+    return "Chapas reais (0 € — nesting estimado)";
+  }
+  if (!(unit > 0)) {
+    return "Chapas reais (0 € — sem €/m² derivado)";
+  }
+  return "Chapas reais (0 €)";
+}
+
+function labelPaineis(snap: FinanceiroUnificadoSnapshot): string {
+  if (
+    snap.materialCostMode === "por_chapas_reais" &&
+    (snap.custosEffective.paineis ?? 0) === 0
+  ) {
+    return "Painéis (substituídos por chapas)";
+  }
+  return "Painéis";
 }
 
 /** Linhas de custos (bloco B) — valores efetivos. */
@@ -576,7 +615,7 @@ export function financeiroCustoRows(
   snap: FinanceiroUnificadoSnapshot
 ): Array<{ label: string; valor: number | null; emBreve?: boolean; total?: boolean }> {
   const rows: Array<{ label: string; valor: number | null; emBreve?: boolean; total?: boolean }> = [
-    { label: "Painéis", valor: snap.custosEffective.paineis },
+    { label: labelPaineis(snap), valor: snap.custosEffective.paineis },
     { label: "Portas", valor: snap.custosEffective.portas },
     { label: "Gavetas", valor: snap.custosEffective.gavetas }, // montagem N×€/gaveta (Fase 2)
     { label: "Ferragens", valor: snap.custosEffective.ferragens },
@@ -584,16 +623,16 @@ export function financeiroCustoRows(
   ];
   // Remates só aparecem com valor > 0 (sem peças reais o Unificado força 0).
   if ((snap.custosEffective.remates ?? 0) > 0) {
-    rows.push({ label: "Remates / Rodapes", valor: snap.custosEffective.remates });
+    rows.push({ label: "Remates / Rodapés", valor: snap.custosEffective.remates });
   }
   rows.push(
-    { label: "Operacoes (CNC/Drill)", valor: snap.custosEffective.operacoes },
-    { label: "Desperdicio", valor: snap.custosEffective.desperdicio },
+    { label: "Operações (CNC/Drill)", valor: snap.custosEffective.operacoes },
+    { label: "Desperdício", valor: snap.custosEffective.desperdicio },
     { label: "Serragem", valor: snap.custosEffective.serragem },
-    { label: "Chapas reais", valor: snap.custosEffective.chapasReais },
-    { label: "Mao de obra", valor: snap.custosEffective.maoDeObra },
-    { label: "Logistica", valor: snap.custosEffective.logistica },
-    { label: "Ops avancadas", valor: snap.custosEffective.operacoesAvancadas },
+    { label: labelChapasReais(snap), valor: snap.custosEffective.chapasReais },
+    { label: "Mão de obra", valor: snap.custosEffective.maoDeObra },
+    { label: "Logística", valor: snap.custosEffective.logistica },
+    { label: "Ops avançadas", valor: snap.custosEffective.operacoesAvancadas },
     { label: "ADM", valor: snap.custosEffective.adm },
     { label: "Montagem", valor: snap.custosEffective.montagem },
     { label: "Portes", valor: snap.custosEffective.portes },

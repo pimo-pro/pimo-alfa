@@ -88,7 +88,7 @@ describe("remates — classificação e linhas UI", () => {
       totalProjeto: 183,
     } as FinanceiroUnificadoSnapshot;
     const labels = financeiroCustoRows(snap).map((r) => r.label);
-    expect(labels).not.toContain("Remates / Rodapes");
+    expect(labels).not.toContain("Remates / Rodapés");
     expect(labels).toContain("Portes");
   });
 
@@ -116,6 +116,6 @@ describe("remates — classificação e linhas UI", () => {
       ivaValor: 0,
       totalProjeto: 112.5,
     } as FinanceiroUnificadoSnapshot;
-    expect(financeiroCustoRows(snap).some((r) => r.label === "Remates / Rodapes")).toBe(true);
+    expect(financeiroCustoRows(snap).some((r) => r.label === "Remates / Rodapés")).toBe(true);
   });
 });
