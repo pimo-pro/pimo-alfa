@@ -76,7 +76,7 @@ function MedidasPanel({ entry }: { entry: Ferragem3DEntry }) {
         <div>
           <dt style={{ color: '#94a3b8' }}>Bounding box (mm)</dt>
           <dd style={{ margin: 0 }}>
-            {dims[0]} × {dims[1]} × {dims[2]}
+            {dims[0]} Ã— {dims[1]} Ã— {dims[2]}
           </dd>
         </div>
       ) : null}
@@ -153,7 +153,7 @@ export default function Ferragens3DOverlay({ open, onClose }: Ferragens3DOverlay
           <div style={{ display: 'grid', gap: 2 }}>
             <strong style={{ fontSize: 14, color: '#f8fafc' }}>Ferragens 3D</strong>
             <span style={{ fontSize: 11, color: '#94a3b8' }}>
-              Biblioteca isolada · visualização 1:1 · sem integração industrial
+              Biblioteca isolada Â· visualizaÃ§Ã£o 1:1 Â· sem integraÃ§Ã£o industrial
             </span>
           </div>
           <button type="button" onClick={onClose} style={industrialBtnStyle(false)} title="Fechar (Esc)">

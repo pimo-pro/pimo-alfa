@@ -2,16 +2,16 @@
 <KDT>
   <Header>
     <PanelName>MODULE_LATERAL_ESQ</PanelName>
-    <!-- Altura do mdulo -->
+    <!-- Altura do módulo -->
     <PanelLength>862</PanelLength>
-    <!-- Profundidade do mdulo -->
+    <!-- Profundidade do módulo -->
     <PanelWidth>351</PanelWidth>
     <!-- Espessura da lateral -->
     <PanelThickness>15</PanelThickness>
   </Header>
 
   <CADCAM>
-    <!-- Cavilha 1030  aresta frente (X=0, Y=distncia frente) -->
+    <!-- Cavilha 10×30 — aresta frente (X=0, Y=distância frente) -->
     <CAD>
       <TypeNo>2</TypeNo>
       <X1>0</X1>
@@ -25,7 +25,7 @@
       <Quadrant>1</Quadrant>
     </CAD>
 
-    <!-- Cavilha 1030  aresta fundo (X=0, Y=W?60) -->
+    <!-- Cavilha 10×30 — aresta fundo (X=0, Y=W-60) -->
     <CAD>
       <TypeNo>2</TypeNo>
       <X1>0</X1>
@@ -39,7 +39,7 @@
       <Quadrant>2</Quadrant>
     </CAD>
 
-    <!-- Cavilha 1030  aresta frente no topo (X=L, Y=60) -->
+    <!-- Cavilha 10×30 — aresta frente no topo (X=L, Y=60) -->
     <CAD>
       <TypeNo>2</TypeNo>
       <X1>862</X1>
@@ -53,7 +53,7 @@
       <Quadrant>1</Quadrant>
     </CAD>
 
-    <!-- Cavilha 1030  aresta fundo no topo (X=L, Y=W?60) -->
+    <!-- Cavilha 10×30 — aresta fundo no topo (X=L, Y=W-60) -->
     <CAD>
       <TypeNo>2</TypeNo>
       <X1>862</X1>

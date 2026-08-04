@@ -1,6 +1,6 @@
 /**
- * Catálogo local das ferragens 3D (biblioteca isolada em /ferragens_3d/).
- * Apenas visualização — sem ligação ao sistema industrial / peças / Viewer principal.
+ * CatÃ¡logo local das ferragens 3D (biblioteca isolada em /ferragens_3d/).
+ * Apenas visualizaÃ§Ã£o â€” sem ligaÃ§Ã£o ao sistema industrial / peÃ§as / Viewer principal.
  */
 
 export interface Ferragem3DBoundingBoxMm {
@@ -52,11 +52,11 @@ function resolveMedidas(mod: { default: Ferragem3DMedidas } | Ferragem3DMedidas)
 }
 
 function labelForId(id: string, tipo?: string): string {
-  if (tipo) return `${id} · ${tipo}`;
+  if (tipo) return `${id} Â· ${tipo}`;
   return id;
 }
 
-/** Lista estável de ferragens disponíveis para o painel de visualização. */
+/** Lista estÃ¡vel de ferragens disponÃ­veis para o painel de visualizaÃ§Ã£o. */
 export function listFerragens3D(): Ferragem3DEntry[] {
   const medidasById = new Map<string, Ferragem3DMedidas>();
   for (const [path, mod] of Object.entries(medidasModules)) {
@@ -81,7 +81,7 @@ export function listFerragens3D(): Ferragem3DEntry[] {
   return entries.sort((a, b) => a.id.localeCompare(b.id, 'pt'));
 }
 
-/** Dimensão máxima da bounding box em metros (para enquadramento da câmara). */
+/** DimensÃ£o mÃ¡xima da bounding box em metros (para enquadramento da cÃ¢mara). */
 export function maxExtentMeters(entry: Ferragem3DEntry): number {
   const dims = entry.medidas.bounding_box_mm?.dimensoes;
   if (!dims?.length) return 0.12;
