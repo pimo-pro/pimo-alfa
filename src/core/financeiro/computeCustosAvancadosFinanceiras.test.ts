@@ -3,8 +3,6 @@ import type { CutListItemComPreco } from "../types";
 import {
   assertNoMaterialDoubleCount,
   computeCustosAvancadosFinanceiras,
-  MO_MINUTOS_POR_FURO,
-  MO_MINUTOS_POR_PECA_CNC,
 } from "./computeCustosAvancadosFinanceiras";
 
 function piece(
@@ -68,7 +66,7 @@ describe("computeCustosAvancadosFinanceiras (P3.9 F3c)", () => {
     expect(r.precoChapasReais).toBe(0);
     expect(r.precoMaoDeObra).toBe(0);
     expect(r.precoLogistica).toBe(0);
-    expect(r.warnings.some((w) => w.includes("enableMaoDeObra"))).toBe(true);
+    expect(r.warnings.some((w) => w.includes("enableMaoDeObra"))).toBe(false);
   });
 
   it("por_chapas_reais → chapasReais = count × derivado + suppress material", () => {
@@ -120,10 +118,10 @@ describe("computeCustosAvancadosFinanceiras (P3.9 F3c)", () => {
     ).toThrow(/anti-double-count/);
   });
 
-  it("MO flag on → tempo × valorHora; peças == total", () => {
+  it("mão de obra = EUR manual (não minutos × €/h)", () => {
     const cutlist = [
-      piece({ id: "a", holes: 10 }), // 2 + 1 = 3 min
-      piece({ id: "b", holes: 0 }), // 2 min
+      piece({ id: "a", w: 1000, h: 1000, holes: 50 }),
+      piece({ id: "b", w: 1000, h: 1000, holes: 0 }),
     ];
     const r = computeCustosAvancadosFinanceiras({
       cutlist,
@@ -133,15 +131,34 @@ describe("computeCustosAvancadosFinanceiras (P3.9 F3c)", () => {
       tarifas: {
         materialCostMode: "por_peca",
         enableMaoDeObra: true,
-        valorHoraMaquina: 60, // 1 €/min
+        valorHoraMaquina: 80, // EUR manuais (campo legado)
         enableLogistica: false,
       },
     });
-    const expectedMin =
-      MO_MINUTOS_POR_PECA_CNC * 2 + MO_MINUTOS_POR_FURO * 10;
-    expect(r.minutosEstimados).toBe(expectedMin);
-    expect(r.precoMaoDeObra).toBe(Math.round((expectedMin / 60) * 60 * 100) / 100);
-    expect(sumMap(r.maoDeObraByPieceId)).toBe(r.precoMaoDeObra);
+    expect(r.minutosEstimados).toBe(0);
+    expect(r.precoMaoDeObra).toBe(80);
+    expect(sumMap(r.maoDeObraByPieceId)).toBe(80);
+    expect(r.maoDeObraByPieceId.get("a")).toBe(40);
+    expect(r.maoDeObraByPieceId.get("b")).toBe(40);
+    expect(r.valorHoraFromSystemFallback).toBe(false);
+  });
+
+  it("sem valor manual → mão de obra 0 (ignora peças/furos)", () => {
+    const r = computeCustosAvancadosFinanceiras({
+      cutlist: [piece({ id: "a", holes: 100 })],
+      chapasCount: 0,
+      chapasModeReal: false,
+      pesoTotalKg: 0,
+      tarifas: {
+        materialCostMode: "por_peca",
+        enableMaoDeObra: true,
+        valorHoraMaquina: 0,
+        enableLogistica: false,
+      },
+    });
+    expect(r.precoMaoDeObra).toBe(0);
+    expect(r.maoDeObraByPieceId.size).toBe(0);
+    expect(r.minutosEstimados).toBe(0);
   });
 
   it("logística = EUR manual (não peso × €/kg)", () => {

@@ -9,12 +9,6 @@ import type {
   OrcamentosCustosIndustriaisSettings,
   OrcamentosMaterialCostMode,
 } from "../orcamentos";
-import { pieceDrillHoleCount, pieceHasCncOperacao } from "./computeOperacoesFinanceiras";
-
-/** Minutos heurísticos por unidade CNC (não TCN real). */
-export const MO_MINUTOS_POR_PECA_CNC = 2;
-/** Minutos heurísticos por furo. */
-export const MO_MINUTOS_POR_FURO = 0.1;
 
 export type CustosAvancadosTarifas = Pick<
   OrcamentosCustosIndustriaisSettings,
@@ -32,6 +26,7 @@ export type CustosAvancadosFinanceirasResult = {
   suppressPieceMaterial: boolean;
   chapasCount: number;
   precoChapasReais: number;
+  /** Legado: deixou de estimar minutos; permanece 0 (MO = EUR manual). */
   minutosEstimados: number;
   precoMaoDeObra: number;
   pesoTotalKg: number;
@@ -40,8 +35,9 @@ export type CustosAvancadosFinanceirasResult = {
   maoDeObraByPieceId: Map<string, number>;
   logisticaByPieceId: Map<string, number>;
   warnings: string[];
-  /** Orçamentos=0 e usou SystemSettings.precos.valorHoraMaquina. */
+  /** Valor EUR manual aplicado (campo legado valorHoraMaquina). */
   valorHoraMaquinaUsed: number;
+  /** Sempre false — fallback SystemSettings removido. */
   valorHoraFromSystemFallback: boolean;
 };
 
@@ -88,31 +84,6 @@ export function resolveCustosAvancadosTarifas(
     enableMaoDeObra: boolFlag(src.enableMaoDeObra, false),
     enableLogistica: boolFlag(src.enableLogistica, false),
   };
-}
-
-function resolveValorHoraMaquina(tarifas: CustosAvancadosTarifas): {
-  valor: number;
-  fromSystemFallback: boolean;
-} {
-  if (tarifas.valorHoraMaquina > 0) {
-    return { valor: tarifas.valorHoraMaquina, fromSystemFallback: false };
-  }
-  try {
-    const orphan = numTarifa(getSettings().precos?.valorHoraMaquina);
-    if (orphan > 0) return { valor: orphan, fromSystemFallback: true };
-  } catch {
-    /* ignore */
-  }
-  return { valor: 0, fromSystemFallback: false };
-}
-
-function estimateMinutosMO(item: CutListItemComPreco): number {
-  const qty = Math.max(1, item.quantidade ?? 1);
-  let min = 0;
-  if (pieceHasCncOperacao(item)) min += MO_MINUTOS_POR_PECA_CNC * qty;
-  const holes = pieceDrillHoleCount(item);
-  if (holes > 0) min += MO_MINUTOS_POR_FURO * holes * qty;
-  return min;
 }
 
 function reconcileMaps(
@@ -209,60 +180,30 @@ export function computeCustosAvancadosFinanceiras(input: {
     }
   }
 
-  // --- Mão de obra ---
-  let minutosEstimados = 0;
+  // --- Mão de obra (EUR manual Admin; independente de tempo / montagem) ---
+  // Campo legado `valorHoraMaquina` = total EUR manual (não €/h × minutos).
+  // Sem valor Admin (>0) e flag off → sempre 0 (sem peças/furos/fallback).
+  const minutosEstimados = 0;
   let precoMaoDeObra = 0;
   let valorHoraMaquinaUsed = 0;
-  let valorHoraFromSystemFallback = false;
-  const maoDeObraByPieceId = new Map<string, number>();
-
-  if (!tarifas.enableMaoDeObra) {
-    warnings.push("enableMaoDeObra=false ? custo maoDeObra = 0");
-  } else {
-    const resolved = resolveValorHoraMaquina(tarifas);
-    valorHoraMaquinaUsed = resolved.valor;
-    valorHoraFromSystemFallback = resolved.fromSystemFallback;
-    if (resolved.fromSystemFallback) {
-      warnings.push(
-        "valorHoraMaquina Orçamentos=0 ? fallback SystemSettings.precos.valorHoraMaquina"
-      );
-    }
-    if (!(valorHoraMaquinaUsed > 0)) {
-      warnings.push("valorHoraMaquina=0 ? custo maoDeObra = 0");
-    } else {
-      for (const item of cutlist) {
-        const id = String(item.id ?? "");
-        const min = estimateMinutosMO(item);
-        minutosEstimados += min;
-        if (min > 0 && id) {
-          const eur = round2((min / 60) * valorHoraMaquinaUsed);
-          if (eur > 0) maoDeObraByPieceId.set(id, eur);
-        }
-      }
-      minutosEstimados = round2(minutosEstimados);
-      precoMaoDeObra = round2((minutosEstimados / 60) * valorHoraMaquinaUsed);
-      // Fechar ? peças ao total (arredondamento)
-      reconcileMaps(
-        maoDeObraByPieceId,
-        precoMaoDeObra,
-        cutlist.map((item) => ({
-          id: String(item.id ?? ""),
-          weight: estimateMinutosMO(item),
-        }))
-      );
-    }
+  const valorHoraFromSystemFallback = false;
+  const manualMoEur = tarifas.valorHoraMaquina;
+  if (tarifas.enableMaoDeObra && manualMoEur > 0) {
+    precoMaoDeObra = round2(manualMoEur);
+    valorHoraMaquinaUsed = precoMaoDeObra;
   }
 
   // --- Logística (EUR manual Admin; independente de portes / peso) ---
   // Campo legado `custoLogisticaPorKg` = total EUR manual (não €/kg × peso).
   // Sem valor Admin (>0) e flag off → sempre 0 (sem peso × tarifa).
   let precoLogistica = 0;
-  const manualEur = tarifas.custoLogisticaPorKg;
-  if (tarifas.enableLogistica && manualEur > 0) {
-    precoLogistica = round2(manualEur);
+  const manualLogEur = tarifas.custoLogisticaPorKg;
+  if (tarifas.enableLogistica && manualLogEur > 0) {
+    precoLogistica = round2(manualLogEur);
   }
 
   const chapasByPieceId = rateioByWeight(cutlist, precoChapasReais, pieceAreaMm2);
+  const maoDeObraByPieceId = rateioByWeight(cutlist, precoMaoDeObra, pieceAreaMm2);
   const logisticaByPieceId = rateioByWeight(cutlist, precoLogistica, (item) => {
     const id = String(item.id ?? "");
     if (input.pesoByPieceId?.has(id)) return input.pesoByPieceId.get(id) ?? 0;

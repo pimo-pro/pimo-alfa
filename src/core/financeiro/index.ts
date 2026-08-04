@@ -96,8 +96,6 @@ export {
   computeCustosAvancadosFinanceiras,
   resolveCustosAvancadosTarifas,
   assertNoMaterialDoubleCount,
-  MO_MINUTOS_POR_PECA_CNC,
-  MO_MINUTOS_POR_FURO,
 } from "./computeCustosAvancadosFinanceiras";
 export type {
   CustosAvancadosFinanceirasResult,

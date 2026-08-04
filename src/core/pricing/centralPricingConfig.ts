@@ -219,15 +219,14 @@ function mapMarketToLegacy(src: CentralPricingFile): {
     densidadePadraoKgM3: 750,
   };
 
-  const enableMaoDeObraCentral =
-    num(mao.montagem_caixa_m2, 0) > 0 || num(mao.montagem_gaveta, 0) > 0;
   const custosIndustriaisMerged = {
     // desperdício monetizado em % do custo de painéis (pricing.json desperdicio.percentual).
     desperdicioEurPorM2: 0,
     serragemEurPorM2: serragem,
     custoChapaReal: 0,
     custoOperacoesEspeciais: 0,
-    valorHoraMaquina: enableMaoDeObraCentral ? 35 : 0,
+    // Mão de obra financeira = EUR manual Admin. Nunca herdar montagem/tempo.
+    valorHoraMaquina: 0,
     // Logística financeira = valor manual Admin (EUR). Nunca herdar portes/peso.
     custoLogisticaPorKg: 0,
     custoMontagemPorPeca: num(mao.montagem_gaveta, 15),
@@ -235,18 +234,11 @@ function mapMarketToLegacy(src: CentralPricingFile): {
     enableDesperdicio: despPct > 0,
     enableSerragem: serragem > 0,
     enableLogistica: false,
-    enableMaoDeObra: enableMaoDeObraCentral,
+    enableMaoDeObra: false,
     ...(typeof src.orcamentos === "object" && src.orcamentos && "custosIndustriais" in src.orcamentos
       ? (src.orcamentos as { custosIndustriais?: object }).custosIndustriais
       : {}),
   };
-  // MO activa ⇒ valorHoraMaquina > 0 (spread legado não pode deixar 0).
-  if (
-    custosIndustriaisMerged.enableMaoDeObra === true &&
-    !(Number(custosIndustriaisMerged.valorHoraMaquina) > 0)
-  ) {
-    custosIndustriaisMerged.valorHoraMaquina = 35;
-  }
 
   const orcamentos = normalizeOrcamentosSettings({
     ...(src.orcamentos && typeof src.orcamentos === "object" ? src.orcamentos : {}),

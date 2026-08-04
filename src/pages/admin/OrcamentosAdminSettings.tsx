@@ -315,15 +315,24 @@ export default function OrcamentosAdminSettings() {
             }
           />
           <NumberInput
-            label="Valor hora maquina (EUR / h)"
+            label="Mão de obra (EUR manual)"
             value={draft.custosIndustriais.valorHoraMaquina}
             onChange={(v) =>
               setDraft((p) => ({
                 ...p,
-                custosIndustriais: { ...p.custosIndustriais, valorHoraMaquina: v },
+                custosIndustriais: {
+                  ...p.custosIndustriais,
+                  valorHoraMaquina: v,
+                  // Valor > 0 activa; 0 desliga (sem cálculo automático).
+                  enableMaoDeObra: v > 0,
+                },
               }))
             }
           />
+          <p style={{ margin: "-4px 0 0", fontSize: 11, color: "var(--text-muted)" }}>
+            0 = sem mão de obra. Valor &gt; 0 = total fixo no Unificado (não é €/h × minutos).
+            Montagem/gavetas é linha à parte.
+          </p>
           <NumberInput
             label="Logística (EUR manual)"
             value={draft.custosIndustriais.custoLogisticaPorKg}
@@ -384,8 +393,8 @@ export default function OrcamentosAdminSettings() {
             <p style={{ margin: "6px 0 0", fontSize: 11, color: "var(--text-muted)" }}>
               Activação controlada (Fase 5): o default global permanece «Por peça». «Por chapas
               reais» substitui Painéis/portas/remates (anti double-count). €/chapa = derivado
-              (€/m² × área chapa), sem tarifa manual. MO usa valorHoraMaquina; logística (€/kg)
-              não altera portes P3.6.
+              (€/m² × área chapa), sem tarifa manual. MO e logística = EUR manual Admin (sem
+              tempo/peso). Portes P3.6 intactos.
             </p>
             {draft.custosIndustriais.materialCostMode === "por_chapas_reais" ? (
               <div style={{ ...bannerStyle, marginTop: 8 }}>
@@ -408,7 +417,6 @@ export default function OrcamentosAdminSettings() {
             [
               ["enableDesperdicio", "Activar desperdicio EUR"],
               ["enableSerragem", "Activar serragem EUR"],
-              ["enableMaoDeObra", "Activar mao de obra EUR"],
             ] as const
           ).map(([key, label]) => (
             <label

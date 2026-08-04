@@ -91,16 +91,14 @@ export function validateSettings(input: Partial<SettingsSchema> | SettingsSchema
       if (isOrcamentosDay1IndustrialStub(n)) {
         return orcamentosDefaultsFromCentral();
       }
-      // MO activa ⇒ valorHoraMaquina > 0.
+      // MO financeira = EUR manual: flag on sem valor → desligar (não forçar 35 €/h).
       if (n.custosIndustriais.enableMaoDeObra && !(n.custosIndustriais.valorHoraMaquina > 0)) {
         return {
           ...n,
           custosIndustriais: {
             ...n.custosIndustriais,
-            valorHoraMaquina: Math.max(
-              settingsDefaults.precos.valorHoraMaquina,
-              35
-            ),
+            enableMaoDeObra: false,
+            valorHoraMaquina: 0,
           },
         };
       }
