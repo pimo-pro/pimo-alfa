@@ -16,6 +16,7 @@ import { buildCutlistItemsForIndustrialExport } from "../fabrication/buildCutlis
 import { ferragensFromBoxes } from "../manufacturing/cutlistFromBoxes";
 import { freeagem4x35JuntasRematesCusto } from "../ferragens/freeagemParafusos";
 import { computeChapasReal } from "../industrial/computeChapasReal";
+import { deriveCustoChapaReal } from "./deriveCustoChapaReal";
 import { getSettings } from "../settings/settingsService";
 import { isDrawerPieceTipo } from "../../services/drawerCutlistAdapter";
 import { isIndustrialDoorPanelTipo } from "../doors/industrialDoorPanels";
@@ -363,6 +364,7 @@ export function computeFinanceiroUnificado(
   // Chapas reais 1× — métricas + desperdício € + F3c avançados
   const chapasReal = computeChapasReal(cutlist, projectName, boxes);
   const isReal = chapasReal.sheets.length > 0;
+  const derivedChapa = deriveCustoChapaReal({ cutlist });
   const wasteM2 = isReal ? chapasReal.totalWasteMm2 / 1_000_000 : 0;
   const serragemM2 = estimateSerragemM2(cutlist);
   const despSerr = computeDesperdicioSerragemFinanceiras({
@@ -389,6 +391,7 @@ export function computeFinanceiroUnificado(
     chapasModeReal: isReal,
     pesoTotalKg,
     pesoByPieceId,
+    custoChapaRealDerived: derivedChapa.custoChapaReal,
   });
   if (avancados.suppressPieceMaterial) {
     for (const k of FINANCEIRO_PIECE_MATERIAL_KEYS) {
@@ -400,7 +403,7 @@ export function computeFinanceiroUnificado(
   custosComputed.chapasReais = avancados.precoChapasReais;
   custosComputed.maoDeObra = avancados.precoMaoDeObra;
   custosComputed.logistica = avancados.precoLogistica;
-  const custosAvancadosWarnings = avancados.warnings;
+  const custosAvancadosWarnings = [...derivedChapa.warnings, ...avancados.warnings];
 
   const opsAvancadas = computeOperacoesIndustriaisAvancadas(cutlist);
   custosComputed.operacoesAvancadas = opsAvancadas.precoTotal;

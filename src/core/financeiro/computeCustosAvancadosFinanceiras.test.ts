@@ -48,16 +48,16 @@ function sumMap(m: Map<string, number>): number {
 }
 
 describe("computeCustosAvancadosFinanceiras (P3.9 F3c)", () => {
-  it("defaults / flags off ? euros 0 (baseline)", () => {
+  it("defaults / flags off → euros 0 (baseline)", () => {
     const cutlist = [piece({ id: "a" }), piece({ id: "b", w: 300, h: 200 })];
     const r = computeCustosAvancadosFinanceiras({
       cutlist,
       chapasCount: 3,
       chapasModeReal: true,
       pesoTotalKg: 40,
+      custoChapaRealDerived: 50,
       tarifas: {
         materialCostMode: "por_peca",
-        custoChapaReal: 50,
         valorHoraMaquina: 35,
         custoLogisticaPorKg: 1,
         enableMaoDeObra: false,
@@ -72,7 +72,7 @@ describe("computeCustosAvancadosFinanceiras (P3.9 F3c)", () => {
     expect(r.warnings.some((w) => w.includes("enableLogistica"))).toBe(true);
   });
 
-  it("por_chapas_reais ? chapasReais = count — custo + suppress material", () => {
+  it("por_chapas_reais → chapasReais = count × derivado + suppress material", () => {
     const cutlist = [
       piece({ id: "a", w: 1000, h: 1000 }),
       piece({ id: "b", w: 1000, h: 1000 }),
@@ -82,9 +82,9 @@ describe("computeCustosAvancadosFinanceiras (P3.9 F3c)", () => {
       chapasCount: 4,
       chapasModeReal: true,
       pesoTotalKg: 10,
+      custoChapaRealDerived: 25,
       tarifas: {
         materialCostMode: "por_chapas_reais",
-        custoChapaReal: 25,
         enableMaoDeObra: false,
         enableLogistica: false,
       },
@@ -98,13 +98,30 @@ describe("computeCustosAvancadosFinanceiras (P3.9 F3c)", () => {
     });
   });
 
+  it("por_chapas_reais sem derivado → chapasReais 0 + warning", () => {
+    const r = computeCustosAvancadosFinanceiras({
+      cutlist: [piece({ id: "a" })],
+      chapasCount: 3,
+      chapasModeReal: true,
+      pesoTotalKg: 1,
+      tarifas: {
+        materialCostMode: "por_chapas_reais",
+        enableMaoDeObra: false,
+        enableLogistica: false,
+      },
+    });
+    expect(r.precoChapasReais).toBe(0);
+    expect(r.suppressPieceMaterial).toBe(true);
+    expect(r.warnings.some((w) => w.includes("derivado=0"))).toBe(true);
+  });
+
   it("anti-double-count assert falha se ambos > 0", () => {
     expect(() =>
       assertNoMaterialDoubleCount({ pieceMaterialSum: 10, chapasReais: 5 })
     ).toThrow(/anti-double-count/);
   });
 
-  it("MO flag on ? tempo — valorHora; ? peças == total", () => {
+  it("MO flag on → tempo × valorHora; peças == total", () => {
     const cutlist = [
       piece({ id: "a", holes: 10 }), // 2 + 1 = 3 min
       piece({ id: "b", holes: 0 }), // 2 min
@@ -128,7 +145,7 @@ describe("computeCustosAvancadosFinanceiras (P3.9 F3c)", () => {
     expect(sumMap(r.maoDeObraByPieceId)).toBe(r.precoMaoDeObra);
   });
 
-  it("logistica flag on ? peso × €/kg; ? peças == total", () => {
+  it("logistica flag on → peso × €/kg; peças == total", () => {
     const cutlist = [
       piece({ id: "a", w: 1000, h: 1000 }),
       piece({ id: "b", w: 1000, h: 1000 }),
@@ -156,15 +173,15 @@ describe("computeCustosAvancadosFinanceiras (P3.9 F3c)", () => {
     expect(r.logisticaByPieceId.get("b")).toBe(15);
   });
 
-  it("por_chapas_reais sem sheets reais ? chapasReais 0 + warning", () => {
+  it("por_chapas_reais sem sheets reais → chapasReais 0 + warning", () => {
     const r = computeCustosAvancadosFinanceiras({
       cutlist: [piece({ id: "a" })],
       chapasCount: 0,
       chapasModeReal: false,
       pesoTotalKg: 1,
+      custoChapaRealDerived: 40,
       tarifas: {
         materialCostMode: "por_chapas_reais",
-        custoChapaReal: 40,
         enableMaoDeObra: false,
         enableLogistica: false,
       },

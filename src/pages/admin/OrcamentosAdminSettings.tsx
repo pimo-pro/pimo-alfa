@@ -294,16 +294,14 @@ export default function OrcamentosAdminSettings() {
               }))
             }
           />
-          <NumberInput
-            label="Custo chapa real (EUR / chapa)"
-            value={draft.custosIndustriais.custoChapaReal}
-            onChange={(v) =>
-              setDraft((p) => ({
-                ...p,
-                custosIndustriais: { ...p.custosIndustriais, custoChapaReal: v },
-              }))
-            }
-          />
+          <div>
+            <span style={adminLabelStyle}>Custo chapa real</span>
+            <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>
+              Derivado automaticamente: preço €/m² do material (mesmo SSOT de Painéis) × área da
+              chapa padrão do sistema. Sem campo de preço extra — não editar aqui para evitar
+              duplicação de tarifas.
+            </p>
+          </div>
           <NumberInput
             label="Ops especiais (EUR / un)"
             value={draft.custosIndustriais.custoOperacoesEspeciais}
@@ -363,9 +361,10 @@ export default function OrcamentosAdminSettings() {
               <option value="por_chapas_reais">Por chapas reais (exclusivo)</option>
             </select>
             <p style={{ margin: "6px 0 0", fontSize: 11, color: "var(--text-muted)" }}>
-              Por chapas reais substitui o custo material peça (paineis/portas/gavetas/remates)
-              — anti double-count. MO usa valorHoraMaquina Orçamentos; se 0, fallback System
-              Settings. Logística (€/kg) não altera portes P3.6.
+              Por chapas reais substitui o custo material peça (paineis/portas/remates) — anti
+              double-count. O €/chapa é derivado automaticamente (€/m² × área chapa), sem tarifa
+              manual. MO usa valorHoraMaquina Orçamentos; se 0, fallback System Settings. Logística
+              (€/kg) não altera portes P3.6.
             </p>
           </div>
         </div>

@@ -81,7 +81,8 @@ export function resolveCustosAvancadosTarifas(
     src.materialCostMode === "por_chapas_reais" ? "por_chapas_reais" : "por_peca";
   return {
     materialCostMode: mode,
-    custoChapaReal: numTarifa(src.custoChapaReal),
+    // Legado Admin ignorado no cálculo; o valor efectivo vem de deriveCustoChapaReal.
+    custoChapaReal: 0,
     valorHoraMaquina: numTarifa(src.valorHoraMaquina),
     custoLogisticaPorKg: numTarifa(src.custoLogisticaPorKg),
     enableMaoDeObra: boolFlag(src.enableMaoDeObra, false),
@@ -168,6 +169,11 @@ export function computeCustosAvancadosFinanceiras(input: {
   /** Peso por pieceId (mesma base do Unificado). */
   pesoByPieceId?: Map<string, number>;
   tarifas?: Partial<CustosAvancadosTarifas> | null;
+  /**
+   * Custo €/chapa derivado de €/m² (Painéis) × área chapa padrão.
+   * Sem este valor, chapasReais permanece 0 no modo exclusivo.
+   */
+  custoChapaRealDerived?: number;
 }): CustosAvancadosFinanceirasResult {
   const tarifas = resolveCustosAvancadosTarifas(input.tarifas);
   const cutlist = input.cutlist ?? [];
@@ -185,15 +191,21 @@ export function computeCustosAvancadosFinanceiras(input: {
 
   // --- Chapas reais ---
   let precoChapasReais = 0;
+  const custoChapa =
+    typeof input.custoChapaRealDerived === "number" && Number.isFinite(input.custoChapaRealDerived)
+      ? Math.max(0, input.custoChapaRealDerived)
+      : 0;
   if (suppressPieceMaterial) {
     if (!input.chapasModeReal || !(chapasCount > 0)) {
       warnings.push(
-        "materialCostMode=por_chapas_reais sem chapas reais ? chapasReais=0 (estimadas)"
+        "materialCostMode=por_chapas_reais sem chapas reais → chapasReais=0 (estimadas)"
       );
-    } else if (!(tarifas.custoChapaReal > 0)) {
-      warnings.push("custoChapaReal=0 ? chapasReais=0");
+    } else if (!(custoChapa > 0)) {
+      warnings.push(
+        "custoChapaReal derivado=0 (sem €/m² ou área chapa) → chapasReais=0"
+      );
     } else {
-      precoChapasReais = round2(chapasCount * tarifas.custoChapaReal);
+      precoChapasReais = round2(chapasCount * custoChapa);
     }
   }
 
