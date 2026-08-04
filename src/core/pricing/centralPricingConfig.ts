@@ -211,7 +211,6 @@ function mapMarketToLegacy(src: CentralPricingFile): {
   const mdfCru = num(chapas.MDF_CRU_19, 20);
   const serragem = num(custos.serragem, 0.8);
   const admPct = num(custos.adm_percentual, 0.05);
-  const logistica = num(custos.logistica, 5);
   const portesSoComEscolha = portes.ativoSomenteComEscolha !== false;
 
   const material = {
@@ -229,12 +228,13 @@ function mapMarketToLegacy(src: CentralPricingFile): {
     custoChapaReal: 0,
     custoOperacoesEspeciais: 0,
     valorHoraMaquina: enableMaoDeObraCentral ? 35 : 0,
-    custoLogisticaPorKg: num(portes.local_kg, 3.5),
+    // Logística financeira = valor manual Admin (EUR). Nunca herdar portes/peso.
+    custoLogisticaPorKg: 0,
     custoMontagemPorPeca: num(mao.montagem_gaveta, 15),
     materialCostMode: ORCAMENTOS_MATERIAL_COST_MODE_DEFAULT,
     enableDesperdicio: despPct > 0,
     enableSerragem: serragem > 0,
-    enableLogistica: logistica > 0 || num(portes.local_kg, 0) > 0,
+    enableLogistica: false,
     enableMaoDeObra: enableMaoDeObraCentral,
     ...(typeof src.orcamentos === "object" && src.orcamentos && "custosIndustriais" in src.orcamentos
       ? (src.orcamentos as { custosIndustriais?: object }).custosIndustriais

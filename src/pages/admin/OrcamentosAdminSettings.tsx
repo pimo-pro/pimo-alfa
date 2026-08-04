@@ -325,15 +325,23 @@ export default function OrcamentosAdminSettings() {
             }
           />
           <NumberInput
-            label="Logistica (EUR / kg)"
+            label="Logística (EUR manual)"
             value={draft.custosIndustriais.custoLogisticaPorKg}
             onChange={(v) =>
               setDraft((p) => ({
                 ...p,
-                custosIndustriais: { ...p.custosIndustriais, custoLogisticaPorKg: v },
+                custosIndustriais: {
+                  ...p.custosIndustriais,
+                  custoLogisticaPorKg: v,
+                  // Valor > 0 activa; 0 desliga (sem cálculo automático).
+                  enableLogistica: v > 0,
+                },
               }))
             }
           />
+          <p style={{ margin: "-4px 0 0", fontSize: 11, color: "var(--text-muted)" }}>
+            0 = sem logística. Valor &gt; 0 = total fixo no Unificado (não é €/kg × peso).
+          </p>
           <NumberInput
             label="Custo de montagem por gaveta (EUR)"
             value={draft.custosIndustriais.custoMontagemPorPeca}
@@ -400,7 +408,6 @@ export default function OrcamentosAdminSettings() {
             [
               ["enableDesperdicio", "Activar desperdicio EUR"],
               ["enableSerragem", "Activar serragem EUR"],
-              ["enableLogistica", "Activar logistica EUR"],
               ["enableMaoDeObra", "Activar mao de obra EUR"],
             ] as const
           ).map(([key, label]) => (

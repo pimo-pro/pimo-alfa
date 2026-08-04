@@ -69,7 +69,6 @@ describe("computeCustosAvancadosFinanceiras (P3.9 F3c)", () => {
     expect(r.precoMaoDeObra).toBe(0);
     expect(r.precoLogistica).toBe(0);
     expect(r.warnings.some((w) => w.includes("enableMaoDeObra"))).toBe(true);
-    expect(r.warnings.some((w) => w.includes("enableLogistica"))).toBe(true);
   });
 
   it("por_chapas_reais → chapasReais = count × derivado + suppress material", () => {
@@ -145,7 +144,7 @@ describe("computeCustosAvancadosFinanceiras (P3.9 F3c)", () => {
     expect(sumMap(r.maoDeObraByPieceId)).toBe(r.precoMaoDeObra);
   });
 
-  it("logistica flag on → peso × €/kg; peças == total", () => {
+  it("logística = EUR manual (não peso × €/kg)", () => {
     const cutlist = [
       piece({ id: "a", w: 1000, h: 1000 }),
       piece({ id: "b", w: 1000, h: 1000 }),
@@ -164,13 +163,30 @@ describe("computeCustosAvancadosFinanceiras (P3.9 F3c)", () => {
         materialCostMode: "por_peca",
         enableMaoDeObra: false,
         enableLogistica: true,
-        custoLogisticaPorKg: 0.5,
+        custoLogisticaPorKg: 50, // EUR manuais (campo legado)
       },
     });
-    expect(r.precoLogistica).toBe(20);
-    expect(sumMap(r.logisticaByPieceId)).toBe(20);
-    expect(r.logisticaByPieceId.get("a")).toBe(5);
-    expect(r.logisticaByPieceId.get("b")).toBe(15);
+    expect(r.precoLogistica).toBe(50);
+    expect(sumMap(r.logisticaByPieceId)).toBe(50);
+    expect(r.logisticaByPieceId.get("a")).toBe(12.5);
+    expect(r.logisticaByPieceId.get("b")).toBe(37.5);
+  });
+
+  it("sem valor manual → logística 0 (ignora peso)", () => {
+    const r = computeCustosAvancadosFinanceiras({
+      cutlist: [piece({ id: "a" })],
+      chapasCount: 0,
+      chapasModeReal: false,
+      pesoTotalKg: 999,
+      tarifas: {
+        materialCostMode: "por_peca",
+        enableMaoDeObra: false,
+        enableLogistica: true,
+        custoLogisticaPorKg: 0,
+      },
+    });
+    expect(r.precoLogistica).toBe(0);
+    expect(r.logisticaByPieceId.size).toBe(0);
   });
 
   it("por_chapas_reais sem sheets reais → chapasReais 0 + warning", () => {

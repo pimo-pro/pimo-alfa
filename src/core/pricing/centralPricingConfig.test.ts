@@ -49,6 +49,12 @@ describe("centralPricingConfig", () => {
     expect(orc.custosIndustriais.serragemEurPorM2).toBeGreaterThan(0);
   });
 
+  it("Logística financeira não herda portes nem auto-activa", () => {
+    const orc = orcamentosDefaultsFromCentral(getBuiltinCentralPricing());
+    expect(orc.custosIndustriais.enableLogistica).toBe(false);
+    expect(orc.custosIndustriais.custoLogisticaPorKg).toBe(0);
+  });
+
   it("MO activa não fica com valorHoraMaquina=0 após spread legado", () => {
     const n = normalizeCentralPricing({
       version: 2,

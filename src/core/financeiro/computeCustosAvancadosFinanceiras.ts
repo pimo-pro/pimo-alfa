@@ -253,16 +253,13 @@ export function computeCustosAvancadosFinanceiras(input: {
     }
   }
 
-  // --- Logística (independente de portes P3.6) ---
+  // --- Logística (EUR manual Admin; independente de portes / peso) ---
+  // Campo legado `custoLogisticaPorKg` = total EUR manual (não €/kg × peso).
+  // Sem valor Admin (>0) e flag off → sempre 0 (sem peso × tarifa).
   let precoLogistica = 0;
-  if (!tarifas.enableLogistica) {
-    warnings.push("enableLogistica=false ? custo logistica = 0");
-  } else if (!(pesoTotalKg > 0)) {
-    warnings.push("pesoTotalKg=0 ? custo logistica = 0");
-  } else if (!(tarifas.custoLogisticaPorKg > 0)) {
-    warnings.push("custoLogisticaPorKg=0 ? custo logistica = 0");
-  } else {
-    precoLogistica = round2(pesoTotalKg * tarifas.custoLogisticaPorKg);
+  const manualEur = tarifas.custoLogisticaPorKg;
+  if (tarifas.enableLogistica && manualEur > 0) {
+    precoLogistica = round2(manualEur);
   }
 
   const chapasByPieceId = rateioByWeight(cutlist, precoChapasReais, pieceAreaMm2);
