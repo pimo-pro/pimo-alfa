@@ -5,6 +5,7 @@ import {
   mergeOrcamentosSettings,
   normalizeOrcamentosSettings,
 } from "./orcamentosSettings";
+import { ORCAMENTOS_MATERIAL_COST_MODE_DEFAULT } from "./chapasReaisActivation";
 
 describe("orcamentosSettings (P3.9)", () => {
   it("defaults are day-1 neutral (0 / flags off / unificacao off)", () => {
@@ -15,6 +16,14 @@ describe("orcamentosSettings (P3.9)", () => {
     expect(d.ferragens.enableUnificacao).toBe(false);
     expect(d.operacoesAvancadas.precoForo5mm).toBe(0);
     expect(d.operacoesAvancadas.precoMeQuadrilha).toBe(0);
+  });
+
+  it("Fase 5E — default materialCostMode permanece por_peca (activação só Admin)", () => {
+    expect(ORCAMENTOS_MATERIAL_COST_MODE_DEFAULT).toBe("por_peca");
+    expect(defaultOrcamentosSettings().custosIndustriais.materialCostMode).toBe("por_peca");
+    expect(
+      normalizeOrcamentosSettings({}).custosIndustriais.materialCostMode
+    ).toBe("por_peca");
   });
 
   it("isOrcamentosDay1IndustrialStub detecta stub day-1", () => {

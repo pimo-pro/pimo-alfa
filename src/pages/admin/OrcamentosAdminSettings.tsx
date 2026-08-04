@@ -15,6 +15,8 @@ import { useToast } from "../../context/ToastContext";
 import { useSettings } from "../../context/SettingsContext";
 import { getSettings } from "../../core/settings/settingsService";
 import {
+  CHAPAS_REAIS_ACTIVATION_STEPS,
+  CHAPAS_REAIS_ACTIVATION_WARNING,
   normalizeOrcamentosSettings,
   type OrcamentosMargemModo,
   type OrcamentosMaterialCostMode,
@@ -347,25 +349,50 @@ export default function OrcamentosAdminSettings() {
             <select
               className="input"
               value={draft.custosIndustriais.materialCostMode}
-              onChange={(e) =>
+              onChange={(e) => {
+                const next = e.target.value as OrcamentosMaterialCostMode;
+                if (
+                  next === "por_chapas_reais" &&
+                  draft.custosIndustriais.materialCostMode !== "por_chapas_reais"
+                ) {
+                  const ok = window.confirm(
+                    `${CHAPAS_REAIS_ACTIVATION_WARNING}\n\n` +
+                      CHAPAS_REAIS_ACTIVATION_STEPS.map((s, i) => `${i + 1}. ${s}`).join("\n")
+                  );
+                  if (!ok) return;
+                }
                 setDraft((p) => ({
                   ...p,
                   custosIndustriais: {
                     ...p.custosIndustriais,
-                    materialCostMode: e.target.value as OrcamentosMaterialCostMode,
+                    materialCostMode: next,
                   },
-                }))
-              }
+                }));
+              }}
             >
-              <option value="por_peca">Por peca (actual)</option>
+              <option value="por_peca">Por peça (default de fábrica)</option>
               <option value="por_chapas_reais">Por chapas reais (exclusivo)</option>
             </select>
             <p style={{ margin: "6px 0 0", fontSize: 11, color: "var(--text-muted)" }}>
-              Por chapas reais substitui o custo material peça (paineis/portas/remates) — anti
-              double-count. O €/chapa é derivado automaticamente (€/m² × área chapa), sem tarifa
-              manual. MO usa valorHoraMaquina Orçamentos; se 0, fallback System Settings. Logística
-              (€/kg) não altera portes P3.6.
+              Activação controlada (Fase 5): o default global permanece «Por peça». «Por chapas
+              reais» substitui Painéis/portas/remates (anti double-count). €/chapa = derivado
+              (€/m² × área chapa), sem tarifa manual. MO usa valorHoraMaquina; logística (€/kg)
+              não altera portes P3.6.
             </p>
+            {draft.custosIndustriais.materialCostMode === "por_chapas_reais" ? (
+              <div style={{ ...bannerStyle, marginTop: 8 }}>
+                <strong style={{ display: "block", marginBottom: 6 }}>
+                  Procedimento Chapas Reais (activo no rascunho)
+                </strong>
+                <ol style={{ margin: 0, paddingLeft: 18 }}>
+                  {CHAPAS_REAIS_ACTIVATION_STEPS.map((step) => (
+                    <li key={step} style={{ marginBottom: 4 }}>
+                      {step}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            ) : null}
           </div>
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 4 }}>

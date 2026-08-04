@@ -213,8 +213,9 @@ export const painelReferenciaSections: DocSection[] = [
       "src/core/financeiro/financeiroPecasBuilder.ts",
     ],
     interactions:
-      "Admin → Sistema → Orçamentos → tarifas/flags → Bottom Info Financeiro (Unificado / Peças).",
+      "Admin → Sistema → Orçamentos → tarifas/flags → Bottom Info Financeiro (Unificado / Peças). " +
+      "Chapas Reais: activar só via modo «por_chapas_reais» (default global = por_peca).",
     notes:
-      "Tabela de fases: F1 Schema | F2 Ferragens | F3a CNC/Drill | F3b Desperdício/Serragem | F3c Chapas/MO/Logística | F4 Ops avançadas — impacto financeiro apenas.",
+      "Tabela de fases: F1 Schema | F2 Ferragens | F3a CNC/Drill | F3b Desperdício/Serragem | F3c Chapas/MO/Logística | F4 Ops avançadas | Fase 5 activação controlada — impacto financeiro apenas.",
   },
 ];

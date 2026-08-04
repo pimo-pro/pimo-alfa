@@ -340,7 +340,14 @@ const SECTIONS: Section[] = [
         title:"Custos Industriais",
         steps:[
           { title:"Desperdício e serragem", text:"€/m² com flags enableDesperdicio / enableSerragem; rateio por área nas Peças." },
-          { title:"Chapas reais / MO / logística", text:"Modo exclusivo por_peca | por_chapas_reais; mão de obra (valorHoraMaquina); logística (€/kg) sem alterar portes P3.6." },
+          { title:"Chapas reais — default", text:"O default de fábrica é «Por peça». Chapas reais no Unificado ficam a 0 € até activar o modo exclusivo no Admin." },
+          { title:"Activar Chapas reais (Admin)", text:"Admin → Sistema → Orçamentos → Modo custo material → «Por chapas reais (exclusivo)» → confirmar o procedimento → Guardar. €/chapa = €/m² × área da chapa (derivado; sem tarifa manual)." },
+          { title:"Validar no Unificado", text:"Painéis a 0 €; Chapas reais = N × €/chapa só com nesting Real (sheets[]). Se Estimado → 0 € + avisos. Gavetas (montagem), ferragens, orla e ops mantêm-se." },
+          { title:"Mão de obra / logística", text:"valorHoraMaquina e logística (€/kg); logística não altera portes P3.6." },
+        ],
+        alerts:[
+          { type:"warning", text:"Não mude o default global no código para por_chapas_reais. Activação é só por configuração Admin (Fase 5E)." },
+          { type:"best-practice", text:"Antes de activar: confirme €/m² do material e que o painel Chapas mostra modo Real num projecto de teste." },
         ],
       },
       {

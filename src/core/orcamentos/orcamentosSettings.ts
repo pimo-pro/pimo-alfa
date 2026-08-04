@@ -11,6 +11,7 @@ import type {
   OrcamentosSettings,
   OperacaoAvancada,
 } from "./orcamentosTypes";
+import { ORCAMENTOS_MATERIAL_COST_MODE_DEFAULT } from "./chapasReaisActivation";
 
 function num(v: unknown, fallback: number): number {
   const n = typeof v === "number" ? v : Number(v);
@@ -68,7 +69,7 @@ export function defaultOrcamentosSettings(): OrcamentosSettings {
       valorHoraMaquina: 0,
       custoLogisticaPorKg: 0,
       custoMontagemPorPeca: 15,
-      materialCostMode: "por_peca",
+      materialCostMode: ORCAMENTOS_MATERIAL_COST_MODE_DEFAULT,
       enableDesperdicio: false,
       enableSerragem: false,
       enableLogistica: false,

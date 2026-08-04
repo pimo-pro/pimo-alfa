@@ -24,3 +24,9 @@ export {
   normalizeOperacoesAvancadasSettings,
   normalizeOrcamentosSettings,
 } from "./orcamentosSettings";
+
+export {
+  CHAPAS_REAIS_ACTIVATION_STEPS,
+  CHAPAS_REAIS_ACTIVATION_WARNING,
+  ORCAMENTOS_MATERIAL_COST_MODE_DEFAULT,
+} from "./chapasReaisActivation";

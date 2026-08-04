@@ -1,5 +1,12 @@
 # Novidades do Sistema
 
+### Fase 5 — Chapas Reais (activação controlada)
+- €/chapa derivado de €/m² × área da chapa (sem tarifa manual nova)
+- Nesting estimado → Chapas reais = 0 € + avisos no Unificado
+- Labels dinâmicos (N × €/chapa; Painéis substituídos)
+- Default global permanece «Por peça»; activação só em Admin → Orçamentos
+- Procedimento documentado na Ajuda (Orçamentos → Custos Industriais)
+
 ### Plano industrial/financeiro concluído
 - Painéis SSOT (carcaça + portas de módulo + madeira de gavetas)
 - Gavetas = montagem configurável (default 22 €)

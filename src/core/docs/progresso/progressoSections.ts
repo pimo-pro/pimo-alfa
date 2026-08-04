@@ -260,7 +260,8 @@ export const PROGRESSO_SECTIONS: ProgressoSection[] = [
       { label: "F3b concluída: Desperdício/Serragem (€)", status: "completed" },
       { label: "F3c concluída: Chapas reais / MO / logística (modos exclusivos)", status: "completed" },
       { label: "F4 concluída: Operações industriais avançadas (tarifas tipadas)", status: "completed" },
-      { label: "Estado P3.9 F1–F4: 100% concluído (defaults 0 = baseline intacto)", status: "completed" },
+      { label: "Fase 5 concluída: activação Chapas Reais (derivado + nesting + Admin only)", status: "completed" },
+      { label: "Estado P3.9 F1–F4 + Fase 5: default por_peca; activação controlada via Admin", status: "completed" },
     ],
   },
 ];

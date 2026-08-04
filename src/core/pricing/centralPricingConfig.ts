@@ -6,6 +6,7 @@
 
 import {
   normalizeOrcamentosSettings,
+  ORCAMENTOS_MATERIAL_COST_MODE_DEFAULT,
   type OrcamentosSettings,
 } from "../orcamentos";
 import {
@@ -230,7 +231,7 @@ function mapMarketToLegacy(src: CentralPricingFile): {
     valorHoraMaquina: enableMaoDeObraCentral ? 35 : 0,
     custoLogisticaPorKg: num(portes.local_kg, 3.5),
     custoMontagemPorPeca: num(mao.montagem_gaveta, 15),
-    materialCostMode: "por_peca" as const,
+    materialCostMode: ORCAMENTOS_MATERIAL_COST_MODE_DEFAULT,
     enableDesperdicio: despPct > 0,
     enableSerragem: serragem > 0,
     enableLogistica: logistica > 0 || num(portes.local_kg, 0) > 0,
