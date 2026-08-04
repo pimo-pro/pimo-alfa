@@ -14,7 +14,6 @@ import {
   buildPieceOrlaConfigForTipo,
   formatOrlaRefForPdf,
   isCostaPieceTipo,
-  isPrateleiraPieceTipo,
   pieceAllowsOrlaByThickness,
   resolveOrlaSidesForPieceTipo,
   stripMaterialThicknessLabel,
@@ -138,7 +137,6 @@ export function computeOrlaFerragem(input: CalcInput): ProjectFerragemOrla {
   ) => {
     const tipo = item.tipo ?? item.nome ?? "";
     if (isCostaPieceTipo(tipo)) return;
-    if (isPrateleiraPieceTipo(tipo)) return;
     const esp = pieceEspessuraMm(item);
     if (!pieceAllowsOrlaByThickness(esp)) return;
     const pieceId = panelIdFromCutListItem(item);
@@ -274,10 +272,6 @@ export function buildOrlaPiecesForBox(
     const panelId = panelIdFromCutListItem(item);
     const tipo = item.tipo ?? item.nome ?? "";
     if (isCostaPieceTipo(tipo)) {
-      delete next[panelId];
-      continue;
-    }
-    if (isPrateleiraPieceTipo(tipo)) {
       delete next[panelId];
       continue;
     }

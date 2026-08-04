@@ -26,6 +26,13 @@ describe("orcamentosSettings (P3.9)", () => {
     ).toBe("por_peca");
   });
 
+  it("legado custoMontagemPorPeca=22 → normaliza para 15 EUR", () => {
+    const n = normalizeOrcamentosSettings({
+      custosIndustriais: { custoMontagemPorPeca: 22 },
+    });
+    expect(n.custosIndustriais.custoMontagemPorPeca).toBe(15);
+  });
+
   it("isOrcamentosDay1IndustrialStub detecta stub day-1", () => {
     expect(isOrcamentosDay1IndustrialStub(defaultOrcamentosSettings())).toBe(true);
     expect(

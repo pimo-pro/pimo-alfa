@@ -18,11 +18,14 @@ export function resolveCustoMontagemPorGavetaEur(
   overrideEur?: number | null
 ): number {
   if (typeof overrideEur === "number" && Number.isFinite(overrideEur) && overrideEur >= 0) {
-    return overrideEur;
+    // Legado 22 EUR → default 15 (mesmo se override explícito residual).
+    return overrideEur === 22 ? CUSTO_MONTAGEM_POR_GAVETA_DEFAULT_EUR : overrideEur;
   }
   try {
     const v = getSettings().orcamentos?.custosIndustriais?.custoMontagemPorPeca;
-    if (typeof v === "number" && Number.isFinite(v) && v >= 0) return v;
+    if (typeof v === "number" && Number.isFinite(v) && v >= 0) {
+      return v === 22 ? CUSTO_MONTAGEM_POR_GAVETA_DEFAULT_EUR : v;
+    }
   } catch {
     /* ignore */
   }

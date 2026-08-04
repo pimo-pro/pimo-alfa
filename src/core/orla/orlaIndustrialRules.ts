@@ -1,14 +1,18 @@
 /**
- * Regras industriais de ORLA por tipo de peca (SSOT metros / PDF).
- * Orla só em portas (perímetro real). Costa / prateleiras / estrutura / gavetas: sem orla.
- * Painéis < 16 mm nao recebem orla.
- * Portas duplas: perímetro sem aresta de encontro.
+ * Regras industriais de ORLA por tipo de peça (SSOT metros / PDF / ferragens_totais).
+ * Restaurado após 8e991597 (que tinha restringido a «só portas»).
+ *
+ * - Todas as bordas: cima, fundo, porta, prateleira, gav_frente, remates, roda pé
+ * - Frente e trás: laterais, sep, div (lados típicos sem cavilha)
+ * - Só topo (front): gav_laterais, gav_costa, gav_frent_int
+ * - Costa do módulo / espessura < 16 mm: sem orla
+ * - Portas duplas: perímetro sem aresta de encontro
  */
 
 import type { OrlaSideId } from "./orlaTypes";
 import { EMPTY_ORLA_SIDES, type PieceOrlaConfig } from "./orlaTypes";
 
-/** Espessura minima de chapa (mm) para aplicar orla — excepto costa (sempre sem orla). */
+/** Espessura mínima de chapa (mm) para aplicar orla — excepto costa (sempre sem orla). */
 export const MIN_ORLA_PANEL_THICKNESS_MM = 16;
 
 export type OrlaPieceSideContext = {
@@ -81,9 +85,8 @@ export function resolveDoubleDoorLeaf(
 }
 
 /**
- * Lados de orla a activar (dominio front/back/left/right).
- * Só portas: simples = 4 lados; duplas = sem aresta de encontro.
- * Estrutura (laterais, cima, fundo, costa, prateleiras, gavetas, remates): sem orla.
+ * Lados de orla a activar (domínio front/back/left/right).
+ * Para peças de gaveta «só topo», usa-se `front` como aresta superior (ver orlaEdgeLengths).
  */
 export function resolveOrlaSidesForPieceTipo(
   tipoRaw: string,
@@ -92,14 +95,62 @@ export function resolveOrlaSidesForPieceTipo(
   const t = normalizeOrlaPieceTipo(tipoRaw);
   if (!t) return [];
 
-  // Costa / prateleiras — nunca
-  if (isCostaPieceTipo(t) || isPrateleiraPieceTipo(t)) return [];
+  // Costa do módulo — nunca
+  if (isCostaPieceTipo(t)) return [];
 
-  // Apenas portas (perímetro real)
+  // Fundo de gaveta — sem orla
+  if (t.includes("gav") && (t.includes("fundo") || t.includes("bottom") || t.includes("base"))) {
+    return [];
+  }
+
+  // Gavetas corpo — só aresta superior (mapeada a `front`)
+  if (
+    /gav_lat|gaveta_lat|gav_lat_dir|gav_lat_esq/.test(t) ||
+    (t.includes("gaveta") && (t.includes("lateral") || t.includes("lat_")))
+  ) {
+    return ["front"];
+  }
+  if (
+    /gav_costa|gaveta_costa|gaveta_traseira/.test(t) ||
+    (t.includes("gaveta") && (t.includes("costa") || t.includes("traseira")))
+  ) {
+    return ["front"];
+  }
+  if (/gav_frent_int|gaveta_frente_int|frente_int/.test(t)) {
+    return ["front"];
+  }
+
+  // Laterais da caixa / sep / div — frente e trás (lados típicos sem cavilha)
+  if (
+    t.includes("lateral") ||
+    t.includes("separador") ||
+    t.includes("divisor") ||
+    t.startsWith("div")
+  ) {
+    return ["front", "back"];
+  }
+
+  // Portas — perímetro; duplas sem aresta de encontro
   if (t.includes("porta")) {
     const leaf = resolveDoubleDoorLeaf(t, ctx);
     if (leaf === "esq") return ["front", "back", "left"];
     if (leaf === "dir") return ["front", "back", "right"];
+    return ["front", "back", "left", "right"];
+  }
+
+  // Todas as bordas: cima, fundo, prateleira, gav_frente, remates, roda pé
+  if (
+    t === "cima" ||
+    t === "fundo" ||
+    t.includes("tampo") ||
+    t.includes("prateleira") ||
+    t.includes("shelf") ||
+    t.includes("remate") ||
+    t.includes("rodape") ||
+    t.includes("roda_pe") ||
+    /gaveta_frente|gav_frente|frente_gaveta|frente_fixa/.test(t) ||
+    (t.includes("gaveta") && t.includes("frente") && !t.includes("int"))
+  ) {
     return ["front", "back", "left", "right"];
   }
 
@@ -114,7 +165,6 @@ export function buildPieceOrlaConfigForTipo(
   ctx?: OrlaPieceSideContext
 ): PieceOrlaConfig | null {
   if (isCostaPieceTipo(tipoRaw)) return null;
-  if (isPrateleiraPieceTipo(tipoRaw)) return null;
   if (espessuraMm != null && !pieceAllowsOrlaByThickness(espessuraMm)) return null;
 
   const sidesToEnable = resolveOrlaSidesForPieceTipo(tipoRaw, ctx);
@@ -144,7 +194,6 @@ export function stripMaterialThicknessLabel(label: string): string {
 /** Ref de orla para PDF: nome + espessura (sem largura). */
 export function formatOrlaRefForPdf(nome: string, espessuraMm: number, _larguraMm?: number): string {
   const n = String(nome ?? "").trim() || "Orla";
-  // Se o nome ja inclui a espessura (ex. "PVC 0.8—23 mm"), extrair base + espessura do preset
   const cleaned = n
     .replace(/\s*\d+([.,]\d+)?\s*[\u00d7xX]\s*\d+([.,]\d+)?\s*mm\b/gi, "")
     .replace(/\s*\d+([.,]\d+)?\s*mm\b/gi, "")

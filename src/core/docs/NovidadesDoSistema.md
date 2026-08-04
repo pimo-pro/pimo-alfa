@@ -9,7 +9,7 @@
 
 ### Plano industrial/financeiro concluído
 - Painéis SSOT (carcaça + portas de módulo + madeira de gavetas)
-- Gavetas = montagem configurável (default 22 €)
+- Gavetas = montagem configurável (default 15 €)
 - Ferragens estabilizadas (corrediças + dobradiças)
 - Chapas reais = métrica industrial (sem monetização no default)
 - Portas de módulo sem preço separado (linha Portas reservada a divisão)

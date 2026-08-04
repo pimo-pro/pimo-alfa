@@ -57,6 +57,10 @@ describe("drawerAssemblyCost — montagem por gaveta", () => {
     expect(resolveCustoMontagemPorGavetaEur(null)).toBeGreaterThanOrEqual(0);
   });
 
+  it("legado 22 EUR → resolve para 15 EUR", () => {
+    expect(resolveCustoMontagemPorGavetaEur(22)).toBe(15);
+  });
+
   it("total = N × tarifa override", () => {
     const boxes = [
       {

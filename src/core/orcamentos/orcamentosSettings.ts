@@ -158,10 +158,11 @@ export function normalizeOrcamentosSettings(raw: unknown): OrcamentosSettings {
       ),
       valorHoraMaquina: num(custos.valorHoraMaquina, d.custosIndustriais.valorHoraMaquina),
       custoLogisticaPorKg: num(custos.custoLogisticaPorKg, d.custosIndustriais.custoLogisticaPorKg),
-      custoMontagemPorPeca: num(
-        custos.custoMontagemPorPeca,
-        d.custosIndustriais.custoMontagemPorPeca
-      ),
+      custoMontagemPorPeca: (() => {
+        const v = num(custos.custoMontagemPorPeca, d.custosIndustriais.custoMontagemPorPeca);
+        // Legado pré-mercado: 22 EUR → 15 EUR (SSOT pricing.json / Admin).
+        return v === 22 ? 15 : v;
+      })(),
       materialCostMode,
       enableDesperdicio: bool(custos.enableDesperdicio, d.custosIndustriais.enableDesperdicio),
       enableSerragem: bool(custos.enableSerragem, d.custosIndustriais.enableSerragem),

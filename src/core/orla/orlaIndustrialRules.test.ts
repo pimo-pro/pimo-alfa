@@ -10,29 +10,34 @@ import {
 } from "./orlaIndustrialRules";
 
 describe("orlaIndustrialRules", () => {
-  it("costa do modulo nunca recebe orla; gavetas tambem sem orla", () => {
+  it("costa do módulo nunca recebe orla; gav_costa recebe só topo", () => {
     expect(isCostaPieceTipo("costa")).toBe(true);
     expect(isCostaPieceTipo("COSTA")).toBe(true);
     expect(resolveOrlaSidesForPieceTipo("costa")).toEqual([]);
     expect(isCostaPieceTipo("gav_costa")).toBe(false);
     expect(isCostaPieceTipo("gaveta_traseira")).toBe(false);
-    expect(resolveOrlaSidesForPieceTipo("gav_costa")).toEqual([]);
-    expect(resolveOrlaSidesForPieceTipo("gaveta_traseira")).toEqual([]);
+    expect(resolveOrlaSidesForPieceTipo("gav_costa")).toEqual(["front"]);
+    expect(resolveOrlaSidesForPieceTipo("gaveta_traseira")).toEqual(["front"]);
   });
 
-  it("estrutura / gavetas / remates: sem orla (so portas)", () => {
-    expect(resolveOrlaSidesForPieceTipo("gav_frent_int")).toEqual([]);
-    expect(resolveOrlaSidesForPieceTipo("gav_lat_dir")).toEqual([]);
-    expect(resolveOrlaSidesForPieceTipo("lateral_esquerda")).toEqual([]);
-    expect(resolveOrlaSidesForPieceTipo("separador")).toEqual([]);
-    expect(resolveOrlaSidesForPieceTipo("div")).toEqual([]);
-    expect(resolveOrlaSidesForPieceTipo("cima")).toEqual([]);
-    expect(resolveOrlaSidesForPieceTipo("fundo")).toEqual([]);
-    expect(resolveOrlaSidesForPieceTipo("remate")).toEqual([]);
-    expect(resolveOrlaSidesForPieceTipo("rodape")).toEqual([]);
-    expect(resolveOrlaSidesForPieceTipo("frente_fixa")).toEqual([]);
-    expect(resolveOrlaSidesForPieceTipo("gaveta_frente")).toEqual([]);
-    expect(resolveOrlaSidesForPieceTipo("prateleira")).toEqual([]);
+  it("regras oficiais: todas as bordas / frente-trás / só topo", () => {
+    expect(resolveOrlaSidesForPieceTipo("cima")).toEqual(["front", "back", "left", "right"]);
+    expect(resolveOrlaSidesForPieceTipo("fundo")).toEqual(["front", "back", "left", "right"]);
+    expect(resolveOrlaSidesForPieceTipo("prateleira")).toEqual(["front", "back", "left", "right"]);
+    expect(resolveOrlaSidesForPieceTipo("gaveta_frente")).toEqual(["front", "back", "left", "right"]);
+    expect(resolveOrlaSidesForPieceTipo("remate")).toEqual(["front", "back", "left", "right"]);
+    expect(resolveOrlaSidesForPieceTipo("rodape")).toEqual(["front", "back", "left", "right"]);
+
+    expect(resolveOrlaSidesForPieceTipo("lateral_esquerda")).toEqual(["front", "back"]);
+    expect(resolveOrlaSidesForPieceTipo("lateral_direita")).toEqual(["front", "back"]);
+    expect(resolveOrlaSidesForPieceTipo("separador")).toEqual(["front", "back"]);
+    expect(resolveOrlaSidesForPieceTipo("div")).toEqual(["front", "back"]);
+    expect(resolveOrlaSidesForPieceTipo("divisorio")).toEqual(["front", "back"]);
+
+    expect(resolveOrlaSidesForPieceTipo("gav_frent_int")).toEqual(["front"]);
+    expect(resolveOrlaSidesForPieceTipo("gav_lat_dir")).toEqual(["front"]);
+    expect(resolveOrlaSidesForPieceTipo("gav_lat_esq")).toEqual(["front"]);
+    expect(resolveOrlaSidesForPieceTipo("gaveta_fundo")).toEqual([]);
   });
 
   it("porta simples: 4 lados", () => {
@@ -78,6 +83,9 @@ describe("orlaIndustrialRules", () => {
     expect(pieceAllowsOrlaByThickness(16)).toBe(true);
     expect(buildPieceOrlaConfigForTipo("porta_simples", "p1", undefined, 10)).toBeNull();
     expect(buildPieceOrlaConfigForTipo("costa", "p1", undefined, 19)).toBeNull();
+    expect(buildPieceOrlaConfigForTipo("prateleira", "p1", undefined, 19)?.sides.front.enabled).toBe(
+      true
+    );
   });
 
   it("buildPieceOrlaConfigForTipo e helpers PDF", () => {

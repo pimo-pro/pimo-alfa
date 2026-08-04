@@ -328,7 +328,7 @@ describe("pdfFerragensTotaisNormalize", () => {
     expect(orla?.preco).toBe(1.5);
   });
 
-  it("prateleira nao gera Orla no PDF (regra industrial)", () => {
+  it("prateleira gera Orla no PDF (regras oficiais restauradas)", () => {
     const rows = normalizeFerragensTotaisForPdf({
       ferragens: [],
       cutlistItems: [
@@ -374,6 +374,7 @@ describe("pdfFerragensTotaisNormalize", () => {
     });
 
     const orla = rows.find((r) => /^\d+([.,]\d+)?\s*m$/i.test(String(r.medida)));
-    expect(orla).toBeUndefined();
+    expect(orla).toBeDefined();
+    expect(orla?.quantidade).toBeGreaterThan(0);
   });
 });
