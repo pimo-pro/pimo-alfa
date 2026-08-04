@@ -79,5 +79,23 @@ export default function WorkOrderExecutionPage() {
     );
   }
 
+  if (order.status === 'cancelled') {
+    return (
+      <IndustrialLayout title="Ordem de trabalho" description="Ordem cancelada">
+        <div style={{ marginBottom: 12 }}>
+          <Link to="/industrial/work-orders" style={{ fontSize: 13, color: ui.link }}>
+            ← Voltar à lista
+          </Link>
+        </div>
+        <p style={{ color: ui.textStrong, marginBottom: 8 }}>
+          Esta ordem foi cancelada e já não está disponível para execução.
+        </p>
+        <p style={{ color: ui.muted, fontSize: 13, margin: 0 }}>
+          O histórico de tracking, tempo e qualidade foi preservado.
+        </p>
+      </IndustrialLayout>
+    );
+  }
+
   return <StationPageShell station={order.station} workOrderId={order.id} />;
 }

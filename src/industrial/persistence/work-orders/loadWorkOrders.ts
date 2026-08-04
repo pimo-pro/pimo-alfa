@@ -13,6 +13,11 @@ export interface WorkOrderFilters {
   projectCode?: string;
   station?: IndustrialStation;
   status?: string;
+  /**
+   * Se true, inclui ordens com status `cancelled`.
+   * Default false — filas de estação/operador não mostram canceladas.
+   */
+  includeCancelled?: boolean;
 }
 
 function projectIdMapFromOrders(orders: IndustrialWorkOrder[]): Map<string, string> {
@@ -35,12 +40,16 @@ async function filterTasksWithExistingOrders(
 
   const { data, error } = await supabase
     .from(WORK_ORDER_TABLES.orders)
-    .select('id')
+    .select('id, status')
     .in('id', orderIds);
 
   if (error) throw new Error(error.message);
 
-  const validIds = new Set((data ?? []).map((row) => row.id));
+  const validIds = new Set(
+    (data ?? [])
+      .filter((row) => String(row.status) !== 'cancelled')
+      .map((row) => row.id as string),
+  );
   const filtered = tasks.filter((task) => validIds.has(task.workOrderId));
 
   if (filtered.length < tasks.length) {
@@ -72,7 +81,11 @@ export async function loadWorkOrders(filters: WorkOrderFilters = {}): Promise<In
 
   if (filters.projectId) query = query.eq('project_id', filters.projectId);
   if (filters.station) query = query.eq('station', filters.station);
-  if (filters.status) query = query.eq('status', filters.status);
+  if (filters.status) {
+    query = query.eq('status', filters.status);
+  } else if (!filters.includeCancelled) {
+    query = query.neq('status', 'cancelled');
+  }
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
@@ -119,7 +132,11 @@ export async function loadWorkOrdersByProjectCode(
     .order('created_at', { ascending: false });
 
   if (filters.station) query = query.eq('station', filters.station);
-  if (filters.status) query = query.eq('status', filters.status);
+  if (filters.status) {
+    query = query.eq('status', filters.status);
+  } else if (!filters.includeCancelled) {
+    query = query.neq('status', 'cancelled');
+  }
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);

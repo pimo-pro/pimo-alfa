@@ -70,6 +70,15 @@ export async function updateWorkOrderStatus(workOrderId: string, status: WorkOrd
 }
 
 export async function syncWorkOrderStatusFromTasks(workOrderId: string): Promise<WorkOrderStatus> {
+  const { data: orderRow, error: orderError } = await supabase
+    .from(WORK_ORDER_TABLES.orders)
+    .select('status')
+    .eq('id', workOrderId)
+    .maybeSingle();
+
+  if (orderError) throw new Error(orderError.message);
+  if (orderRow?.status === 'cancelled') return 'cancelled';
+
   const { data, error } = await supabase
     .from(WORK_ORDER_TABLES.tasks)
     .select('status')

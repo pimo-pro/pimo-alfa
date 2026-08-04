@@ -20,6 +20,7 @@ import {
   syncWorkOrderStatusFromTasks,
   syncWorkOrdersStatusFromTasks,
   updateTaskState,
+  updateWorkOrderStatus,
 } from '@/industrial/persistence/work-orders/updateTaskState';
 import {
   loadPieceOperations,
@@ -29,7 +30,7 @@ import {
   updatePieceTime,
 } from '@/industrial/api/pieceActions';
 import type { PieceOperation, PieceOperationType } from '@/industrial/core/piece-operations/types';
-import type { IndustrialWorkOrderTask } from '@/industrial/work-orders/types';
+import type { IndustrialWorkOrder, IndustrialWorkOrderTask } from '@/industrial/work-orders/types';
 
 /** Concorrência máxima no processamento em lote (Iniciar / Concluir / Rejeitar). */
 const BULK_CONCURRENCY = 6;
@@ -59,6 +60,8 @@ export async function fetchWorkOrders(filters?: {
   projectId?: string;
   projectCode?: string;
   station?: IndustrialStation;
+  /** Lista de gestão: incluir canceladas. Filas de estação: omitir (default). */
+  includeCancelled?: boolean;
 }) {
   return loadWorkOrders(filters);
 }
@@ -495,6 +498,40 @@ export async function assignOperator(taskId: string, operatorId: string) {
   const task = await assignTaskOperator(taskId, operatorId);
   await logTaskEvent(taskId, 'operator_assigned', { operatorId }, operatorId);
   return task;
+}
+
+/**
+ * Soft-cancel: marca a ordem como `cancelled` em `industrial_work_orders`.
+ * Preserva tasks, eventos, tracking, tempo e qualidade.
+ * Não usa o delete legado de `work_orders`.
+ */
+export async function cancelWorkOrder(
+  workOrderId: string,
+  operatorId?: string,
+): Promise<IndustrialWorkOrder> {
+  const order = await loadWorkOrderById(workOrderId);
+  if (!order) throw new Error('Ordem de trabalho não encontrada.');
+  if (order.status === 'cancelled') return order;
+  if (order.status === 'completed') {
+    throw new Error('Ordem já concluída — não pode ser cancelada.');
+  }
+
+  const industrialUserId = await resolveIndustrialUserId(operatorId);
+  await updateWorkOrderStatus(workOrderId, 'cancelled');
+  await logWorkOrderEvent({
+    workOrderId,
+    eventType: 'work_order_cancelled',
+    operatorId: industrialUserId,
+    metadata: {
+      previousStatus: order.status,
+      station: order.station,
+      softCancel: true,
+    },
+  });
+
+  const updated = await loadWorkOrderById(workOrderId);
+  if (!updated) throw new Error('Ordem cancelada mas não foi possível recarregar.');
+  return updated;
 }
 
 export interface ExecuteTaskInput {

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import { useAuth } from '@/auth/useAuth';
-import { generateProjectWorkOrders } from '@/industrial/api/workOrderActions';
+import { cancelWorkOrder, generateProjectWorkOrders } from '@/industrial/api/workOrderActions';
 import { resolveProjetosLinkForProjectId } from '@/industrial/integration/projetos/projetosProjectLinks';
 import {
   projectCodeFromName,
@@ -12,7 +12,12 @@ import {
 import { readOfflineProjects } from '@/core/projects/projectsOfflineStore';
 import { IndustrialLayout, useIndustrialPageState } from '@/industrial/ui/components';
 import { industrialUi, useIndustrialTone } from '@/industrial/ui/layouts/industrialTheme';
-import { INDUSTRIAL_STATIONS, STATION_LABELS, type IndustrialStation } from '@/industrial/work-orders/types';
+import {
+  INDUSTRIAL_STATIONS,
+  STATION_LABELS,
+  type IndustrialStation,
+  type IndustrialWorkOrder,
+} from '@/industrial/work-orders/types';
 import { industrialFeatureFlags } from '@/industrial/config/featureFlags';
 import { buildIndustrialOnlineAnalysisIndexPath } from '@/core/industrial/onlineAnalysis';
 
@@ -25,6 +30,10 @@ const STATUS_LABEL: Record<string, string> = {
   completed: 'Concluído',
   cancelled: 'Cancelado',
 };
+
+function canCancelOrder(order: IndustrialWorkOrder): boolean {
+  return order.status === 'pending' || order.status === 'in_progress';
+}
 
 function normalizeProjectQueryParam(raw: string | null): string {
   if (!raw?.trim()) return '';
@@ -55,6 +64,7 @@ export default function IndustrialWorkOrdersRoute() {
   }, [searchParams]);
 
   const [generating, setGenerating] = useState(false);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,6 +72,7 @@ export default function IndustrialWorkOrdersRoute() {
     () => ({
       projectCode: projectFilter || undefined,
       station: stationFilter || undefined,
+      includeCancelled: true,
     }),
     [projectFilter, stationFilter],
   );
@@ -115,6 +126,29 @@ export default function IndustrialWorkOrdersRoute() {
       setError(err instanceof Error ? err.message : 'Falha ao gerar ordens.');
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const handleCancelOrder = async (order: IndustrialWorkOrder) => {
+    const projectCode = resolveOrderProjectCode(order);
+    const stationLabel = STATION_LABELS[order.station] ?? order.station;
+    const confirmed = window.confirm(
+      `Cancelar a ordem ${projectCode} · ${stationLabel}?\n\n` +
+        'A ordem deixa de aparecer nas filas activas. O histórico de tracking, tempo e qualidade é preservado.',
+    );
+    if (!confirmed) return;
+
+    setCancellingId(order.id);
+    setError(null);
+    setMessage(null);
+    try {
+      await cancelWorkOrder(order.id, user?.id);
+      setMessage(`Ordem ${projectCode} · ${stationLabel} cancelada.`);
+      await reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Falha ao cancelar ordem.');
+    } finally {
+      setCancellingId(null);
     }
   };
 
@@ -304,13 +338,41 @@ export default function IndustrialWorkOrdersRoute() {
                       <td style={{ padding: 8, color: ui.text }}>{STATUS_LABEL[order.status] ?? order.status}</td>
                       <td style={{ padding: 8, color: ui.text }}>{order.pieceIds.length}</td>
                       <td style={{ padding: 8 }}>
-                        <Link to={`/industrial/work-orders/order/${order.id}`} style={{ color: ui.link }}>
-                          Executar
-                        </Link>
-                        {' · '}
-                        <Link to={`/industrial/work-orders/${order.station}`} style={{ color: ui.linkMuted }}>
-                          Estação
-                        </Link>
+                        {order.status === 'cancelled' ? (
+                          <span style={{ color: ui.muted, fontSize: 12 }}>Cancelada</span>
+                        ) : (
+                          <>
+                            <Link to={`/industrial/work-orders/order/${order.id}`} style={{ color: ui.link }}>
+                              Executar
+                            </Link>
+                            {' · '}
+                            <Link to={`/industrial/work-orders/${order.station}`} style={{ color: ui.linkMuted }}>
+                              Estação
+                            </Link>
+                            {canCancelOrder(order) ? (
+                              <>
+                                {' · '}
+                                <button
+                                  type="button"
+                                  disabled={cancellingId === order.id}
+                                  onClick={() => void handleCancelOrder(order)}
+                                  style={{
+                                    padding: 0,
+                                    border: 'none',
+                                    background: 'transparent',
+                                    color: '#dc2626',
+                                    cursor: cancellingId === order.id ? 'wait' : 'pointer',
+                                    fontSize: 13,
+                                    textDecoration: 'underline',
+                                  }}
+                                  title="Cancelar ordem (soft-cancel — preserva histórico)"
+                                >
+                                  {cancellingId === order.id ? 'A cancelar…' : 'Cancelar ordem'}
+                                </button>
+                              </>
+                            ) : null}
+                          </>
+                        )}
                       </td>
                     </tr>
                   );
