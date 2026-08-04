@@ -30,11 +30,14 @@ export {
 
 const fmt = (n: number) => (Number.isFinite(n) ? n.toFixed(2) : "0.00");
 
-/** XML DRILL: Ø4 legado → Ø5; cavilhas Ø10 e demais ≥5 mm inalterados. */
+/** XML DRILL: Ø4 legado → Ø5; cavilhas / face Ø≥10 (ex. GAV_COSTA inferiores) inalterados. */
 function resolveDrillXmlDiameterMm(hole: {
   diameter?: number;
   holeType?: string;
 }): number {
+  const raw = Number(hole.diameter);
+  // Furos inferiores GAV_COSTA e cavilhas Ø10: nunca forçar Ø5 de parafuso.
+  if (Number.isFinite(raw) && raw >= 10) return raw;
   return resolveTcnDrillDiameterMm(hole);
 }
 /** Sangria default (frente inset / legado); laterais usam DRAWER_LAT_GROOVE_OVERCUT_MM. */

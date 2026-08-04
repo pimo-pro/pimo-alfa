@@ -134,10 +134,12 @@ describe("golden XML_COMPLITO � costa", () => {
     ]);
     expect(holes.filter((h) => h.tipo === "cavilha")[0]!.profundidade).toBe(30);
     const tops = holes.filter((h) => h.face === "cima");
-    expect(tops.map((h) => [h.x, h.y, h.profundidade])).toEqual([
-      [8, costaH, 10],
-      [716 - 8, costaH, 10],
+    expect(tops.map((h) => [h.x, h.y, h.diametro, h.profundidade])).toEqual([
+      [8, costaH, 10, 10],
+      [716 - 8, costaH, 10, 10],
     ]);
+    expect(tops.every((h) => h.diametro === 10)).toBe(true);
+    expect(tops.every((h) => h.diametro !== 5)).toBe(true);
 
     const xml = xmlFor("gaveta_traseira", {
       largura: 716,
@@ -148,6 +150,11 @@ describe("golden XML_COMPLITO � costa", () => {
     expect(xml).toContain("<Depth>30.00</Depth>");
     expect(xml).toContain("<Y1>15.00</Y1>");
     expect(xml).toContain(`<Y1>${(costaH - 15).toFixed(2)}</Y1>`);
+    expect(xml).toContain(`<Y1>${costaH.toFixed(2)}</Y1>`);
+    expect(xml).toContain("<X1>8.00</X1>");
+    expect(xml).toContain("<X1>708.00</X1>");
+    expect(xml).toContain("<Diameter>10.00</Diameter>");
+    expect(xml).not.toContain("<Diameter>5.00</Diameter>");
   });
 });
 
@@ -212,6 +219,9 @@ describe("golden XML_COMPLITO � frente inferior pairing laterais", () => {
     expect(xml).toContain("<BeginX>25.00</BeginX>");
     expect(xml).toContain(`<EndX>${(L - 25).toFixed(2)}</EndX>`);
     expect(xml).toContain(`<BeginY>${grooveY.toFixed(2)}</BeginY>`);
+    expect(xml).toContain("<Width>13.00</Width>");
+    expect(xml).toContain("<Depth>11.00</Depth>");
+    expect(xml).not.toMatch(/<TypeNo>3<\/TypeNo>[\s\S]*?<Depth>13\.00<\/Depth>/);
     expect(xml).not.toContain(`<BeginY>${(W - 56.5).toFixed(2)}</BeginY>`);
     expect(xml).not.toContain("<TypeNo>2</TypeNo>");
   });

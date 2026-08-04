@@ -153,7 +153,9 @@ describe("Furação estrutural de gaveta (TechnicalDrillHole) — golden XML_COM
       defaultRulesConfig
     );
     expect(frente.filter((h) => h.tipo === "cavilha")).toHaveLength(4);
-    expect(frente.some((h) => h.holeSubtype === "groove")).toBe(false);
+    const frenteGroove = frente.find((h) => h.holeSubtype === "groove");
+    expect(frenteGroove?.profundidade).toBe(11);
+    expect(frenteGroove?.grooveWidth).toBe(13);
   });
 
   it("adapter — grooves propagados para PanelDrillHole", () => {

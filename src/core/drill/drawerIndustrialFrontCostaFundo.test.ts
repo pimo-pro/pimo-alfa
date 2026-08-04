@@ -124,6 +124,7 @@ describe("gaveta industrial � frente DRILL / costa -23 / fundo entradas", () =
 
     const groove = holes.find((h) => h.holeSubtype === "groove");
     expect(groove?.profundidade).toBe(11);
+    expect(groove?.grooveWidth).toBe(13);
     expect(groove?.y).toBe(DRAWER_SIDE_BASE_ELEVATION_MM + sideH - 13);
   });
 
@@ -142,6 +143,11 @@ describe("gaveta industrial � frente DRILL / costa -23 / fundo entradas", () =
     );
     expect(costaYs).toEqual([15, costaH - 15]);
     expect(costa.filter((h) => h.tipo === "cavilha").every((h) => h.profundidade === 30)).toBe(true);
+    const bottoms = costa.filter((h) => h.face === "cima");
+    expect(bottoms).toHaveLength(2);
+    expect(bottoms.every((h) => h.diametro === 10 && h.profundidade === 10 && h.y === costaH)).toBe(
+      true
+    );
   });
 
   it("pipeline cutlist: frente_ext gera XML DRILL com cavilhas + rasgo", () => {

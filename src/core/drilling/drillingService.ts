@@ -534,7 +534,7 @@ function calcDrawerStructural(piece: PieceInput, out: TechnicalDrillHole[]) {
         altura: piece.altura,
         espessura: piece.espessura,
         isLowestDrawer: piece.isLowestDrawer === true,
-        bottomThicknessMm: piece.drawerBottomThicknessMm,
+        bottomThicknessMm: piece.drawerBottomThicknessMm ?? 10,
         sideHeightMm: piece.drawerSideHeightMm,
         sideBaseElevationMm: piece.drawerSideBaseElevationMm,
       });

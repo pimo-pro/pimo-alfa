@@ -31,9 +31,11 @@ import {
 } from "./drawerSlideDrillingCatalog";
 import { DRAWER_VERTICAL_BASE_OFFSET_MM } from "../drawerVerticalPosition";
 import {
-  DRAWER_BOTTOM_GROOVE_DEPTH_EXTRA_MM,
   DRAWER_BOTTOM_GROOVE_WIDTH_MM,
   DRAWER_BOTTOM_GROOVE_Y_FROM_TOP_MM,
+  DRAWER_COSTA_BOTTOM_FACE_DEPTH_MM,
+  DRAWER_COSTA_BOTTOM_FACE_DIAMETER_MM,
+  DRAWER_FRONT_BOTTOM_GROOVE_DEPTH_MM,
   DRAWER_LAT_GROOVE_BOTTOM_DEPTH_MM,
   DRAWER_LAT_GROOVE_BOTTOM_FROM_TOP_MM,
   DRAWER_LAT_GROOVE_BOTTOM_WIDTH_MM,
@@ -694,11 +696,12 @@ export function computeDrawerCostaStructuralHoles(params: {
   }
 
   const inset = 8;
+  // Furos inferiores (Y=W): sempre Ø10×10 — nunca Ø5 (legado incorrecto).
   holes.push({
     x: inset,
     y: altura,
-    diametro: dia,
-    profundidade: 10,
+    diametro: DRAWER_COSTA_BOTTOM_FACE_DIAMETER_MM,
+    profundidade: DRAWER_COSTA_BOTTOM_FACE_DEPTH_MM,
     tipo: "fixacao_estrutural",
     face: "cima",
     topDrillable: true,
@@ -706,8 +709,8 @@ export function computeDrawerCostaStructuralHoles(params: {
   holes.push({
     x: largura - inset,
     y: altura,
-    diametro: dia,
-    profundidade: 10,
+    diametro: DRAWER_COSTA_BOTTOM_FACE_DIAMETER_MM,
+    profundidade: DRAWER_COSTA_BOTTOM_FACE_DEPTH_MM,
     tipo: "fixacao_estrutural",
     face: "cima",
     topDrillable: true,
@@ -945,7 +948,8 @@ export function computeDrawerLowestFrenteExtFixedHoles(params: {
       x: xGroove,
       y: yGroove,
       diametro: 0,
-      profundidade: bottomT + DRAWER_BOTTOM_GROOVE_DEPTH_EXTRA_MM,
+      // SSOT: Depth sempre 11 mm (nunca Width 13). Y/pairing intactos.
+      profundidade: DRAWER_FRONT_BOTTOM_GROOVE_DEPTH_MM,
       tipo: "fixacao_estrutural",
       face: "tras",
       holeSubtype: "groove",
@@ -977,7 +981,8 @@ function buildDrawerFrenteBottomGroove(params: {
     x: params.grooveStartXMm ?? 0,
     y,
     diametro: 0,
-    profundidade: bottomT + DRAWER_BOTTOM_GROOVE_DEPTH_EXTRA_MM,
+    // Industrial: sempre 11 mm (T_fundo+1). Width 13 e Y = elev+sideH−13 intactos.
+    profundidade: DRAWER_FRONT_BOTTOM_GROOVE_DEPTH_MM,
     tipo: "fixacao_estrutural",
     face: "tras",
     holeSubtype: "groove",
