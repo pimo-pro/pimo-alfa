@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-08-05T14:19:32.113Z",
+      "author": "pimo-pro",
+      "commitMessage": "fix(industrial): SEP LAT Y alinhado e rasgo frente gaveta Width 11",
+      "version": "v6.0805.1519"
+    },
+    {
       "publishedAt": "2026-08-05T11:29:29.257Z",
       "author": "pimo-pro",
       "commitMessage": "feat(materiais): SSOT na seleção, texturas reais e cartas por família",
