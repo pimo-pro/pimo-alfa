@@ -6,6 +6,12 @@
 export const changelog = [
   {
     data: "2026-08-05",
+    versao: "v6.0805.next-gav-fundo",
+    descricao:
+      "gav_fundo: eixos corrigidos — width=vão+20, depth=sideDepth+10+T_costa (550×500 → 486×466).",
+  },
+  {
+    data: "2026-08-05",
     versao: "v6.0805.1519",
     descricao:
       "SEP LAT Y = absoluteY−T (Viewer/cutlist/DRILL/TCN alinhados, delta=0). Rasgo frente gaveta Width 11 mm (Depth 11, centro intacto).",

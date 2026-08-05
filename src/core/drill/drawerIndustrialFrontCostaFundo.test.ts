@@ -14,6 +14,7 @@ import {
   DRAWER_SIDE_BASE_ELEVATION_MM,
 } from "../drawers/drawerGeometryConstants";
 import { calculateDrawerSpecs } from "../drawers/DrawerParametrics";
+import { resolveDrawerSideDepthMm } from "../drawers/drawerSlideDepth";
 import { settingsDefaults } from "../settings/settingsSchema";
 import { cutlistComPrecoFromBox } from "../manufacturing/cutlistFromBoxes";
 import { defaultRulesConfig } from "../rules/rulesConfig";
@@ -33,7 +34,7 @@ describe("gaveta industrial — frente DRILL / costa -23 / fundo entradas", () =
     expect(resolveXmlMachineTarget("gaveta_lat_esq")).toBe("drill");
   });
 
-  it("SSOT: costa = laterais - 23; fundo = interna + entradas", () => {
+  it("SSOT: costa = laterais - 23; fundo = vão+laterais / sideDepth+frente+costa", () => {
     const specs = calculateDrawerSpecs(
       {
         boxInternalWidth: 1046,
@@ -53,9 +54,12 @@ describe("gaveta industrial — frente DRILL / costa -23 / fundo entradas", () =
     const sideH = specs.leftSide.height;
     expect(specs.back.height).toBe(sideH - DRAWER_COSTA_HEIGHT_BELOW_LATERAL_MM);
     const internalW = specs.back.width;
-    expect(specs.bottom.width).toBe(internalW + DRAWER_BOTTOM_FRONT_ENTRY_MM + 16);
+    const sideDepth = resolveDrawerSideDepthMm(specs.body.depth);
+    expect(specs.bottom.width).toBe(
+      internalW + DRAWER_BOTTOM_SIDE_ENTRY_MM + DRAWER_BOTTOM_SIDE_ENTRY_MM
+    );
     expect(specs.bottom.height).toBe(
-      specs.body.depth + DRAWER_BOTTOM_SIDE_ENTRY_MM + DRAWER_BOTTOM_SIDE_ENTRY_MM
+      sideDepth + DRAWER_BOTTOM_FRONT_ENTRY_MM + 16
     );
     expect(specs.gaps.bottomSlots).toEqual({
       front: 10,
@@ -64,8 +68,9 @@ describe("gaveta industrial — frente DRILL / costa -23 / fundo entradas", () =
     });
   });
 
-  it("exemplo industrial: interna 1000x500, costa 16 ? fundo 1026x520", () => {
+  it("exemplo industrial: vão 1000, bodyDepth 500, costa 16 → fundo 1020×516", () => {
     // backWidth = boxInternal - 2*folgaLateral(7) - 2*sideT(16) = 1046 - 14 - 32 = 1000
+    // sideDepth = 500 - 10 = 490; width = 1000+20; depth = 490+10+16
     const specs = calculateDrawerSpecs(
       {
         boxInternalWidth: 1046,
@@ -85,9 +90,43 @@ describe("gaveta industrial — frente DRILL / costa -23 / fundo entradas", () =
       { nominalDepthMm: 500 }
     );
     expect(specs.back.width).toBe(1000);
-    expect(specs.bottom.width).toBe(1026);
-    expect(specs.bottom.height).toBe(520);
+    expect(specs.bottom.width).toBe(1020);
+    expect(specs.bottom.height).toBe(516);
     expect(specs.back.height).toBe(specs.leftSide.height - 23);
+  });
+
+  it("caso 550×500 (T=19, laterais/costa 16): gav_fundo = 486×466", () => {
+    // L int 512; bodyWidth 498; vão 466; slide 450; sideDepth 440
+    // width 466+20=486; depth 440+10+16=466
+    const specs = calculateDrawerSpecs(
+      {
+        boxInternalWidth: 550 - 2 * 19,
+        boxInternalHeight: 720,
+        boxInternalDepth: 450,
+        boxThickness: 19,
+        drawerHeight: 200,
+      },
+      settingsDefaults.gavetas.gavetaProfundidadesDisponiveisMm,
+      {
+        gavetaEspessuraLateralMm: 16,
+        gavetaEspessuraTraseiraMm: 16,
+        gavetaEspessuraFundoMm: 10,
+        gavetaTipoCaixaMetalica: "Nenhuma",
+        gavetaValidarProfundidadeCompativel: false,
+        gavetaFolgaLateralMm: 7,
+      },
+      { nominalDepthMm: 450 }
+    );
+    expect(specs.back.width).toBe(466);
+    expect(specs.leftSide.depth).toBe(440);
+    expect(specs.bottom.width).toBe(486);
+    expect(specs.bottom.height).toBe(466);
+    expect(specs.bottom.thickness).toBe(10);
+
+    // Pipeline: layer/cutlist herdam as mesmas dims (Viewer + industrial)
+    expect(specs.gaps.bottomSlots).toEqual({ front: 10, sides: 10, back: 16 });
+    expect(specs.bottom.width).toBe(specs.back.width + 20);
+    expect(specs.bottom.height).toBe(specs.leftSide.depth + 10 + 16);
   });
 
   it("frente_ext (highest): cavilhas sync Y aresta laterais + elev; rasgo fundo+1", () => {

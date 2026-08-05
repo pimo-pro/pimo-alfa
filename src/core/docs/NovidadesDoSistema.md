@@ -1,5 +1,11 @@
 # Novidades do Sistema
 
+### gav_fundo — eixos industriais corrigidos
+- Largura = vão entre laterais + 10 + 10 (encaixe nas laterais)
+- Profundidade = sideDepth + 10 + T_costa (sideDepth = bodyDepth − 10)
+- Caso 550×500 (T=19, laterais/costa 16) → **486 × 466 mm**
+- Cutlist / Viewer / DRILL / TCN / HXML herdam as mesmas dimensões SSOT
+
 ### Furos SEP alinhados ao Viewer e ao DIV
 - Y nas laterais: `absoluteY − T` (mesma convenção das prateleiras)
 - Caso H=720 / T=19 / pos=600 → SEP 619 mm, Y LAT 600 mm, delta Viewer 0 mm

@@ -411,17 +411,18 @@ export function calculateDrawerSpecs(
   );
 
   // ===== FUNDO =====
-  // Área interna (vão entre laterais × profundidade do corpo) + entradas industriais:
-  // largura  = interna + 10 (frente) + espessura_costa
-  // profundidade = interna + 10 + 10 (cada lateral)
+  // Vão entre laterais × comprimento das laterais + entradas industriais:
+  // largura  = vão + 10 + 10 (cada lateral)
+  // profundidade = sideDepth + 10 (frente) + espessura_costa
+  // sideDepth = bodyDepth − 10 (mesmo critério das laterais)
   const effectiveBottomThickness = metalBoxEnabled ? sideThickness : bottomThickness;
   const internalWidth = backWidth;
-  const internalDepth = bodyDepth;
+  const sideDepthForBottom = resolveDrawerSideDepthMm(bodyDepth);
   const bottomWidth = clampMm(
-    internalWidth + DRAWER_BOTTOM_FRONT_ENTRY_MM + backThickness
+    internalWidth + DRAWER_BOTTOM_SIDE_ENTRY_MM + DRAWER_BOTTOM_SIDE_ENTRY_MM
   );
   const bottomDepth = clampMm(
-    internalDepth + DRAWER_BOTTOM_SIDE_ENTRY_MM + DRAWER_BOTTOM_SIDE_ENTRY_MM
+    sideDepthForBottom + DRAWER_BOTTOM_FRONT_ENTRY_MM + backThickness
   );
 
   // ===== POSICIONAMENTO =====
