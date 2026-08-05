@@ -1,5 +1,11 @@
 # Novidades do Sistema
 
+### Hettich Quadro V6 — furos intermédios 38+b1
+- Lookup SSOT NL→b1 (250–500); 550/600 sem b1 (fallback proporcional + TODO)
+- Padrão: X1=38 · midF=38+b1 · midR=D−(38+b1) · X_last=D−38
+- Removido o recuo incorrecto `38+b1−1`; nunca usar b1 sozinho como distância
+- Y=41 mm e espelhamento L/R mantidos; Adapter/Service intactos
+
 ### Folga vertical DIV ↔ SEP (mín. 5 mm)
 - `DIV_SEP_VERTICAL_CLEARANCE_MM = 5`
 - Altura DIV ligado: `floor(SEP.bottomY − T − 5)`

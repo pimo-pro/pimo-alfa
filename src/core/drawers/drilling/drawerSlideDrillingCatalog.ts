@@ -7,10 +7,11 @@
  * Padrao de marcacao (modulo):
  *   X1 = 38 mm (frente)
  *   X_last = profundidadeLateral - 38 mm (traseira)
- *   NL 350-400 → 4 furos; NL 450-600 → 5 furos
+ *   NL 350-400 → 4 furos; NL 450-600 → 5 furos (sistemas proporcionais)
  *   Todos os furos: marcacao, profundidade 1 mm (nao estruturais).
  *
- * Hettich Quadro V6 YOU M: intermedios ancorados no CC oficial (b1).
+ * Hettich Quadro V6 YOU M: dois intermedios oficiais a 38+b1(NL) da frente e da traseira.
+ * NL 550/600: sem b1 confirmado → fallback proporcional (TODO).
  * ArciTech / Blum / etc.: distribuicao proporcional entre X1 e X_last.
  */
 
@@ -20,6 +21,10 @@ import {
   type DrawerSlideLengthMm,
   resolveDrawerSlideLength,
 } from "../drawerSlideDepth";
+import {
+  lookupQuadroV6B1Mm,
+  quadroV6IntermediateDistanceFromFaceMm,
+} from "./hettichQuadroV6B1Config";
 
 /** Altura estrutural partilhada com o stack de gavetas (mm). */
 export const SLIDE_AXIS_FROM_DRAWER_BOTTOM_MM = 41;
@@ -57,33 +62,20 @@ export type SlideDrillingSystemTable = {
   /** Fonte / notas de validacao. */
   source: string;
   byLength: SlideDrillingLengthTable[];
-  /** CC oficial (b1) por NL — Quadro V6; indefinido nos restantes. */
-  officialB1ByLength?: Partial<Record<DrawerSlideLengthMm, number>>;
-};
-
-/**
- * Quadro V6 YOU M Silent System — distancia CC (b1) oficial Hettich
- * (Silent System / Push to open; nao Push to open Silent).
- * Fonte: ficha Quadro V6 YOU (NL -> b1).
- */
-export const QUADRO_V6_YOU_M_B1_MM: Record<DrawerSlideLengthMm, number> = {
-  350: 224,
-  400: 224,
-  450: 256,
-  500: 256,
-  550: 256,
-  600: 256,
+  /**
+   * Quadro V6: resolver b1 via lookup SSOT (null → fallback proporcional).
+   * Outros sistemas: sem lookup.
+   */
+  useQuadroOfficialB1Lookup?: boolean;
 };
 
 /** Frente do modulo -> 1.o furo (atelier / ficha YOU: 38 mm). */
 export const QUADRO_V6_YOU_M_FRONT_X_MM = MODULE_SLIDE_EDGE_SETBACK_MM;
-/** Recuo de seguranca no 2.o furo oficial CC (evita fragilidade na madeira). */
-export const QUADRO_V6_YOU_M_SECOND_HOLE_SETBACK_MM = 1;
 
 export const HETTICH_QUADRO_V6_YOU_M_SILENT_SYSTEM =
   "Hettich Quadro V6 You M Silent System" as const;
 
-/** Contagem de furos de marcacao por comprimento nominal. */
+/** Contagem de furos de marcacao por comprimento nominal (sistemas proporcionais). */
 export function moduleSlideHoleCountForNl(nl: number): 4 | 5 {
   return nl <= 400 ? 4 : 5;
 }
@@ -92,89 +84,94 @@ function round1(n: number): number {
   return Math.round(n * 10) / 10;
 }
 
+function holesFromXs(xs: number[]): SlideDrillingHoleDef[] {
+  return xs.map((x, i) => {
+    const role: SlideHoleRole =
+      i === 0 ? "front" : i === xs.length - 1 ? "rear" : "mark";
+    return { xFromFrontMm: x, role, isMarkOnly: true };
+  });
+}
+
+/**
+ * Padrao Quadro oficial: X1=38, midF=38+b1, midR=D-(38+b1), X_last=D-38.
+ * Distancia real = sempre 38+b1 (nunca b1 sozinho).
+ */
+function buildQuadroOfficialIntermediatePattern(
+  panelDepthMm: number,
+  b1Mm: number
+): SlideDrillingHoleDef[] {
+  const x1 = MODULE_SLIDE_EDGE_SETBACK_MM;
+  const depth = Math.max(x1 * 2 + 10, Number(panelDepthMm) || 0);
+  const xLast = depth - MODULE_SLIDE_EDGE_SETBACK_MM;
+  const distFromFace = quadroV6IntermediateDistanceFromFaceMm(
+    b1Mm,
+    MODULE_SLIDE_EDGE_SETBACK_MM
+  );
+  const xMidF = round1(distFromFace);
+  const xMidR = round1(depth - distFromFace);
+  const xs = [...new Set([x1, xMidF, xMidR, xLast].map(round1))].sort(
+    (a, b) => a - b
+  );
+  if (xs[0] !== x1) xs[0] = x1;
+  if (xs[xs.length - 1] !== xLast) xs[xs.length - 1] = xLast;
+  return holesFromXs(xs);
+}
+
 /**
  * Constroi o padrao de marcacao simetrico nos laterais do modulo.
- * X1 = 38; X_last = D - 38; intermedios proporcionais (ancorados em CC se houver b1).
+ * Com b1 oficial (Quadro): dois intermedios a 38+b1.
+ * Sem b1: X1=38; X_last=D-38; intermedios proporcionais (4/5 por NL).
  */
 export function buildModuleSlideMarkingPattern(input: {
-  comprimentoMm: DrawerSlideLengthMm;
+  comprimentoMm: number;
   panelDepthMm: number;
-  officialB1Mm?: number;
+  /** b1 oficial Hettich (mm). Se definido, usa padrao Quadro 38+b1. */
+  officialB1Mm?: number | null;
 }): SlideDrillingHoleDef[] {
   const x1 = MODULE_SLIDE_EDGE_SETBACK_MM;
   const depth = Math.max(x1 * 2 + 10, Number(input.panelDepthMm) || input.comprimentoMm);
   const xLast = depth - MODULE_SLIDE_EDGE_SETBACK_MM;
+
+  if (input.officialB1Mm != null && Number.isFinite(input.officialB1Mm)) {
+    return buildQuadroOfficialIntermediatePattern(depth, input.officialB1Mm);
+  }
+
+  // Fallback proporcional (ArciTech / Quadro NL 550-600 sem b1 / genericos).
   const nTotal = moduleSlideHoleCountForNl(input.comprimentoMm);
   const nMid = nTotal - 2;
-
   const xs: number[] = [x1];
   for (let i = 1; i <= nMid; i++) {
     xs.push(round1(x1 + ((xLast - x1) * i) / (nMid + 1)));
   }
   xs.push(xLast);
 
-  if (input.officialB1Mm != null && Number.isFinite(input.officialB1Mm)) {
-    const cc = round1(
-      MODULE_SLIDE_EDGE_SETBACK_MM +
-        input.officialB1Mm -
-        QUADRO_V6_YOU_M_SECOND_HOLE_SETBACK_MM
-    );
-    if (cc > x1 + 5 && cc < xLast - 5 && xs.length >= 3) {
-      let bestIdx = 1;
-      let bestDist = Infinity;
-      for (let i = 1; i < xs.length - 1; i++) {
-        const d = Math.abs(xs[i]! - cc);
-        if (d < bestDist) {
-          bestDist = d;
-          bestIdx = i;
-        }
-      }
-      xs[bestIdx] = cc;
-    }
-  }
-
-  // Dedup + sort (caso CC coincida com um interpolado).
   const unique = [...new Set(xs.map((x) => round1(x)))].sort((a, b) => a - b);
-  // Garantir extremos exactos.
   if (unique[0] !== x1) unique[0] = x1;
   if (unique[unique.length - 1] !== xLast) unique[unique.length - 1] = xLast;
 
-  // Se dedup reduziu abaixo do alvo, repor proporcao simples.
   let finalXs = unique;
   if (finalXs.length < nTotal) {
     finalXs = [];
     for (let i = 0; i < nTotal; i++) {
       finalXs.push(round1(x1 + ((xLast - x1) * i) / (nTotal - 1)));
     }
-    if (input.officialB1Mm != null) {
-      const cc = round1(
-        MODULE_SLIDE_EDGE_SETBACK_MM +
-          input.officialB1Mm -
-          QUADRO_V6_YOU_M_SECOND_HOLE_SETBACK_MM
-      );
-      if (cc > x1 + 5 && cc < xLast - 5) {
-        let bestIdx = 1;
-        let bestDist = Infinity;
-        for (let i = 1; i < finalXs.length - 1; i++) {
-          const d = Math.abs(finalXs[i]! - cc);
-          if (d < bestDist) {
-            bestDist = d;
-            bestIdx = i;
-          }
-        }
-        finalXs[bestIdx] = cc;
-      }
-    }
   }
 
-  return finalXs.map((x, i) => {
-    const role: SlideHoleRole =
-      i === 0 ? "front" : i === finalXs.length - 1 ? "rear" : "mark";
-    return { xFromFrontMm: x, role, isMarkOnly: true };
-  });
+  return holesFromXs(finalXs);
 }
 
-function lengthsForSystem(officialB1ByLength?: Partial<Record<DrawerSlideLengthMm, number>>): SlideDrillingLengthTable[] {
+function resolveOfficialB1ForTable(
+  table: Pick<SlideDrillingSystemTable, "useQuadroOfficialB1Lookup">,
+  nl: number
+): number | undefined {
+  if (!table.useQuadroOfficialB1Lookup) return undefined;
+  const b1 = lookupQuadroV6B1Mm(nl);
+  return b1 == null ? undefined : b1;
+}
+
+function lengthsForSystem(
+  options?: Pick<SlideDrillingSystemTable, "useQuadroOfficialB1Lookup">
+): SlideDrillingLengthTable[] {
   // Lazy: evita TDZ/ciclo de imports com drawerSlideDepth durante o boot do módulo.
   const lengths = DRAWER_SLIDE_LENGTHS_MM ?? [];
   return lengths.map((nl) => ({
@@ -183,7 +180,7 @@ function lengthsForSystem(officialB1ByLength?: Partial<Record<DrawerSlideLengthM
     holes: buildModuleSlideMarkingPattern({
       comprimentoMm: nl,
       panelDepthMm: nl,
-      officialB1Mm: officialB1ByLength?.[nl],
+      officialB1Mm: resolveOfficialB1ForTable(options ?? {}, nl),
     }),
   }));
 }
@@ -198,9 +195,9 @@ function buildSlideDrillingCatalog(): SlideDrillingSystemTable[] {
     profundidadeMarkMm: MODULE_SLIDE_MARK_DEPTH_MM,
     mirrorLeftRight: true,
     source:
-      "Hettich Quadro V6 YOU M Silent System — marcacao modulo (X1=38, X_last=D-38, CC=b1, prof. 1 mm).",
-    officialB1ByLength: QUADRO_V6_YOU_M_B1_MM,
-    byLength: lengthsForSystem(QUADRO_V6_YOU_M_B1_MM),
+      "Hettich Quadro V6 YOU M Silent System — marcacao modulo (X1=38, mid=38+b1, X_last=D-38, prof. 1 mm).",
+    useQuadroOfficialB1Lookup: true,
+    byLength: lengthsForSystem({ useQuadroOfficialB1Lookup: true }),
   },
   {
     slideType: "Hettich ArciTech",
@@ -342,7 +339,7 @@ export function resolveSlideDrillingPattern(input: {
   const holes = buildModuleSlideMarkingPattern({
     comprimentoMm: length,
     panelDepthMm: input.panelDepthMm,
-    officialB1Mm: table.officialB1ByLength?.[length],
+    officialB1Mm: resolveOfficialB1ForTable(table, length),
   });
 
   return {
