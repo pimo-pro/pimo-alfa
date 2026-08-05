@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-08-05T15:48:56.842Z",
+      "author": "pimo-pro",
+      "commitMessage": "fix(industrial): Quadro V6 intermédios oficiais 38+b1(NL)",
+      "version": "v6.0805.1648"
+    },
+    {
       "publishedAt": "2026-08-05T15:21:10.488Z",
       "author": "pimo-pro",
       "commitMessage": "fix(industrial): folga vertical DIV↔SEP mínima de 5 mm",
