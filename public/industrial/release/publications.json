@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-08-05T14:51:32.447Z",
+      "author": "pimo-pro",
+      "commitMessage": "fix(industrial): gav_fundo eixos laterais/frente-costa corrigidos",
+      "version": "v6.0805.1551"
+    },
+    {
       "publishedAt": "2026-08-05T14:19:32.113Z",
       "author": "pimo-pro",
       "commitMessage": "fix(industrial): SEP LAT Y alinhado e rasgo frente gaveta Width 11",
