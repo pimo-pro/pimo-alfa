@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-08-05T15:21:10.488Z",
+      "author": "pimo-pro",
+      "commitMessage": "fix(industrial): folga vertical DIV↔SEP mínima de 5 mm",
+      "version": "v6.0805.1621"
+    },
+    {
       "publishedAt": "2026-08-05T14:51:32.447Z",
       "author": "pimo-pro",
       "commitMessage": "fix(industrial): gav_fundo eixos laterais/frente-costa corrigidos",

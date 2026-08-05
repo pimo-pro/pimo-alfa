@@ -1,6 +1,16 @@
 {
-  "updatedAt": "2026-08-05T14:51:32.972Z",
+  "updatedAt": "2026-08-05T15:21:10.920Z",
   "news": [
+    {
+      "version": "v6.0805.1621",
+      "title": "fix(industrial): SEP LAT Y alinhado e rasgo frente gaveta Width 11",
+      "description": "fix(industrial): SEP LAT Y alinhado e rasgo frente gaveta Width 11\n\nFuros SEP nas laterais com Y = absoluteY − T (Viewer/cutlist/DRILL/TCN alinhados). Rasgo inferior da frente da gaveta: Width 11 mm, Depth 11 mm, centro intacto.",
+      "publishedAt": "2026-08-05T15:21:10.796Z",
+      "type": "fix",
+      "author": "pimo-pro",
+      "icon": "fix",
+      "commit": "83c42b37"
+    },
     {
       "version": "v6.0805.1551",
       "title": "fix(industrial): SEP LAT Y alinhado e rasgo frente gaveta Width 11",
