@@ -124,7 +124,7 @@ describe("gaveta industrial — frente DRILL / costa -23 / fundo entradas", () =
 
     const groove = holes.find((h) => h.holeSubtype === "groove");
     expect(groove?.profundidade).toBe(11);
-    expect(groove?.grooveWidth).toBe(13);
+    expect(groove?.grooveWidth).toBe(11);
     expect(groove?.y).toBe(DRAWER_SIDE_BASE_ELEVATION_MM + sideH - 13);
   });
 

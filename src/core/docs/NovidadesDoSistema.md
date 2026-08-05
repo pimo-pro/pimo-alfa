@@ -1,5 +1,16 @@
 # Novidades do Sistema
 
+### Furos SEP alinhados ao Viewer e ao DIV
+- Y nas laterais: `absoluteY − T` (mesma convenção das prateleiras)
+- Caso H=720 / T=19 / pos=600 → SEP 619 mm, Y LAT 600 mm, delta Viewer 0 mm
+- DIV ligado: altura `floor(SEP.bottomY − FUNDO.topY)` intacta
+- Cutlist / DRILL / TCN / HXML partilham o mesmo `hole.y`
+
+### Rasgo inferior da frente da gaveta (TypeNo=3)
+- Width do rasgo: 13 → **11 mm** (fundo 10 mm, folga 1 mm)
+- Depth permanece 11 mm; centro do rasgo (`BeginY`) inalterado
+- IDs canónicos e pipeline CNC/TCN/cutlist/PI preservados
+
 ### Seleção de materiais alinhada ao SSOT
 - Famílias com Nome novo padronizado (MDF Branco, HDF LACADO, etc.) — sem números no nome
 - Espessuras escolhidas em campo próprio (10 / 16 / 17 / 19 mm…)

@@ -948,7 +948,7 @@ export function computeDrawerLowestFrenteExtFixedHoles(params: {
       x: xGroove,
       y: yGroove,
       diametro: 0,
-      // SSOT: Depth sempre 11 mm (nunca Width 13). Y/pairing intactos.
+      // SSOT: Depth 11 mm e Width 11 mm (fundo 10 + 1). Y/pairing intactos.
       profundidade: DRAWER_FRONT_BOTTOM_GROOVE_DEPTH_MM,
       tipo: "fixacao_estrutural",
       face: "tras",
@@ -981,7 +981,7 @@ function buildDrawerFrenteBottomGroove(params: {
     x: params.grooveStartXMm ?? 0,
     y,
     diametro: 0,
-    // Industrial: sempre 11 mm (T_fundo+1). Width 13 e Y = elev+sideH−13 intactos.
+    // Industrial: Depth 11 e Width 11 (T_fundo+1). Y = elev+sideH−13 intacto.
     profundidade: DRAWER_FRONT_BOTTOM_GROOVE_DEPTH_MM,
     tipo: "fixacao_estrutural",
     face: "tras",

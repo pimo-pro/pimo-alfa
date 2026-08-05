@@ -102,7 +102,8 @@ function calcShelfGridYs(
   return ys;
 }
 
-function absoluteYToLateralPanelY(box: DivSepBoxLike, absoluteY: number): number {
+/** Converte Y absoluto da caixa → Y local do painel lateral (base = topo do FUNDO). */
+export function absoluteYToLateralPanelY(box: DivSepBoxLike, absoluteY: number): number {
   const espessura = Math.max(0, Number(box.espessura) || 0);
   // Convenção industrial (cutlist / TCN / SEP na LAT): Y desde a base do painel.
   // Laterais inset (entre CIMA e FUNDO): base do painel = espessura (topo do FUNDO).

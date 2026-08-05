@@ -22,6 +22,7 @@ import {
   resolveSeparadorCenterY,
   resolveSeparadorDimensions,
 } from "./dimensions";
+import { absoluteYToLateralPanelY } from "./shelfDrilling";
 import type { DivisorItem, DivSepBoxLike, SeparadorItem } from "./types";
 
 type HoleBucket = {
@@ -128,13 +129,16 @@ function drillSeparadorEdgeHoles(
 
 function drillLateralAtSepHeight(
   bucket: HoleBucket,
+  box: DivSepBoxLike,
   profundidadeMm: number,
-  centerY: number,
+  absoluteCenterY: number,
   receptorThickness: number,
   rules: DivSepRules,
   includeParafuso: boolean,
   sepId: string
 ): void {
+  // Mesma convenção das prateleiras: Y absoluto → Y local do painel LAT (base = topo FUNDO).
+  const centerY = absoluteYToLateralPanelY(box, absoluteCenterY);
   const cavilhaD = getCavilhaDiameterMm(rules);
   const faceCavilhaDepth = Math.min(getCavilhaDepthMm(rules), CAVILHA_FACE_DEPTH_MM);
   const depthPos = calcDepthHolePositions(profundidadeMm, rules);
@@ -195,6 +199,7 @@ function drillSeparador(
   drillSeparadorEdgeHoles(sepHoles, panelLarguraMm, dims.profundidadeMm, rules, panelId);
   drillLateralAtSepHeight(
     bucket,
+    box,
     dims.profundidadeMm,
     centerY,
     internal.espessura,

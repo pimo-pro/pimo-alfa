@@ -219,7 +219,7 @@ describe("golden XML_COMPLITO — frente inferior pairing laterais", () => {
     expect(xml).toContain("<BeginX>25.00</BeginX>");
     expect(xml).toContain(`<EndX>${(L - 25).toFixed(2)}</EndX>`);
     expect(xml).toContain(`<BeginY>${grooveY.toFixed(2)}</BeginY>`);
-    expect(xml).toContain("<Width>13.00</Width>");
+    expect(xml).toContain("<Width>11.00</Width>");
     expect(xml).toContain("<Depth>11.00</Depth>");
     expect(xml).not.toMatch(/<TypeNo>3<\/TypeNo>[\s\S]*?<Depth>13\.00<\/Depth>/);
     expect(xml).not.toContain(`<BeginY>${(W - 56.5).toFixed(2)}</BeginY>`);

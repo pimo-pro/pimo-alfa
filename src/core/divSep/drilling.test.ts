@@ -12,7 +12,9 @@ import {
   resolveSeparadorCenterY,
   resolveSeparadorDimensions,
 } from "./dimensions";
+import { absoluteYToLateralPanelY } from "./shelfDrilling";
 import { CORNER_FF_EDGE_DOWEL_DEPTH_MM } from "../cornerCabinet/cornerFixedFrontDowels";
+import { CAVILHA_FACE_DEPTH_MM } from "../drill/cavilha10x40Rule";
 import { countDivSepFerragens } from "./ferragens";
 import {
   defaultDivisorItem,
@@ -63,7 +65,9 @@ describe("buildDivSepDrilling — SEP", () => {
     expect(cavilhas.every((h) => h.topDrillable === true)).toBe(true);
     expect(parafusos.length).toBe(0);
     expect(cavilhas.map((h) => roundMm(h.x)).sort()).toEqual(depthPos.cavilha.map(roundMm).sort());
-    expect(new Set(cavilhas.map((h) => roundMm(h.y)))).toEqual(new Set([roundMm(sepCenterY)]));
+    expect(new Set(cavilhas.map((h) => roundMm(h.y)))).toEqual(
+      new Set([roundMm(absoluteYToLateralPanelY(box, sepCenterY))])
+    );
     for (const c of cavilhas) {
       expect(roundMm(c.depth)).toBe(getCavilhaDepthMm(rules));
     }
@@ -123,7 +127,8 @@ describe("buildDivSepDrilling — SEP+DIV combinados", () => {
     const faceCavilhas = sepHoles.filter((h) => h.holeType === "cavilha" && h.topDrillable === true);
     expect(faceCavilhas.length).toBeGreaterThan(0);
     for (const h of faceCavilhas) {
-      expect(roundMm(h.depth)).toBe(CORNER_FF_EDGE_DOWEL_DEPTH_MM);
+      // Face SEP: 10×13 (par da aresta DIV 10×30) — SSOT CAVILHA_FACE_DEPTH_MM
+      expect(roundMm(h.depth)).toBe(CAVILHA_FACE_DEPTH_MM);
     }
   });
 
@@ -138,8 +143,12 @@ describe("buildDivSepDrilling — SEP+DIV combinados", () => {
     expect(parafusos.length).toBeGreaterThan(0);
     expect(cavilhas.map((h) => roundMm(h.x)).sort()).toEqual(depthPos.cavilha.map(roundMm).sort());
     expect(parafusos.map((h) => roundMm(h.x)).sort()).toEqual(depthPos.parafuso.map(roundMm).sort());
-    expect(new Set(cavilhas.map((h) => roundMm(h.y)))).toEqual(new Set([roundMm(sepCenterY)]));
-    expect(new Set(parafusos.map((h) => roundMm(h.y)))).toEqual(new Set([roundMm(sepCenterY)]));
+    expect(new Set(cavilhas.map((h) => roundMm(h.y)))).toEqual(
+      new Set([roundMm(absoluteYToLateralPanelY(box, sepCenterY))])
+    );
+    expect(new Set(parafusos.map((h) => roundMm(h.y)))).toEqual(
+      new Set([roundMm(absoluteYToLateralPanelY(box, sepCenterY))])
+    );
   });
 
   it("não cria furos estruturais em CIMA quando DIV está ligado ao SEP", () => {
@@ -242,5 +251,44 @@ describe("calcDepthHolePositions", () => {
     const pos = calcDepthHolePositions(400, DIV_SEP_TEST_RULES);
     expect(pos.cavilha).toEqual([60, 340]);
     expect(pos.parafuso).toEqual([90, 310]);
+  });
+});
+
+describe("SEP LAT Y — caso industrial H=720 T=19 pos=600", () => {
+  it("Y local LAT = 600 (= sepCenterAbs − T), não 619 absoluto", () => {
+    const rules = DIV_SEP_TEST_RULES;
+    const sep = defaultSeparadorItem({ id: "sep-720", positionMm: 600 });
+    const div = defaultDivisorItem({
+      id: "div-720",
+      linkedSeparadorId: "sep-720",
+      positionMm: 281,
+    });
+    const box = makeDivSepTestBox({
+      dimensoes: { largura: 600, altura: 720, profundidade: 560 },
+      espessura: 19,
+      separadores: [sep],
+      divisores: [div],
+    });
+    const panelIds = box.panelIds!;
+    const { getExtraHoles } = buildDivSepDrilling(box, panelIds, rules);
+
+    const sepCenterAbs = resolveSeparadorCenterY(box, sep);
+    expect(roundMm(sepCenterAbs)).toBe(619);
+    expect(roundMm(absoluteYToLateralPanelY(box, sepCenterAbs))).toBe(600);
+
+    const latLeft = getExtraHoles("lateral_esquerda");
+    const latRight = getExtraHoles("lateral_direita");
+    const ys = [...latLeft, ...latRight]
+      .filter((h) => h.holeType === "cavilha" || h.holeType === "parafuso")
+      .map((h) => roundMm(h.y));
+
+    expect(ys.length).toBeGreaterThan(0);
+    expect(new Set(ys)).toEqual(new Set([600]));
+    expect(ys.every((y) => y !== 619)).toBe(true);
+
+    const divH = resolveDivisorDimensions(box, div).alturaMm;
+    const sepBottom =
+      sepCenterAbs - resolveSeparadorDimensions(box, sep).alturaMm / 2;
+    expect(divH).toBe(Math.floor(sepBottom - 19));
   });
 });

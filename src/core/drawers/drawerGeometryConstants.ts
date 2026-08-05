@@ -108,12 +108,15 @@ export const DRAWER_BOTTOM_SIDE_ENTRY_MM = 10;
  */
 export const DRAWER_BOTTOM_GROOVE_DEPTH_EXTRA_MM = 1;
 /**
- * SSOT industrial XML_COMPLITO — profundidade do rasgo na frente (GAV_FRENT_EXT / GAV_FRENTE).
- * Sempre 11 mm (= T_fundo 10 + 1). Nunca usar a largura do rasgo (13 mm) como Depth.
+ * SSOT industrial — profundidade do rasgo na frente (GAV_FRENT_EXT / GAV_FRENTE).
+ * Sempre 11 mm (= T_fundo 10 + 1). Não confundir com Width do TypeNo=3.
  */
 export const DRAWER_FRONT_BOTTOM_GROOVE_DEPTH_MM = 10 + DRAWER_BOTTOM_GROOVE_DEPTH_EXTRA_MM;
-/** Largura do rasgo do fundo nas laterais / frente (mm). */
-export const DRAWER_BOTTOM_GROOVE_WIDTH_MM = 13;
+/**
+ * Largura (Width) do rasgo inferior da frente — TypeNo=3.
+ * Fundo 10 mm → Width 11 mm (folga 1 mm). Laterais usam DRAWER_LAT_GROOVE_* próprias.
+ */
+export const DRAWER_BOTTOM_GROOVE_WIDTH_MM = 11;
 /** Distância do topo da lateral ao eixo do rasgo (mm). */
 export const DRAWER_BOTTOM_GROOVE_Y_FROM_TOP_MM = 13;
 /**
