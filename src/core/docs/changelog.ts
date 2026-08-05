@@ -6,7 +6,7 @@
 export const changelog = [
   {
     data: "2026-08-05",
-    versao: "v6.0805.next-div-sep-clearance",
+    versao: "v6.0805.1621",
     descricao:
       "Folga vertical DIV↔SEP ≥ 5 mm: alturaDIV = floor(SEP.bottomY − T − 5). Furos LAT no centro do SEP.",
   },
