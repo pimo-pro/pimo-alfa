@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { resolveDivisorLinkedHeightMm, resolveSeparadorBottomY } from "./coupling";
+import {
+  DIV_SEP_VERTICAL_CLEARANCE_MM,
+  resolveDivisorLinkedHeightMm,
+  resolveSeparadorBottomY,
+} from "./coupling";
 import {
   getDivSepInternalDims,
   resolveDivisorDimensions,
@@ -45,9 +49,14 @@ function assertLinkedDivBelowSep(
   const dims = resolveDivisorDimensions(box, div);
   const linkedH = resolveDivisorLinkedHeightMm(box, div, sep);
 
-  expect(dims.alturaMm).toBe(Math.floor(sepBottomY - fundoTopY));
+  expect(dims.alturaMm).toBe(
+    Math.floor(sepBottomY - fundoTopY - DIV_SEP_VERTICAL_CLEARANCE_MM)
+  );
   expect(dims.alturaMm).toBe(linkedH);
   expect(fundoTopY + dims.alturaMm).toBeLessThanOrEqual(sepBottomY);
+  expect(sepBottomY - (fundoTopY + dims.alturaMm)).toBeGreaterThanOrEqual(
+    DIV_SEP_VERTICAL_CLEARANCE_MM
+  );
 
   const specs = getDivSepMeshSpecs(box, widthM, heightM, depthM, thicknessM);
   const sepSpec = specs.find((s) => s.name === `divsep-sep-${sep.id}`);
@@ -64,7 +73,7 @@ function assertLinkedDivBelowSep(
 }
 
 describe("SEP/DIV geometry — P0 Viewer + P1 floor", () => {
-  it("altura industrial = floor(sepBottomY − FUNDO.topY) sem penetração", () => {
+  it("altura industrial = floor(sepBottomY − FUNDO.topY − 5) sem penetração", () => {
     const sep = defaultSeparadorItem({ id: "sep-geo", positionMm: 600 });
     const div = defaultDivisorItem({
       id: "div-geo",

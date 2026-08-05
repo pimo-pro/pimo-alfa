@@ -6,6 +6,12 @@
 export const changelog = [
   {
     data: "2026-08-05",
+    versao: "v6.0805.next-div-sep-clearance",
+    descricao:
+      "Folga vertical DIV↔SEP ≥ 5 mm: alturaDIV = floor(SEP.bottomY − T − 5). Furos LAT no centro do SEP.",
+  },
+  {
+    data: "2026-08-05",
     versao: "v6.0805.1551",
     descricao:
       "gav_fundo: eixos corrigidos — width=vão+20, depth=sideDepth+10+T_costa (550×500 → 486×466).",

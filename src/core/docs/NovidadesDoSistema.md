@@ -1,5 +1,11 @@
 # Novidades do Sistema
 
+### Folga vertical DIV ↔ SEP (mín. 5 mm)
+- `DIV_SEP_VERTICAL_CLEARANCE_MM = 5`
+- Altura DIV ligado: `floor(SEP.bottomY − T − 5)`
+- NP26389 (T=19, pos=1519) → DIV **1504**, gap **5,5 mm**, furos LAT **1519** (centro do SEP)
+- Viewer / cutlist / DRILL / TCN / HXML herdando a mesma altura SSOT
+
 ### gav_fundo — eixos industriais corrigidos
 - Largura = vão entre laterais + 10 + 10 (encaixe nas laterais)
 - Profundidade = sideDepth + 10 + T_costa (sideDepth = bodyDepth − 10)
@@ -9,7 +15,7 @@
 ### Furos SEP alinhados ao Viewer e ao DIV
 - Y nas laterais: `absoluteY − T` (mesma convenção das prateleiras)
 - Caso H=720 / T=19 / pos=600 → SEP 619 mm, Y LAT 600 mm, delta Viewer 0 mm
-- DIV ligado: altura `floor(SEP.bottomY − FUNDO.topY)` intacta
+- DIV ligado: altura com folga vertical mínima de 5 mm sob o SEP
 - Cutlist / DRILL / TCN / HXML partilham o mesmo `hole.y`
 
 ### Rasgo inferior da frente da gaveta (TypeNo=3)

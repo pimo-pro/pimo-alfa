@@ -10,7 +10,7 @@ import {
   resolveDivisorDimensions,
   resolveSeparadorCenterY,
 } from "./dimensions";
-import { resolveSeparadorBottomY } from "./coupling";
+import { DIV_SEP_VERTICAL_CLEARANCE_MM, resolveSeparadorBottomY } from "./coupling";
 import { getDivSepMeshSpecs } from "./visualSpecs";
 import {
   defaultDivisorItem,
@@ -51,7 +51,12 @@ describe("Viewer visual verify H=720 T=19 pos=600", () => {
 
     expect(roundMm(sepCenterAbs)).toBe(619);
     expect(roundMm(absoluteYToLateralPanelY(box, sepCenterAbs))).toBe(600);
-    expect(divH).toBe(Math.floor(sepBottom - fundoTop));
+    expect(divH).toBe(
+      Math.floor(sepBottom - fundoTop - DIV_SEP_VERTICAL_CLEARANCE_MM)
+    );
+    expect(sepBottom - (fundoTop + divH)).toBeGreaterThanOrEqual(
+      DIV_SEP_VERTICAL_CLEARANCE_MM
+    );
 
     const { getExtraHoles } = buildDivSepDrilling(box, box.panelIds!, DIV_SEP_TEST_RULES);
     const lat = getExtraHoles("lateral_esquerda").filter(
