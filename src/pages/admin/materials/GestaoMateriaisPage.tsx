@@ -22,6 +22,12 @@ import {
 import type { MaterialRecord, MaterialCategoryId, CreateMaterialData } from "../../../core/materials/types";
 import { getAllPresets, getPresetById } from "../../../core/materials/presetService";
 import { MATERIAIS_INDUSTRIAIS } from "../../../core/manufacturing/materials";
+import {
+  getMaterialEspessuraMm,
+  groupMaterialsByPadronizado,
+  toMaterialPadronizado,
+} from "../../../components/settings/material/materialGrouping";
+import { applyMateriaisSsotFromPublicUrl } from "../../../core/catalog/materiaisSsotApply";
 
 const labelStyle: React.CSSProperties = {
   fontSize: 11,
@@ -133,7 +139,9 @@ export default function GestaoMateriaisPage() {
   const [importJson, setImportJson] = useState("");
   const [showImport, setShowImport] = useState(false);
   const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
+  const [expandedGrupo, setExpandedGrupo] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<{ id: string; label: string } | null>(null);
+  const [ssotBusy, setSsotBusy] = useState(false);
   const texturePreviewUrl = String(form.textureUrl ?? "").trim();
 
   const filteredAndSorted = useMemo(() => {
@@ -143,6 +151,10 @@ export default function GestaoMateriaisPage() {
       list = list.filter(
         (m) =>
           (m.label ?? "").toLowerCase().includes(q) ||
+          toMaterialPadronizado(m.label ?? "", {
+            id: m.id,
+            industrialMaterialId: m.industrialMaterialId,
+          }).toLowerCase().includes(q) ||
           String(m.espessura ?? "").includes(q) ||
           String(m.precoPorM2 ?? "").includes(q) ||
           (getCategoryLabel(m.categoryId ?? "").toLowerCase().includes(q))
@@ -188,6 +200,11 @@ export default function GestaoMateriaisPage() {
     sortField,
     sortDir,
   ]);
+
+  const gruposFiltrados = useMemo(
+    () => groupMaterialsByPadronizado(filteredAndSorted),
+    [filteredAndSorted]
+  );
 
   const openNew = () => {
     setEditingId(null);
@@ -344,6 +361,26 @@ export default function GestaoMateriaisPage() {
     e.target.value = "";
   };
 
+  const handleSyncSsot = async () => {
+    setSsotBusy(true);
+    try {
+      const result = await applyMateriaisSsotFromPublicUrl();
+      if (!result.ok) {
+        showToast(result.error ?? "Falha ao sincronizar SSOT.", "error");
+        return;
+      }
+      reload();
+      showToast(
+        `SSOT aplicado: ${result.chapasComIndustrial} chapas industriais · ${result.materialsUpdated} materiais · ${result.freeagensUpdated} freeagens · ${result.orlaUpdated} orlas.`,
+        "info"
+      );
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Erro ao sincronizar SSOT.", "error");
+    } finally {
+      setSsotBusy(false);
+    }
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20, minHeight: 0 }}>
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
@@ -353,6 +390,15 @@ export default function GestaoMateriaisPage() {
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button type="button" className="button" onClick={openNew}>
             + Adicionar Material
+          </button>
+          <button
+            type="button"
+            className="button button-ghost"
+            onClick={() => void handleSyncSsot()}
+            disabled={ssotBusy}
+            title="Lê public/config/materiais-ssot.xlsx e aplica nomes/preços na UI"
+          >
+            {ssotBusy ? "A sincronizar SSOT…" : "Sincronizar SSOT Excel"}
           </button>
           <button type="button" className="button button-ghost" onClick={handleExport}>
             Exportar Materiais
@@ -544,12 +590,15 @@ export default function GestaoMateriaisPage() {
           {sortDir === "asc" ? "↑ Asc" : "↓ Desc"}
         </button>
         <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-          {filteredAndSorted.length} de {materials.length} materiais
+          {gruposFiltrados.length} materiais · {filteredAndSorted.length} espessuras
+          {materials.length !== filteredAndSorted.length
+            ? ` (de ${materials.length})`
+            : ""}
         </span>
       </div>
 
       <Panel title="Materiais existentes">
-        {filteredAndSorted.length === 0 ? (
+        {gruposFiltrados.length === 0 ? (
           <div
             style={{
               fontSize: 13,
@@ -573,117 +622,231 @@ export default function GestaoMateriaisPage() {
               gap: 18,
             }}
           >
-            {filteredAndSorted.map((m) => (
-              <div
-                key={m.id}
-                onMouseEnter={() => setHoveredCardId(m.id)}
-                onMouseLeave={() => setHoveredCardId(null)}
-                style={{
-                  position: "relative",
-                  display: "flex",
-                  flexDirection: "column",
-                  padding: 16,
-                  background: "rgba(255,255,255,0.05)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  borderRadius: 10,
-                  boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
-                  gap: 12,
-                  minHeight: 0,
-                  transition: "border-color 0.15s ease, box-shadow 0.15s ease",
-                }}
-              >
-                {hoveredCardId === m.id && (
-                  <div
+            {gruposFiltrados.map((grupo) => {
+              const open = expandedGrupo === grupo.materialPadronizado;
+              const representative = grupo.listaDeEspessuras[0];
+              const espessurasLabel = grupo.listaDeEspessuras
+                .map((m) => getMaterialEspessuraMm(m))
+                .filter((t) => t > 0)
+                .join(", ");
+              return (
+                <div
+                  key={grupo.materialPadronizado}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    padding: 16,
+                    background: "rgba(255,255,255,0.05)",
+                    border: open
+                      ? "1px solid rgba(59, 130, 246, 0.45)"
+                      : "1px solid rgba(255,255,255,0.1)",
+                    borderRadius: 10,
+                    boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
+                    gap: 12,
+                    gridColumn: open ? "1 / -1" : undefined,
+                    transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setExpandedGrupo(open ? null : grupo.materialPadronizado)
+                    }
                     style={{
-                      position: "absolute",
-                      left: 0,
-                      right: 0,
-                      top: 0,
-                      padding: "10px 12px",
-                      background: "rgba(15, 23, 42, 0.98)",
-                      borderBottom: "1px solid rgba(255,255,255,0.1)",
-                      borderRadius: "10px 10px 0 0",
-                      fontSize: 11,
-                      color: "var(--text-main)",
-                      lineHeight: 1.5,
-                      pointerEvents: "none",
-                      zIndex: 1,
-                      boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 12,
+                      width: "100%",
+                      padding: 0,
+                      border: "none",
+                      background: "transparent",
+                      cursor: "pointer",
+                      textAlign: "left",
+                      fontFamily: "inherit",
+                      color: "inherit",
                     }}
                   >
-                    <div style={{ fontWeight: 600, marginBottom: 4 }}>{m.label}</div>
-                    <div style={{ color: "var(--text-muted)" }}>
-                      Categoria: {getCategoryLabel(m.categoryId ?? "")} · Espessura: {m.espessura ?? "—"} mm · Preço: {m.precoPorM2 ?? "—"} €/m²
+                    {representative?.color && (
+                      <span
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 8,
+                          background: representative.color,
+                          border: "1px solid rgba(255,255,255,0.25)",
+                          flexShrink: 0,
+                        }}
+                      />
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: 14,
+                          fontWeight: 600,
+                          color: "var(--text-main)",
+                          letterSpacing: "0.01em",
+                        }}
+                      >
+                        {grupo.materialPadronizado}
+                      </div>
+                      <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
+                        {grupo.listaDeEspessuras.length} espessura
+                        {grupo.listaDeEspessuras.length === 1 ? "" : "s"}
+                        {espessurasLabel ? ` · ${espessurasLabel} mm` : ""}
+                      </div>
                     </div>
-                    <div style={{ marginTop: 4, fontSize: 10, opacity: 0.9 }}>
-                      Tipo: {getTypeLabel(m)}
-                    </div>
-                  </div>
-                )}
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-                  {m.color && (
                     <span
                       style={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: 8,
-                        background: m.color,
-                        border: "1px solid rgba(255,255,255,0.25)",
-                        flexShrink: 0,
-                      }}
-                    />
-                  )}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-main)", letterSpacing: "0.01em" }}>
-                      {m.label}
-                    </div>
-                    <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
-                      {getCategoryLabel(m.categoryId ?? "")} · {m.espessura ?? "—"} mm · {m.precoPorM2 ?? "—"} €/m²
-                    </div>
-                    <span
-                      style={{
-                        display: "inline-block",
-                        marginTop: 6,
-                        padding: "2px 6px",
-                        fontSize: 10,
-                        fontWeight: 500,
-                        borderRadius: 4,
-                        background: "rgba(59, 130, 246, 0.15)",
+                        fontSize: 12,
                         color: "var(--text-muted)",
+                        flexShrink: 0,
+                        paddingTop: 4,
+                      }}
+                      aria-hidden
+                    >
+                      {open ? "▾" : "▸"}
+                    </span>
+                  </button>
+
+                  {open && (
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+                        gap: 14,
+                        paddingTop: 4,
+                        borderTop: "1px solid rgba(255,255,255,0.08)",
                       }}
                     >
-                      {getTypeLabel(m)}
-                    </span>
-                  </div>
+                      {grupo.listaDeEspessuras.map((m) => (
+                        <div
+                          key={m.id}
+                          onMouseEnter={() => setHoveredCardId(m.id)}
+                          onMouseLeave={() => setHoveredCardId(null)}
+                          style={{
+                            position: "relative",
+                            display: "flex",
+                            flexDirection: "column",
+                            padding: 14,
+                            background: "rgba(255,255,255,0.04)",
+                            border: "1px solid rgba(255,255,255,0.1)",
+                            borderRadius: 10,
+                            boxShadow: "0 1px 4px rgba(0,0,0,0.1)",
+                            gap: 12,
+                            minHeight: 0,
+                            transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+                          }}
+                        >
+                          {hoveredCardId === m.id && (
+                            <div
+                              style={{
+                                position: "absolute",
+                                left: 0,
+                                right: 0,
+                                top: 0,
+                                padding: "10px 12px",
+                                background: "rgba(15, 23, 42, 0.98)",
+                                borderBottom: "1px solid rgba(255,255,255,0.1)",
+                                borderRadius: "10px 10px 0 0",
+                                fontSize: 11,
+                                color: "var(--text-main)",
+                                lineHeight: 1.5,
+                                pointerEvents: "none",
+                                zIndex: 1,
+                                boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+                              }}
+                            >
+                              <div style={{ fontWeight: 600, marginBottom: 4 }}>{m.label}</div>
+                              <div style={{ color: "var(--text-muted)" }}>
+                                Categoria: {getCategoryLabel(m.categoryId ?? "")} · Espessura:{" "}
+                                {m.espessura ?? "—"} mm · Preço: {m.precoPorM2 ?? "—"} €/m²
+                              </div>
+                              <div style={{ marginTop: 4, fontSize: 10, opacity: 0.9 }}>
+                                Tipo: {getTypeLabel(m)}
+                              </div>
+                            </div>
+                          )}
+                          <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                            {m.color && (
+                              <span
+                                style={{
+                                  width: 32,
+                                  height: 32,
+                                  borderRadius: 8,
+                                  background: m.color,
+                                  border: "1px solid rgba(255,255,255,0.25)",
+                                  flexShrink: 0,
+                                }}
+                              />
+                            )}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div
+                                style={{
+                                  fontSize: 14,
+                                  fontWeight: 600,
+                                  color: "var(--text-main)",
+                                  letterSpacing: "0.01em",
+                                }}
+                              >
+                                {m.label}
+                              </div>
+                              <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
+                                {getCategoryLabel(m.categoryId ?? "")} · {m.espessura ?? "—"} mm ·{" "}
+                                {m.precoPorM2 ?? "—"} €/m²
+                              </div>
+                              <span
+                                style={{
+                                  display: "inline-block",
+                                  marginTop: 6,
+                                  padding: "2px 6px",
+                                  fontSize: 10,
+                                  fontWeight: 500,
+                                  borderRadius: 4,
+                                  background: "rgba(59, 130, 246, 0.15)",
+                                  color: "var(--text-muted)",
+                                }}
+                              >
+                                {getTypeLabel(m)}
+                              </span>
+                            </div>
+                          </div>
+                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                            <button
+                              type="button"
+                              className="button button-ghost"
+                              style={{ fontSize: 11, padding: "5px 10px" }}
+                              onClick={() => openEdit(m.id)}
+                            >
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              className="button button-ghost"
+                              style={{ fontSize: 11, padding: "5px 10px" }}
+                              onClick={() => handleDuplicate(m.id)}
+                            >
+                              Duplicar
+                            </button>
+                            <button
+                              type="button"
+                              className="button button-ghost"
+                              style={{
+                                fontSize: 11,
+                                padding: "5px 10px",
+                                color: "var(--red, #ef4444)",
+                              }}
+                              onClick={() => handleDelete(m.id, m.label)}
+                            >
+                              Eliminar
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <button
-                    type="button"
-                    className="button button-ghost"
-                    style={{ fontSize: 11, padding: "5px 10px" }}
-                    onClick={() => openEdit(m.id)}
-                  >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    className="button button-ghost"
-                    style={{ fontSize: 11, padding: "5px 10px" }}
-                    onClick={() => handleDuplicate(m.id)}
-                  >
-                    Duplicar
-                  </button>
-                  <button
-                    type="button"
-                    className="button button-ghost"
-                    style={{ fontSize: 11, padding: "5px 10px", color: "var(--red, #ef4444)" }}
-                    onClick={() => handleDelete(m.id, m.label)}
-                  >
-                    Eliminar
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </Panel>

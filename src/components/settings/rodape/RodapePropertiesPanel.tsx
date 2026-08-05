@@ -6,6 +6,7 @@ import { rodapeKindLabel } from "../../../core/rodape/rodapeTypes";
 import { getMaterialByIdOrLabel } from "../../../core/materials/service";
 import { RODAPE_DEFAULT_HEIGHT_MM } from "../../../core/kitchenFinish/finishTypes";
 import { resolveRodapePieceNomeForRodape } from "../../../core/rodape/labels";
+import GroupedMaterialSelect from "../material/GroupedMaterialSelect";
 
 type Props = { rodapeId: string };
 
@@ -145,25 +146,20 @@ export default function RodapePropertiesPanel({ rodapeId }: Props) {
 
         <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
           Material
-          <select
-            className="select input-sm"
+          <GroupedMaterialSelect
+            materials={materials}
             value={rodape.materialId}
-            onChange={(e) => {
-              const mat = getMaterialByIdOrLabel(e.target.value);
+            onChange={(materialId) => {
+              const mat = getMaterialByIdOrLabel(materialId);
               const nextThickness = Number(mat?.espessura) || thicknessMm;
               actions.updateRodape(rodape.id, {
-                materialId: e.target.value,
+                materialId,
                 thicknessMm: nextThickness,
                 dimensions: { ...rodape.dimensions, depthMm: nextThickness },
               });
             }}
-          >
-            {materials.map((m) => (
-              <option key={m.canonicalId} value={m.canonicalId}>
-                {m.label}
-              </option>
-            ))}
-          </select>
+            selectClassName="select input-sm"
+          />
         </label>
 
         <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>

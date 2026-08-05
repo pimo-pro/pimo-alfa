@@ -5,6 +5,7 @@ import { listOfficialMaterials } from "../../../core/materials/materials.api";
 import type { CreateHematiInput, HematiKind } from "../../../core/hemati/hematiTypes";
 import { hematiKindLabel } from "../../../core/hemati/hematiTypes";
 import { HEMATI_DEFAULT_THICKNESS_MM } from "../../../core/kitchenFinish/finishTypes";
+import GroupedMaterialSelect from "../material/GroupedMaterialSelect";
 
 type Props = {
   boxId: string;
@@ -102,17 +103,12 @@ export default function BoxHematiSection({ boxId }: Props) {
                   Visível
                 </label>
               </div>
-              <select
-                className="select input-sm"
+              <GroupedMaterialSelect
+                materials={materials}
                 value={hemati.materialId}
-                onChange={(e) => actions.updateHemati(hemati.id, { materialId: e.target.value })}
-              >
-                {materials.map((m) => (
-                  <option key={m.canonicalId} value={m.canonicalId}>
-                    {m.label}
-                  </option>
-                ))}
-              </select>
+                onChange={(materialId) => actions.updateHemati(hemati.id, { materialId })}
+                selectClassName="select input-sm"
+              />
               <input
                 className="input input-sm"
                 type="number"

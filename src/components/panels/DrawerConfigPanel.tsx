@@ -3,6 +3,7 @@ import type { DrawerLayerItem, DrawerLayerMetadata } from "../../models/BoxLayer
 import type { WorkspaceBox } from "../../core/types";
 import { getSettings } from "../../core/settings/settingsService";
 import { listOfficialMaterials } from "../../core/materials/materials.api";
+import GroupedMaterialSelect from "../settings/material/GroupedMaterialSelect";
 import {
   DRAWER_HANDLE_POSITIONS,
   DRAWER_HANDLE_TYPES,
@@ -581,11 +582,10 @@ export default function DrawerConfigPanel({
 
       <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
         <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Material da frente</span>
-        <select
-          className="select select-xs"
+        <GroupedMaterialSelect
+          materials={woodMaterials}
           value={material}
-          onChange={(e) => {
-            const materialId = e.target.value;
+          onChange={(materialId) => {
             update({
               material: materialId,
               materialId,
@@ -593,13 +593,8 @@ export default function DrawerConfigPanel({
             });
             onFrontMaterialChange?.(materialId);
           }}
-        >
-          {woodMaterials.map((m) => (
-            <option key={m.canonicalId} value={m.canonicalId}>
-              {m.label}
-            </option>
-          ))}
-        </select>
+          selectClassName="select select-xs"
+        />
       </label>
 
       <div className="muted-text" style={{ fontSize: 10 }}>

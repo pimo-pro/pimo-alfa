@@ -16,6 +16,7 @@ import { ToastProvider } from "./context/ToastContext";
 import { PendingWorkspaceMergeEffect } from "./context/PendingWorkspaceMergeEffect";
 import { PendingSingleLoadEffect } from "./workspace/PendingSingleLoadEffect";
 import { PendingImportedProjectEffect } from "./workspace/PendingImportedProjectEffect";
+import MateriaisSsotBootstrap from "./core/catalog/MateriaisSsotBootstrap";
 import { SettingsProvider } from "./context/SettingsContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { ThemeTemplateProvider } from "./context/ThemeTemplateContext";
@@ -234,6 +235,7 @@ function LegacyApp() {
       <SettingsProvider>
         <MaterialProvider>
           <ToastProvider>
+            <MateriaisSsotBootstrap />
             <PendingWorkspaceMergeEffect />
             <PendingSingleLoadEffect />
             <PendingImportedProjectEffect />

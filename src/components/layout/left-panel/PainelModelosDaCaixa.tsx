@@ -14,6 +14,7 @@ import RuleViolationsAlert from "../../ui/RuleViolationsAlert";
 import LayoutWarningsAlert from "../../ui/LayoutWarningsAlert";
 import { getViewerMaterialId } from "../../../core/materials/service";
 import { listOfficialMaterials } from "../../../core/materials/materials.api";
+import GroupedMaterialSelect from "../../settings/material/GroupedMaterialSelect";
 import { Icon } from "@/components/icons";
 import { useUiStore } from "../../../stores/uiStore";
 
@@ -124,10 +125,10 @@ export default function PainelModelosDaCaixa() {
             </div>
             <div>
               <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>Material</div>
-              <select
+              <GroupedMaterialSelect
+                materials={VISUAL_WOOD_OPTIONS}
                 value={project.material.tipo}
-                onChange={(e) => {
-                  const value = e.target.value;
+                onChange={(value) => {
                   actions.setMaterial({ ...project.material, tipo: value });
                   if (project.selectedWorkspaceBoxId) {
                     viewerApi?.updateBox(project.selectedWorkspaceBoxId, {
@@ -135,13 +136,7 @@ export default function PainelModelosDaCaixa() {
                     });
                   }
                 }}
-                className="select"
-                style={{ width: "100%" }}
-              >
-                {VISUAL_WOOD_OPTIONS.map((m) => (
-                  <option key={m.canonicalId} value={m.canonicalId}>{m.label}</option>
-                ))}
-              </select>
+              />
               <select
                 value={selectedBox?.espessura ?? project.material.espessura}
                 onChange={(e) => {

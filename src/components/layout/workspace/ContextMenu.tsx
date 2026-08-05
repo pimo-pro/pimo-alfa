@@ -2,6 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useProject } from "../../../context/useProject";
 import { listOfficialMaterials } from "../../../core/materials/materials.api";
 import { getViewerMaterialId } from "../../../core/materials/service";
+import {
+  getMaterialEspessuraMm,
+  groupMaterialsByPadronizado,
+} from "../../settings/material/materialGrouping";
 import type { ViewerMousePreset } from "../../../context/projectTypes";
 import { Icon } from "@/components/icons";
 import ContextMenuPortal from "./ContextMenuPortal";
@@ -42,8 +46,9 @@ export type ContextMenuProps = {
   selectedObjectIds?: string[];
 };
 
-/** Materiais oficiais do projeto (mesma lista do módulo); apenas labels para o picker. */
+/** Materiais oficiais do projeto (mesma lista do módulo); agrupados para o picker. */
 const OFFICIAL_MATERIALS = listOfficialMaterials();
+const OFFICIAL_MATERIAL_GRUPOS = groupMaterialsByPadronizado(OFFICIAL_MATERIALS);
 
 const menuStyle: React.CSSProperties = {
   position: "fixed",
@@ -161,11 +166,14 @@ export default function ContextMenu({
   const menuRef = useRef<HTMLDivElement>(null);
   const submenuCloseTimerRef = useRef<number | null>(null);
   const [materialSubmenuOpen, setMaterialSubmenuOpen] = useState<"door" | "drawer" | null>(null);
+  const [materialGrupoOpen, setMaterialGrupoOpen] = useState<string | null>(null);
   const [mouseSubmenuOpen, setMouseSubmenuOpen] = useState(false);
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
   const [materialSubmenuPos, setMaterialSubmenuPos] = useState<{ left: number; top: number; height: number } | null>(null);
+  const [materialThicknessPos, setMaterialThicknessPos] = useState<{ left: number; top: number; height: number } | null>(null);
   const [mouseSubmenuPos, setMouseSubmenuPos] = useState<{ left: number; top: number; height: number } | null>(null);
   const [materialAnchorRect, setMaterialAnchorRect] = useState<DOMRect | null>(null);
+  const [materialThicknessAnchorRect, setMaterialThicknessAnchorRect] = useState<DOMRect | null>(null);
   const [mouseAnchorRect, setMouseAnchorRect] = useState<DOMRect | null>(null);
   const [dimensionsSubmenuOpen, setDimensionsSubmenuOpen] = useState(false);
   const [dimensionsSubmenuPos, setDimensionsSubmenuPos] = useState<{ left: number; top: number; height: number } | null>(null);
@@ -234,6 +242,9 @@ export default function ContextMenu({
 
   const closeSubmenus = () => {
     setMaterialSubmenuOpen(null);
+    setMaterialGrupoOpen(null);
+    setMaterialThicknessPos(null);
+    setMaterialThicknessAnchorRect(null);
     setMouseSubmenuOpen(false);
     setDimensionsSubmenuOpen(false);
     setActiveCategoryId(null);
@@ -256,15 +267,20 @@ export default function ContextMenu({
     setActiveCategoryId(category.id);
     setMouseSubmenuOpen(false);
     setMaterialSubmenuOpen(null);
+    setMaterialGrupoOpen(null);
+    setMaterialThicknessPos(null);
   };
 
   const openMaterialPicker = (target: "door" | "drawer", rect: DOMRect) => {
     clearSubmenuCloseTimer();
-    const estimatedHeight = OFFICIAL_MATERIALS.length * ITEM_HEIGHT + 16;
+    const estimatedHeight = OFFICIAL_MATERIAL_GRUPOS.length * ITEM_HEIGHT + 16;
     const nextPos = placeMenu(rect.right, rect.top, SUBMENU_MIN_WIDTH, estimatedHeight);
     setMaterialAnchorRect(rect);
     setMaterialSubmenuPos({ left: nextPos.left, top: nextPos.top, height: estimatedHeight });
     setMaterialSubmenuOpen(target);
+    setMaterialGrupoOpen(null);
+    setMaterialThicknessPos(null);
+    setMaterialThicknessAnchorRect(null);
     setActiveCategoryId(null);
     setMouseSubmenuOpen(false);
   };
@@ -789,26 +805,96 @@ export default function ContextMenu({
               onPointerLeave={scheduleCloseSubmenus}
               onPointerDown={(e) => e.stopPropagation()}
             >
-              {OFFICIAL_MATERIALS.map((m) => (
+              {OFFICIAL_MATERIAL_GRUPOS.map((grupo) => (
                 <button
-                  key={m.canonicalId}
+                  key={grupo.materialPadronizado}
                   type="button"
                   role="menuitem"
                   style={itemStyle}
-                  onClick={() => applyLayerMaterial(m.canonicalId)}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = "var(--viewer-toolbar-hover-bg)";
+                    clearSubmenuCloseTimer();
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const estimatedHeight =
+                      grupo.listaDeEspessuras.length * ITEM_HEIGHT + 16;
+                    const nextPos = placeMenu(
+                      rect.right,
+                      rect.top,
+                      SUBMENU_MIN_WIDTH,
+                      estimatedHeight
+                    );
+                    setMaterialGrupoOpen(grupo.materialPadronizado);
+                    setMaterialThicknessAnchorRect(rect);
+                    setMaterialThicknessPos({
+                      left: nextPos.left,
+                      top: nextPos.top,
+                      height: estimatedHeight,
+                    });
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background = "transparent";
                   }}
                 >
-                  {m.label}
+                  {grupo.materialPadronizado}
+                  <span style={{ marginLeft: "auto", opacity: 0.55, fontSize: 11 }}>▸</span>
                 </button>
               ))}
             </div>
           </>
         )}
+
+        {materialSubmenuOpen &&
+          materialGrupoOpen &&
+          materialThicknessPos &&
+          materialThicknessAnchorRect && (
+            <>
+              <SubmenuHoverBridge
+                anchorRect={materialThicknessAnchorRect}
+                submenuLeft={materialThicknessPos.left}
+                submenuTop={materialThicknessPos.top}
+                submenuHeight={materialThicknessPos.height}
+                onPointerEnter={clearSubmenuCloseTimer}
+              />
+              <div
+                role="menu"
+                aria-label={`Espessuras — ${materialGrupoOpen}`}
+                style={{
+                  ...menuStyle,
+                  left: materialThicknessPos.left,
+                  top: materialThicknessPos.top,
+                  minWidth: SUBMENU_MIN_WIDTH,
+                }}
+                onPointerEnter={clearSubmenuCloseTimer}
+                onPointerLeave={scheduleCloseSubmenus}
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                {(
+                  OFFICIAL_MATERIAL_GRUPOS.find(
+                    (g) => g.materialPadronizado === materialGrupoOpen
+                  )?.listaDeEspessuras ?? []
+                ).map((m) => {
+                  const t = getMaterialEspessuraMm(m);
+                  return (
+                    <button
+                      key={m.canonicalId}
+                      type="button"
+                      role="menuitem"
+                      style={itemStyle}
+                      onClick={() => applyLayerMaterial(m.canonicalId)}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = "var(--viewer-toolbar-hover-bg)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "transparent";
+                      }}
+                    >
+                      {t > 0 ? `${t} mm` : m.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
 
         {mouseSubmenuOpen && mouseSubmenuPos && mouseAnchorRect && (
           <>

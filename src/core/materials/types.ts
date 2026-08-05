@@ -53,6 +53,8 @@ export interface MaterialRecord {
   textureUrl?: string;
   espessura?: number;
   precoPorM2?: number;
+  /** Preço de venda por m² (€) — UI / SSOT; não altera IDs industriais. */
+  precoVendaPorM2?: number;
   /** Dimensões reais da chapa para este material (mm). */
   sheetWidthMm?: number;
   sheetHeightMm?: number;

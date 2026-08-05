@@ -5,6 +5,7 @@ import { listOfficialMaterials, resolveSeparadorMaterialForBox, resolveFrenteFix
 import { getViewerMaterialId } from "../../../core/materials/service";
 import WoodGrainRotationToggle from "./WoodGrainRotationToggle";
 import WoodGrainLockToggle from "./WoodGrainLockToggle";
+import GroupedMaterialSelect from "./GroupedMaterialSelect";
 import { resolveDoorLabel } from "../../../core/doors/doorLabels";
 import { isCornerDireitaInferiorModel } from "../../../core/cornerCabinet";
 import { boxHasActiveDrawers } from "../../../core/drawers/drawerModeloAGate";
@@ -56,21 +57,14 @@ export default function SelecionarMaterialSection({
         <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
           Material da Caixa
         </div>
-        <select
-          className="select"
+        <GroupedMaterialSelect
+          materials={woodMaterials}
           value={currentMaterialId}
-          onChange={(e) => {
-            const materialId = e.target.value;
+          onChange={(materialId) => {
             actions.setWorkspaceBoxMaterial(boxId, materialId);
             onViewerMaterialChange?.(boxId, getViewerMaterialId(materialId));
           }}
-        >
-          {woodMaterials.map((material) => (
-            <option key={material.canonicalId} value={material.canonicalId}>
-              {material.label}
-            </option>
-          ))}
-        </select>
+        />
         <WoodGrainRotationToggle
           materialId={currentMaterialId}
           allowPieceRotation={box.allowPieceRotation}
@@ -88,24 +82,17 @@ export default function SelecionarMaterialSection({
           <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
             Separador
           </div>
-          <select
-            className="select"
+          <GroupedMaterialSelect
+            materials={woodMaterials}
             value={separadorMaterialId}
-            onChange={(e) => {
-              const materialId = e.target.value;
+            onChange={(materialId) => {
               const isBodyDefault = materialId === currentMaterialId;
               actions.setWorkspaceBoxSeparadorMaterial(
                 boxId,
                 isBodyDefault ? undefined : materialId
               );
             }}
-          >
-            {woodMaterials.map((material) => (
-              <option key={material.canonicalId} value={material.canonicalId}>
-                {material.label}
-              </option>
-            ))}
-          </select>
+          />
         </section>
       )}
 
@@ -114,11 +101,10 @@ export default function SelecionarMaterialSection({
           <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
             Material da frente fixa
           </div>
-          <select
-            className="select"
+          <GroupedMaterialSelect
+            materials={woodMaterials}
             value={fixedFrontMaterialId}
-            onChange={(e) => {
-              const materialId = e.target.value;
+            onChange={(materialId) => {
               const isBodyDefault = materialId === currentMaterialId;
               actions.setWorkspaceBoxFrenteFixaMaterial(
                 boxId,
@@ -126,13 +112,7 @@ export default function SelecionarMaterialSection({
               );
               onFixedFrontMaterialChange?.(boxId, getViewerMaterialId(materialId));
             }}
-          >
-            {woodMaterials.map((material) => (
-              <option key={material.canonicalId} value={material.canonicalId}>
-                {material.label}
-              </option>
-            ))}
-          </select>
+          />
         </section>
       )}
 
@@ -145,21 +125,14 @@ export default function SelecionarMaterialSection({
               <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
                 {label}
               </div>
-              <select
-                className="select"
+              <GroupedMaterialSelect
+                materials={woodMaterials}
                 value={doorMaterialId}
-                onChange={(e) => {
-                  const materialId = e.target.value;
+                onChange={(materialId) => {
                   actions.setDoorMaterial(boxId, door.id, materialId);
                   onDoorMaterialChange?.(boxId, door.id, getViewerMaterialId(materialId));
                 }}
-              >
-                {woodMaterials.map((material) => (
-                  <option key={material.canonicalId} value={material.canonicalId}>
-                    {material.label}
-                  </option>
-                ))}
-              </select>
+              />
               <WoodGrainRotationToggle
                 materialId={doorMaterialId}
                 allowPieceRotation={door.allowPieceRotation}
@@ -191,21 +164,14 @@ export default function SelecionarMaterialSection({
               <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
                 {label}
               </div>
-              <select
-                className="select"
+              <GroupedMaterialSelect
+                materials={woodMaterials}
                 value={drawerMaterialId}
-                onChange={(e) => {
-                  const materialId = e.target.value;
+                onChange={(materialId) => {
                   actions.setDrawerMaterial(boxId, drawer.id, materialId);
                   onDrawerMaterialChange?.(boxId, drawer.id, getViewerMaterialId(materialId));
                 }}
-              >
-                {woodMaterials.map((material) => (
-                  <option key={material.canonicalId} value={material.canonicalId}>
-                    {material.label}
-                  </option>
-                ))}
-              </select>
+              />
               <WoodGrainRotationToggle
                 materialId={drawerMaterialId}
                 allowPieceRotation={drawer.allowPieceRotation}

@@ -14,6 +14,8 @@ export type OrlaPreset = {
   texturaUrl?: string;
   precoPorMetro: number;
   precoPorM2?: number;
+  /** Preço por rolo (€) — SSOT / UI; opcional. */
+  precoPorRolo?: number;
 };
 
 export type OrlaSideConfig = {

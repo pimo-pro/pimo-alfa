@@ -24,6 +24,7 @@ import {
 import { getMaterialByIdOrLabel } from "../../../core/materials/service";
 import WoodGrainRotationToggle from "../material/WoodGrainRotationToggle";
 import WoodGrainLockToggle from "../material/WoodGrainLockToggle";
+import GroupedMaterialSelect from "../material/GroupedMaterialSelect";
 import { measureRemateGap, measureRemateGapToBox } from "../../../core/remate/remateGapMeasure";
 import RemateRulesSection from "./RemateRulesSection";
 import { OPPOSITE_MOUNT_SLOT } from "../../../core/remate/remateCloneUtils";
@@ -447,17 +448,14 @@ export default function RematePropertiesPanel({ remateId }: Props) {
 
         <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
           Material
-          <select
-            className="select input-sm"
+          <GroupedMaterialSelect
+            materials={materials}
             value={remate.materialPresetId}
-            onChange={(e) => actions.updateRemate(remate.id, { materialPresetId: e.target.value })}
-          >
-            {materials.map((m) => (
-              <option key={m.canonicalId} value={m.canonicalId}>
-                {m.label}
-              </option>
-            ))}
-          </select>
+            onChange={(materialId) =>
+              actions.updateRemate(remate.id, { materialPresetId: materialId })
+            }
+            selectClassName="select input-sm"
+          />
         </label>
 
         <WoodGrainRotationToggle

@@ -215,6 +215,15 @@ function saveToStorage(data: MaterialRecord[]): void {
 }
 
 /**
+ * Escrita em bloco do CRUD de materiais (UI / SSOT).
+ * Não altera o catálogo industrial oficial (`materials.api`).
+ */
+export function writeMaterialsCrudSnapshot(list: MaterialRecord[]): void {
+  const safe = Array.isArray(list) ? list.map((m) => applyInferredIndustrialFields(m)) : [];
+  saveToStorage(safe);
+}
+
+/**
  * FASE 7M — Substitui o conteúdo do CRUD por exactamente os 16 materiais industriais oficiais.
  * Reutiliza o `id` de registo do localStorage quando encontra correspondência por `industrialMaterialId` ou label oficial
  * (para não invalidar `project.materialId` / `workspaceBox.material` que apontem para esses ids).
