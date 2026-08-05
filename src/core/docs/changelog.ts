@@ -6,7 +6,7 @@
 export const changelog = [
   {
     data: "2026-08-05",
-    versao: "v6.0805.next-gav-fundo",
+    versao: "v6.0805.1551",
     descricao:
       "gav_fundo: eixos corrigidos — width=vão+20, depth=sideDepth+10+T_costa (550×500 → 486×466).",
   },
