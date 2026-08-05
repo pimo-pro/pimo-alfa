@@ -4,10 +4,11 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Connect, PreviewServer, ViteDevServer } from "vite";
 import { buildMaterialsApiPayload } from "./materialsApi";
 
-function readJsonBody(req: Connect.IncomingMessage): Promise<unknown> {
+function readJsonBody(req: IncomingMessage): Promise<unknown> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     req.on("data", (c) => chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c)));
@@ -23,7 +24,7 @@ function readJsonBody(req: Connect.IncomingMessage): Promise<unknown> {
   });
 }
 
-function sendJson(res: Connect.ServerResponse, status: number, body: unknown): void {
+function sendJson(res: ServerResponse, status: number, body: unknown): void {
   res.statusCode = status;
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
@@ -55,8 +56,8 @@ function extFrom(fileName: string, mimeType: string): string {
 }
 
 async function handleFamiliaTextureUpload(
-  req: Connect.IncomingMessage,
-  res: Connect.ServerResponse,
+  req: IncomingMessage,
+  res: ServerResponse,
   rootDir: string
 ): Promise<void> {
   try {
@@ -102,7 +103,7 @@ async function handleFamiliaTextureUpload(
 }
 
 function materialsApiHandler(rootDir: string): Connect.NextHandleFunction {
-  return (req, res, next) => {
+  return (req, res, _next) => {
     const urlPath = (req.url ?? "").split("?")[0] ?? "";
 
     if (req.method === "OPTIONS") {

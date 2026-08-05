@@ -1,11 +1,91 @@
 {
-  "updatedAt": "2026-08-03T19:52:56.823Z",
+  "updatedAt": "2026-08-05T11:29:29.770Z",
   "news": [
+    {
+      "version": "v6.0805.1229",
+      "title": "feat(materiais): SSOT na seleção, texturas reais e cartas por família",
+      "description": "feat(materiais): SSOT na seleção, texturas reais e cartas por família\n\nA seleção de materiais foi totalmente alinhada com o SSOT, garantindo nomes corretos, texturas reais, espessuras separadas e integração direta com o 3D. Eliminados nomes antigos com números anexados (Carvalho 10, Nogueira 16, etc.).",
+      "publishedAt": "2026-08-05T11:29:29.617Z",
+      "type": "feature",
+      "author": "pimo-pro",
+      "icon": "feature",
+      "commit": "106fa681"
+    },
+    {
+      "version": "v6.0805.1221",
+      "title": "feat(materiais): SSOT na seleção, texturas reais e cartas por família",
+      "description": "feat(materiais): SSOT na seleção, texturas reais e cartas por família",
+      "publishedAt": "2026-08-05T11:21:34.300Z",
+      "type": "feature",
+      "author": "pimo-pro",
+      "icon": "feature",
+      "commit": "106fa681"
+    },
+    {
+      "version": "v2026.08-financeiro-manual-modes",
+      "title": "fix(financeiro): mão de obra só com EUR manual Admin",
+      "description": "fix(financeiro): mão de obra só com EUR manual Admin",
+      "publishedAt": "2026-08-04T17:36:41+01:00",
+      "type": "fix",
+      "author": "pimo-pro",
+      "icon": "fix",
+      "commit": "2e9b572"
+    },
+    {
+      "version": "v6.0804.1713",
+      "title": "fix(industrial): restaurar ORLA completa e gavetas a 15 EUR",
+      "description": "fix(industrial): restaurar ORLA completa e gavetas a 15 EUR",
+      "publishedAt": "2026-08-04T17:12:43+01:00",
+      "type": "fix",
+      "author": "pimo-pro",
+      "icon": "fix",
+      "commit": "d08a56c"
+    },
+    {
+      "version": "v6.0804.1641",
+      "title": "docs(orcamentos): activação controlada Chapas Reais só via Admin (Fase 5E)",
+      "description": "docs(orcamentos): activação controlada Chapas Reais só via Admin (Fase 5E)",
+      "publishedAt": "2026-08-04T16:27:53+01:00",
+      "type": "docs",
+      "author": "pimo-pro",
+      "icon": "docs",
+      "commit": "d59fe1a"
+    },
+    {
+      "version": "v-next-ferragens3d-ui.1",
+      "title": "Fix: .htaccess em /industrial para SPA nao receber 403 da pasta release/",
+      "description": "Fix: .htaccess em /industrial para SPA nao receber 403 da pasta release/",
+      "publishedAt": "2026-08-04T12:34:35+01:00",
+      "type": "fix",
+      "author": "pimo-pro",
+      "icon": "fix",
+      "commit": "2796ef5"
+    },
+    {
+      "version": "v-next-ferragens3d-ui",
+      "title": "Release v-next-ferragens3d-ui",
+      "description": "Release v-next-ferragens3d-ui",
+      "publishedAt": "2026-08-04T12:24:12+01:00",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "update",
+      "commit": "961181c"
+    },
+    {
+      "version": "v6.0803.abd",
+      "title": "Release v6.0803.abd",
+      "description": "Release v6.0803.abd",
+      "publishedAt": "2026-08-03T22:18:41+01:00",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "update",
+      "commit": "9e08d51"
+    },
     {
       "version": "v6.0803.2052",
       "title": "Industrial: Elevação real do gaveta inferior",
       "description": "Industrial: Elevação real do gaveta inferior\n\nCorpo a T+18,5 mm (18,5 mm acima do topo do FUNDO). Frente Y=0. Pairing dos furos preservado. Viewer e merge SSOT corrigidos.",
-      "publishedAt": "2026-08-03T19:52:56.821Z",
+      "publishedAt": "2026-08-03T20:57:36+01:00",
       "type": "fix",
       "author": "pimo-pro",
       "icon": "fix",

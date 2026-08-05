@@ -2,6 +2,18 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-08-05T11:29:29.257Z",
+      "author": "pimo-pro",
+      "commitMessage": "feat(materiais): SSOT na seleção, texturas reais e cartas por família",
+      "version": "v6.0805.1229"
+    },
+    {
+      "publishedAt": "2026-08-05T11:21:32.066Z",
+      "author": "pimo-pro",
+      "commitMessage": "feat(materiais): SSOT na seleção, texturas reais e cartas por família",
+      "version": "v6.0805.1221"
+    },
+    {
       "publishedAt": "2026-08-03T19:52:54.964Z",
       "author": "pimo-pro",
       "commitMessage": "Industrial: Elevação real do gaveta inferior — 18,5 mm acima do FUNDO, pairing preservado",
