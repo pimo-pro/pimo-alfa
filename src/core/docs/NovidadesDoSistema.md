@@ -1,10 +1,14 @@
 # Novidades do Sistema
 
-### Hettich Quadro V6 — furos intermédios 38+b1
-- Lookup SSOT NL→b1 (250–500); 550/600 sem b1 (fallback proporcional + TODO)
-- Padrão: X1=38 · midF=38+b1 · midR=D−(38+b1) · X_last=D−38
-- Removido o recuo incorrecto `38+b1−1`; nunca usar b1 sozinho como distância
+### Quadro V6 — Furos Intermédios Industriais
+- Regra: distância real do intermédio à face = **38 + b1(NL)** (frente e traseira espelhadas)
+- Padrão por lado: `X1=38` · `X_mid_F=38+b1` · `X_mid_R=D−(38+b1)` · `X_last=D−38`
+- Lookup SSOT `hettichQuadroV6B1Config.ts`: NL **250–500** com b1 oficial
+- NL **550/600**: sem b1 confirmado → fallback proporcional (4/5) + TODO (não inventar valores)
+- Removido o setback incorrecto `38+b1−1`; nunca usar b1 sozinho como distância
 - Y=41 mm e espelhamento L/R mantidos; Adapter/Service intactos
+- Alinhamento SSOT completo: Viewer / cutlist / DRILL / TCN / HXML
+- **Versão estável de referência:** `v6.0805.1648`
 
 ### Folga vertical DIV ↔ SEP (mín. 5 mm)
 - `DIV_SEP_VERTICAL_CLEARANCE_MM = 5`

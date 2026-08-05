@@ -8,7 +8,7 @@ export const changelog = [
     data: "2026-08-05",
     versao: "v6.0805.1648",
     descricao:
-      "Quadro V6: intermédios oficiais 38+b1(NL); lookup SSOT 250–500; 550/600 fallback proporcional.",
+      "ESTÁVEL — Quadro V6 furos intermédios industriais: 38+b1(NL); lookup SSOT 250–500; 550/600 fallback proporcional; removido setback −1. Referência: v-ref-quadroV6-38b1-0805.",
   },
   {
     data: "2026-08-05",

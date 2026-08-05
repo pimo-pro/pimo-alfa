@@ -3,8 +3,8 @@
   "news": [
     {
       "version": "v6.0805.1648",
-      "title": "fix(industrial): SEP LAT Y alinhado e rasgo frente gaveta Width 11",
-      "description": "fix(industrial): SEP LAT Y alinhado e rasgo frente gaveta Width 11\n\nFuros SEP nas laterais com Y = absoluteY − T (Viewer/cutlist/DRILL/TCN alinhados). Rasgo inferior da frente da gaveta: Width 11 mm, Depth 11 mm, centro intacto.",
+      "title": "Quadro V6 — Furos Intermédios Industriais (versão estável)",
+      "description": "Versão estável de referência industrial — Quadro V6 YOU M Silent System.\n\n• Regra: distância real do intermédio = 38 + b1(NL) (frente e traseira espelhadas).\n• Padrão: X1=38 · midF=38+b1 · midR=D−(38+b1) · X_last=D−38.\n• Lookup SSOT NL→b1 (250–500); NL 550/600 fallback proporcional + TODO.\n• Removido setback incorrecto 38+b1−1; nunca usar b1 sozinho.\n• Y=41 mm e espelhamento L/R mantidos; Adapter/Service intactos.\n• SSOT alinhado: Viewer / cutlist / DRILL / TCN / HXML.\n• Marcada como versão estável: v6.0805.1648 (alias v-ref-quadroV6-38b1-0805).",
       "publishedAt": "2026-08-05T15:48:57.284Z",
       "type": "fix",
       "author": "pimo-pro",
