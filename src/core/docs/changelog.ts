@@ -6,7 +6,7 @@
 export const changelog = [
   {
     data: "2026-08-05",
-    versao: "v6.0805.next-quadro-b1",
+    versao: "v6.0805.1648",
     descricao:
       "Quadro V6: intermédios oficiais 38+b1(NL); lookup SSOT 250–500; 550/600 fallback proporcional.",
   },
