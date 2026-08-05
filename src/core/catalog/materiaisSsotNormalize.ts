@@ -27,21 +27,26 @@ function normalizeKey(s: string): string {
     .replace(/\s+/g, " ");
 }
 
-/** Propaga «Nome novo» / «Nome atual» nas linhas vazias da mesma família. */
+/** Remove sufixo de espessura do nome de família (segurança SSOT). */
+export function stripEspessuraFromFamilia(name: string): string {
+  return String(name ?? "")
+    .replace(/\s+\d+(?:[.,]\d+)?\s*mm?\s*$/i, "")
+    .trim();
+}
+
+/** Propaga só «Nome novo padronizado» nas linhas vazias da mesma família. */
 export function propagateSsotChapaFamilies(
   rows: MateriaisSsotChapaRow[]
 ): MateriaisSsotChapaRow[] {
   let lastFamilia = "";
-  let lastNomeAtual = "";
   return rows.map((row) => {
     const novo = row.nomeNovoPadronizado.trim();
-    const atual = row.nomeAtual.trim();
     if (novo) lastFamilia = novo;
-    if (atual) lastNomeAtual = atual;
     return {
       ...row,
       nomeNovoPadronizado: novo || lastFamilia,
-      nomeAtual: atual || lastNomeAtual,
+      // Nome atual mantém-se por linha (não herda o da 1.ª espessura).
+      nomeAtual: row.nomeAtual.trim(),
     };
   });
 }
@@ -118,9 +123,13 @@ export function resolveSsotChapas(
 ): MateriaisSsotChapaResolved[] {
   const propagated = propagateSsotChapaFamilies(catalog.chapas);
   return propagated
-    .filter((r) => r.ref.trim() || r.nomeAtual.trim())
+    .filter((r) => r.ref.trim() || r.nomeAtual.trim() || r.nomeNovoPadronizado.trim())
     .map((row) => {
-      const familia = resolveChapaNomePadronizado(row) || row.nomeNovoPadronizado.trim() || row.nomeAtual.trim();
+      const familiaRaw =
+        resolveChapaNomePadronizado(row) ||
+        row.nomeNovoPadronizado.trim() ||
+        row.nomeAtual.trim();
+      const familia = stripEspessuraFromFamilia(familiaRaw) || familiaRaw;
       const industrialCanonicalId = resolveIndustrialCanonicalId({
         ref: row.ref,
         nomeAtual: row.nomeAtual,
@@ -129,10 +138,13 @@ export function resolveSsotChapas(
       });
       const official = industrialCanonicalId ? resolveMaterial(industrialCanonicalId) : null;
       const esp = row.espessuraMm ?? official?.industrialDefaults?.espessuraPadrao ?? null;
+      // displayLabel só para CRUD/match — a carta de família usa `familia` sem espessura.
       const displayLabel =
+        (familia && esp != null ? `${familia} ${esp}` : "") ||
         row.nomeAtual.trim() ||
         official?.label ||
-        (familia && esp != null ? `${familia} ${esp}` : familia || row.ref);
+        familia ||
+        row.ref;
       return {
         ...row,
         familia,
@@ -141,6 +153,33 @@ export function resolveSsotChapas(
         espessuraMm: esp,
       };
     });
+}
+
+export type MateriaisSsotFamiliaGrupo = {
+  /** Nome novo padronizado (família UI). */
+  familia: string;
+  espessuras: MateriaisSsotChapaResolved[];
+};
+
+/** Agrupa chapas SSOT por «Nome novo padronizado» (uma carta por família). */
+export function groupSsotChapasByFamilia(
+  rows: MateriaisSsotChapaResolved[]
+): MateriaisSsotFamiliaGrupo[] {
+  const byFam = new Map<string, MateriaisSsotChapaResolved[]>();
+  for (const row of rows) {
+    const familia = row.familia.trim() || "Sem família";
+    const list = byFam.get(familia);
+    if (list) list.push(row);
+    else byFam.set(familia, [row]);
+  }
+  return [...byFam.entries()]
+    .map(([familia, espessuras]) => ({
+      familia,
+      espessuras: [...espessuras].sort(
+        (a, b) => (a.espessuraMm ?? 0) - (b.espessuraMm ?? 0)
+      ),
+    }))
+    .sort((a, b) => a.familia.localeCompare(b.familia, "pt", { sensitivity: "base" }));
 }
 
 export function parseMedidaChapaMm(medida: string): { widthMm: number; heightMm: number } | null {

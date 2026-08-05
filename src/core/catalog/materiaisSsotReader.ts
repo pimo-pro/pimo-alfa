@@ -202,5 +202,9 @@ export async function loadMateriaisSsotFromUrl(
 export function resolveChapaNomePadronizado(row: MateriaisSsotChapaRow): string {
   const novo = row.nomeNovoPadronizado.trim();
   if (novo) return novo;
-  return row.nomeAtual.trim();
+  // Fallback: nome atual sem sufixo de espessura (não usar nome antigo com mm na família).
+  return row.nomeAtual
+    .trim()
+    .replace(/\s+\d+(?:[.,]\d+)?\s*mm?\s*$/i, "")
+    .trim();
 }

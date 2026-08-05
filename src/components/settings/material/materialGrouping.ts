@@ -8,16 +8,16 @@ import { getSsotFamiliaForMaterialId } from "../../../core/catalog/materiaisSsot
 
 /** Nome base (sem espessura) → nome industrial padronizado (UI) — fallback legado. */
 export const MATERIAL_NOME_PADRONIZADO_MAP: Record<string, string> = {
-  agl_carvalho: "AGL_LAM_Carvalho",
-  "agl carvalho": "AGL_LAM_Carvalho",
-  carvalho: "HDF_Carvalho",
-  "hdf cru": "HDF_CRU",
-  hdf_cru: "HDF_CRU",
-  lacado: "HDF_LACADO",
-  "laminado linho cancun": "AGL_LAM_LINHO_CANCUN",
-  "mdf branco": "MDF_BVRANCO",
-  "mdf preto": "MDF_PRETO",
-  nogueira: "HDF_NOGUEIRA",
+  agl_carvalho: "AGL CARVALHO",
+  "agl carvalho": "AGL CARVALHO",
+  carvalho: "HDF FOLHEADO CARVALHO",
+  "hdf cru": "HDF CRU",
+  hdf_cru: "HDF CRU",
+  lacado: "HDF LACADO",
+  "laminado linho cancun": "AGL LAM Linho Cancun",
+  "mdf branco": "MDF Branco",
+  "mdf preto": "MDF Preto",
+  nogueira: "HDF FOLHEADO NOGUEIRA",
 };
 
 export type MaterialGrupoPadronizado<T> = {

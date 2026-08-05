@@ -24,10 +24,17 @@ import { getAllPresets, getPresetById } from "../../../core/materials/presetServ
 import { MATERIAIS_INDUSTRIAIS } from "../../../core/manufacturing/materials";
 import {
   getMaterialEspessuraMm,
-  groupMaterialsByPadronizado,
   toMaterialPadronizado,
 } from "../../../components/settings/material/materialGrouping";
 import { applyMateriaisSsotFromPublicUrl } from "../../../core/catalog/materiaisSsotApply";
+import { loadMateriaisSsotFromUrl } from "../../../core/catalog/materiaisSsotReader";
+import {
+  groupSsotChapasByFamilia,
+  resolveSsotChapas,
+  type MateriaisSsotChapaResolved,
+  type MateriaisSsotFamiliaGrupo,
+} from "../../../core/catalog/materiaisSsotNormalize";
+import type { MateriaisSsotCatalog } from "../../../core/catalog/materiaisSsotTypes";
 
 const labelStyle: React.CSSProperties = {
   fontSize: 11,
@@ -49,10 +56,6 @@ export const CATEGORIAS_MATERIAIS: { id: MaterialCategoryId; label: string }[] =
 type SortField = "label" | "precoPorM2" | "espessura" | "categoryId";
 type SortDir = "asc" | "desc";
 type FilterType = "all" | "industrial" | "visual" | "migrado";
-
-function getCategoryLabel(id: string): string {
-  return CATEGORIAS_MATERIAIS.find((c) => c.id === id)?.label ?? (id || "—");
-}
 
 function getMaterialType(m: MaterialRecord): "industrial" | "visual" | "migrado" | "outro" {
   if (m.categoryId === "industrial") return "migrado";
@@ -139,57 +142,137 @@ export default function GestaoMateriaisPage() {
   const [importJson, setImportJson] = useState("");
   const [showImport, setShowImport] = useState(false);
   const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
-  const [expandedGrupo, setExpandedGrupo] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<{ id: string; label: string } | null>(null);
   const [ssotBusy, setSsotBusy] = useState(false);
+  const [ssotCatalog, setSsotCatalog] = useState<MateriaisSsotCatalog | null>(null);
+  const [ssotLoadError, setSsotLoadError] = useState<string | null>(null);
+  const [ssotReady, setSsotReady] = useState(false);
   const texturePreviewUrl = String(form.textureUrl ?? "").trim();
 
-  const filteredAndSorted = useMemo(() => {
-    let list = [...materials];
+  /** Garante SSOT aplicado + catálogo em memória antes de desenhar a grelha. */
+  useEffect(() => {
+    let cancelled = false;
+    setSsotReady(false);
+    setSsotLoadError(null);
+    void (async () => {
+      try {
+        const applyResult = await applyMateriaisSsotFromPublicUrl();
+        if (cancelled) return;
+        if (!applyResult.ok) {
+          setSsotLoadError(applyResult.error ?? "Falha ao aplicar SSOT.");
+        }
+        const cat = await loadMateriaisSsotFromUrl();
+        if (cancelled) return;
+        setSsotCatalog(cat);
+        reload();
+        setSsotReady(true);
+      } catch (err) {
+        if (cancelled) return;
+        setSsotCatalog(null);
+        setSsotLoadError(err instanceof Error ? err.message : String(err));
+        setSsotReady(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [reload]);
+
+  const findMaterialForSsotRow = (row: MateriaisSsotChapaResolved): MaterialRecord | undefined => {
+    if (row.industrialCanonicalId) {
+      const byInd = materials.find(
+        (m) =>
+          m.industrialMaterialId === row.industrialCanonicalId ||
+          m.id === row.industrialCanonicalId
+      );
+      if (byInd) return byInd;
+    }
+    const ref = row.ref.trim().toLowerCase();
+    if (ref) {
+      const byRef = materials.find(
+        (m) =>
+          (m.industrialMaterialId ?? "").toLowerCase() === ref ||
+          (m.id ?? "").toLowerCase() === ref
+      );
+      if (byRef) return byRef;
+    }
+    if (row.espessuraMm != null && row.familia.trim()) {
+      const fam = row.familia.trim().toLowerCase();
+      return materials.find((m) => {
+        if (getMaterialEspessuraMm(m) !== row.espessuraMm) return false;
+        const pad = toMaterialPadronizado(m.label ?? "", {
+          id: m.id,
+          industrialMaterialId: m.industrialMaterialId,
+        }).toLowerCase();
+        const label = (m.label ?? "").toLowerCase();
+        return pad === fam || label.startsWith(fam) || label.includes(fam);
+      });
+    }
+    return undefined;
+  };
+
+  /** Fonte principal da grelha: famílias do SSOT (Nome novo padronizado). */
+  const ssotGruposFiltrados = useMemo((): MateriaisSsotFamiliaGrupo[] | null => {
+    if (!ssotCatalog) return null;
+    let rows = resolveSsotChapas(ssotCatalog);
     const q = search.trim().toLowerCase();
     if (q) {
-      list = list.filter(
-        (m) =>
-          (m.label ?? "").toLowerCase().includes(q) ||
-          toMaterialPadronizado(m.label ?? "", {
-            id: m.id,
-            industrialMaterialId: m.industrialMaterialId,
-          }).toLowerCase().includes(q) ||
-          String(m.espessura ?? "").includes(q) ||
-          String(m.precoPorM2 ?? "").includes(q) ||
-          (getCategoryLabel(m.categoryId ?? "").toLowerCase().includes(q))
+      rows = rows.filter(
+        (r) =>
+          r.familia.toLowerCase().includes(q) ||
+          r.nomeAtual.toLowerCase().includes(q) ||
+          r.nomeNovoPadronizado.toLowerCase().includes(q) ||
+          r.ref.toLowerCase().includes(q) ||
+          r.displayLabel.toLowerCase().includes(q) ||
+          String(r.espessuraMm ?? "").includes(q) ||
+          String(r.precoPorM2Eur ?? "").includes(q) ||
+          String(r.precoVendaPorM2Eur ?? "").includes(q)
       );
-    }
-    if (filterCategory) {
-      list = list.filter((m) => (m.categoryId ?? "") === filterCategory);
-    }
-    if (filterType !== "all") {
-      list = list.filter((m) => getMaterialType(m) === filterType);
     }
     const pMin = filterPriceMin !== "" ? Number(filterPriceMin) : null;
     const pMax = filterPriceMax !== "" ? Number(filterPriceMax) : null;
-    if (pMin !== null && !Number.isNaN(pMin)) list = list.filter((m) => Number(m.precoPorM2 ?? 0) >= pMin);
-    if (pMax !== null && !Number.isNaN(pMax)) list = list.filter((m) => Number(m.precoPorM2 ?? 0) <= pMax);
+    if (pMin !== null && !Number.isNaN(pMin)) {
+      rows = rows.filter((r) => Number(r.precoPorM2Eur ?? r.precoVendaPorM2Eur ?? 0) >= pMin);
+    }
+    if (pMax !== null && !Number.isNaN(pMax)) {
+      rows = rows.filter((r) => Number(r.precoPorM2Eur ?? r.precoVendaPorM2Eur ?? 0) <= pMax);
+    }
     const eMin = filterEspessuraMin !== "" ? Number(filterEspessuraMin) : null;
     const eMax = filterEspessuraMax !== "" ? Number(filterEspessuraMax) : null;
-    if (eMin !== null && !Number.isNaN(eMin)) list = list.filter((m) => Number(m.espessura ?? 0) >= eMin);
-    if (eMax !== null && !Number.isNaN(eMax)) list = list.filter((m) => Number(m.espessura ?? 0) <= eMax);
-    list.sort((a, b) => {
+    if (eMin !== null && !Number.isNaN(eMin)) {
+      rows = rows.filter((r) => Number(r.espessuraMm ?? 0) >= eMin);
+    }
+    if (eMax !== null && !Number.isNaN(eMax)) {
+      rows = rows.filter((r) => Number(r.espessuraMm ?? 0) <= eMax);
+    }
+    if (filterCategory || filterType !== "all") {
+      rows = rows.filter((r) => {
+        const m = findMaterialForSsotRow(r);
+        if (!m) return filterType === "all" && !filterCategory;
+        if (filterCategory && (m.categoryId ?? "") !== filterCategory) return false;
+        if (filterType !== "all" && getMaterialType(m) !== filterType) return false;
+        return true;
+      });
+    }
+    let grupos = groupSsotChapasByFamilia(rows);
+    grupos = [...grupos].sort((a, b) => {
       let cmp = 0;
       if (sortField === "label") {
-        cmp = (a.label ?? "").localeCompare(b.label ?? "", undefined, { sensitivity: "base" });
-      } else if (sortField === "precoPorM2") {
-        cmp = Number(a.precoPorM2 ?? 0) - Number(b.precoPorM2 ?? 0);
+        cmp = a.familia.localeCompare(b.familia, "pt", { sensitivity: "base" });
       } else if (sortField === "espessura") {
-        cmp = Number(a.espessura ?? 0) - Number(b.espessura ?? 0);
+        cmp = (a.espessuras[0]?.espessuraMm ?? 0) - (b.espessuras[0]?.espessuraMm ?? 0);
+      } else if (sortField === "precoPorM2") {
+        const pa = a.espessuras[0]?.precoPorM2Eur ?? a.espessuras[0]?.precoVendaPorM2Eur ?? 0;
+        const pb = b.espessuras[0]?.precoPorM2Eur ?? b.espessuras[0]?.precoVendaPorM2Eur ?? 0;
+        cmp = Number(pa) - Number(pb);
       } else {
-        cmp = (getCategoryLabel(a.categoryId ?? "")).localeCompare(getCategoryLabel(b.categoryId ?? ""), undefined, { sensitivity: "base" });
+        cmp = a.familia.localeCompare(b.familia, "pt", { sensitivity: "base" });
       }
       return sortDir === "asc" ? cmp : -cmp;
     });
-    return list;
+    return grupos;
   }, [
-    materials,
+    ssotCatalog,
     search,
     filterCategory,
     filterType,
@@ -199,12 +282,11 @@ export default function GestaoMateriaisPage() {
     filterEspessuraMax,
     sortField,
     sortDir,
+    materials,
   ]);
 
-  const gruposFiltrados = useMemo(
-    () => groupMaterialsByPadronizado(filteredAndSorted),
-    [filteredAndSorted]
-  );
+  const usarSsot = ssotCatalog !== null;
+  const totalEspessurasSsot = ssotGruposFiltrados?.reduce((n, g) => n + g.espessuras.length, 0) ?? 0;
 
   const openNew = () => {
     setEditingId(null);
@@ -343,11 +425,6 @@ export default function GestaoMateriaisPage() {
     setShowImport(false);
   };
 
-  const getTypeLabel = (m: MaterialRecord) => {
-    const t = getMaterialType(m);
-    return t === "industrial" ? "Industrial" : t === "visual" ? "Visual" : t === "migrado" ? "Migrado" : "Outro";
-  };
-
   const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -363,19 +440,26 @@ export default function GestaoMateriaisPage() {
 
   const handleSyncSsot = async () => {
     setSsotBusy(true);
+    setSsotLoadError(null);
     try {
       const result = await applyMateriaisSsotFromPublicUrl();
       if (!result.ok) {
+        setSsotLoadError(result.error ?? "Falha ao sincronizar SSOT.");
         showToast(result.error ?? "Falha ao sincronizar SSOT.", "error");
         return;
       }
+      const cat = await loadMateriaisSsotFromUrl();
+      setSsotCatalog(cat);
       reload();
+      setSsotReady(true);
       showToast(
-        `SSOT aplicado: ${result.chapasComIndustrial} chapas industriais · ${result.materialsUpdated} materiais · ${result.freeagensUpdated} freeagens · ${result.orlaUpdated} orlas.`,
+        `SSOT: ${groupSsotChapasByFamilia(resolveSsotChapas(cat)).length} famílias · ${result.chapasComIndustrial} REF industriais · ${result.materialsUpdated} materiais actualizados.`,
         "info"
       );
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Erro ao sincronizar SSOT.", "error");
+      const msg = err instanceof Error ? err.message : "Erro ao sincronizar SSOT.";
+      setSsotLoadError(msg);
+      showToast(msg, "error");
     } finally {
       setSsotBusy(false);
     }
@@ -590,15 +674,27 @@ export default function GestaoMateriaisPage() {
           {sortDir === "asc" ? "↑ Asc" : "↓ Desc"}
         </button>
         <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-          {gruposFiltrados.length} materiais · {filteredAndSorted.length} espessuras
-          {materials.length !== filteredAndSorted.length
-            ? ` (de ${materials.length})`
-            : ""}
+          {usarSsot && ssotGruposFiltrados
+            ? `${ssotGruposFiltrados.length} famílias · ${totalEspessurasSsot} espessuras (SSOT)`
+            : "A aguardar SSOT…"}
         </span>
       </div>
 
-      <Panel title="Materiais existentes">
-        {gruposFiltrados.length === 0 ? (
+      <Panel title="Materiais existentes (SSOT — 1 carta por família)">
+        {!ssotReady ? (
+          <div style={{ fontSize: 13, color: "var(--text-muted)", padding: 24, textAlign: "center" }}>
+            A carregar famílias do SSOT Excel…
+          </div>
+        ) : ssotLoadError && !ssotCatalog ? (
+          <div style={{ fontSize: 13, color: "var(--red, #ef4444)", padding: 24, textAlign: "center" }}>
+            Não foi possível carregar o SSOT: {ssotLoadError}
+            <div style={{ marginTop: 12 }}>
+              <button type="button" className="button" onClick={() => void handleSyncSsot()}>
+                Tentar novamente
+              </button>
+            </div>
+          </div>
+        ) : usarSsot && ssotGruposFiltrados && ssotGruposFiltrados.length === 0 ? (
           <div
             style={{
               fontSize: 13,
@@ -610,243 +706,224 @@ export default function GestaoMateriaisPage() {
               border: "1px dashed rgba(255,255,255,0.08)",
             }}
           >
-            {materials.length === 0
-              ? "Nenhum material registado. Use \"Adicionar Material\" para criar o primeiro."
-              : "Nenhum material corresponde aos filtros aplicados. Ajuste a pesquisa ou os filtros."}
+            Nenhuma família SSOT corresponde aos filtros. Ajuste a pesquisa ou sincronize o Excel.
           </div>
-        ) : (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(292px, 1fr))",
-              gap: 18,
-            }}
-          >
-            {gruposFiltrados.map((grupo) => {
-              const open = expandedGrupo === grupo.materialPadronizado;
-              const representative = grupo.listaDeEspessuras[0];
-              const espessurasLabel = grupo.listaDeEspessuras
-                .map((m) => getMaterialEspessuraMm(m))
-                .filter((t) => t > 0)
-                .join(", ");
-              return (
-                <div
-                  key={grupo.materialPadronizado}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    padding: 16,
-                    background: "rgba(255,255,255,0.05)",
-                    border: open
-                      ? "1px solid rgba(59, 130, 246, 0.45)"
-                      : "1px solid rgba(255,255,255,0.1)",
-                    borderRadius: 10,
-                    boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
-                    gap: 12,
-                    gridColumn: open ? "1 / -1" : undefined,
-                    transition: "border-color 0.15s ease, box-shadow 0.15s ease",
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setExpandedGrupo(open ? null : grupo.materialPadronizado)
-                    }
+        ) : usarSsot && ssotGruposFiltrados && ssotGruposFiltrados.length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                Fonte: <code>public/config/materiais-ssot.xlsx</code> · Nome novo padronizado ·
+                espessuras sempre visíveis dentro de cada família.
+              </div>
+              {ssotGruposFiltrados.map((grupo) => {
+                const first = grupo.espessuras[0];
+                const linkedFirst = first ? findMaterialForSsotRow(first) : undefined;
+                const espessurasLabel = grupo.espessuras
+                  .map((r) => r.espessuraMm)
+                  .filter((t): t is number => t != null && t > 0)
+                  .join(", ");
+                return (
+                  <div
+                    key={grupo.familia}
                     style={{
                       display: "flex",
-                      alignItems: "flex-start",
-                      gap: 12,
-                      width: "100%",
-                      padding: 0,
-                      border: "none",
-                      background: "transparent",
-                      cursor: "pointer",
-                      textAlign: "left",
-                      fontFamily: "inherit",
-                      color: "inherit",
+                      flexDirection: "column",
+                      padding: 16,
+                      background: "rgba(255,255,255,0.05)",
+                      border: "1px solid rgba(59, 130, 246, 0.35)",
+                      borderRadius: 10,
+                      boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
+                      gap: 14,
                     }}
                   >
-                    {representative?.color && (
-                      <span
-                        style={{
-                          width: 32,
-                          height: 32,
-                          borderRadius: 8,
-                          background: representative.color,
-                          border: "1px solid rgba(255,255,255,0.25)",
-                          flexShrink: 0,
-                        }}
-                      />
-                    )}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div
-                        style={{
-                          fontSize: 14,
-                          fontWeight: 600,
-                          color: "var(--text-main)",
-                          letterSpacing: "0.01em",
-                        }}
-                      >
-                        {grupo.materialPadronizado}
-                      </div>
-                      <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
-                        {grupo.listaDeEspessuras.length} espessura
-                        {grupo.listaDeEspessuras.length === 1 ? "" : "s"}
-                        {espessurasLabel ? ` · ${espessurasLabel} mm` : ""}
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                      {linkedFirst?.color && (
+                        <span
+                          style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 8,
+                            background: linkedFirst.color,
+                            border: "1px solid rgba(255,255,255,0.25)",
+                            flexShrink: 0,
+                          }}
+                        />
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
+                          style={{
+                            fontSize: 16,
+                            fontWeight: 700,
+                            color: "var(--text-main)",
+                            letterSpacing: "0.01em",
+                          }}
+                        >
+                          {grupo.familia}
+                        </div>
+                        <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
+                          {grupo.espessuras.length} espessura
+                          {grupo.espessuras.length === 1 ? "" : "s"}
+                          {espessurasLabel ? ` · ${espessurasLabel} mm` : ""}
+                        </div>
                       </div>
                     </div>
-                    <span
-                      style={{
-                        fontSize: 12,
-                        color: "var(--text-muted)",
-                        flexShrink: 0,
-                        paddingTop: 4,
-                      }}
-                      aria-hidden
-                    >
-                      {open ? "▾" : "▸"}
-                    </span>
-                  </button>
 
-                  {open && (
                     <div
                       style={{
                         display: "grid",
-                        gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-                        gap: 14,
+                        gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+                        gap: 12,
                         paddingTop: 4,
                         borderTop: "1px solid rgba(255,255,255,0.08)",
                       }}
                     >
-                      {grupo.listaDeEspessuras.map((m) => (
-                        <div
-                          key={m.id}
-                          onMouseEnter={() => setHoveredCardId(m.id)}
-                          onMouseLeave={() => setHoveredCardId(null)}
-                          style={{
-                            position: "relative",
-                            display: "flex",
-                            flexDirection: "column",
-                            padding: 14,
-                            background: "rgba(255,255,255,0.04)",
-                            border: "1px solid rgba(255,255,255,0.1)",
-                            borderRadius: 10,
-                            boxShadow: "0 1px 4px rgba(0,0,0,0.1)",
-                            gap: 12,
-                            minHeight: 0,
-                            transition: "border-color 0.15s ease, box-shadow 0.15s ease",
-                          }}
-                        >
-                          {hoveredCardId === m.id && (
-                            <div
-                              style={{
-                                position: "absolute",
-                                left: 0,
-                                right: 0,
-                                top: 0,
-                                padding: "10px 12px",
-                                background: "rgba(15, 23, 42, 0.98)",
-                                borderBottom: "1px solid rgba(255,255,255,0.1)",
-                                borderRadius: "10px 10px 0 0",
-                                fontSize: 11,
-                                color: "var(--text-main)",
-                                lineHeight: 1.5,
-                                pointerEvents: "none",
-                                zIndex: 1,
-                                boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-                              }}
-                            >
-                              <div style={{ fontWeight: 600, marginBottom: 4 }}>{m.label}</div>
-                              <div style={{ color: "var(--text-muted)" }}>
-                                Categoria: {getCategoryLabel(m.categoryId ?? "")} · Espessura:{" "}
-                                {m.espessura ?? "—"} mm · Preço: {m.precoPorM2 ?? "—"} €/m²
-                              </div>
-                              <div style={{ marginTop: 4, fontSize: 10, opacity: 0.9 }}>
-                                Tipo: {getTypeLabel(m)}
-                              </div>
-                            </div>
-                          )}
-                          <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-                            {m.color && (
-                              <span
-                                style={{
-                                  width: 32,
-                                  height: 32,
-                                  borderRadius: 8,
-                                  background: m.color,
-                                  border: "1px solid rgba(255,255,255,0.25)",
-                                  flexShrink: 0,
-                                }}
-                              />
-                            )}
-                            <div style={{ flex: 1, minWidth: 0 }}>
+                      {grupo.espessuras.map((row, idx) => {
+                        const m = findMaterialForSsotRow(row);
+                        const cardKey =
+                          row.industrialCanonicalId ||
+                          `${grupo.familia}-${row.espessuraMm ?? "x"}-${row.ref || idx}`;
+                        const esp = row.espessuraMm;
+                        const preco =
+                          row.precoPorM2Eur ??
+                          row.precoVendaPorM2Eur ??
+                          m?.precoPorM2 ??
+                          null;
+                        const precoVenda = row.precoVendaPorM2Eur;
+                        const refLabel = row.industrialCanonicalId || row.ref.trim() || "—";
+                        const title = esp != null ? `${esp} mm` : "Espessura —";
+                        return (
+                          <div
+                            key={cardKey}
+                            onMouseEnter={() => setHoveredCardId(cardKey)}
+                            onMouseLeave={() => setHoveredCardId(null)}
+                            style={{
+                              position: "relative",
+                              display: "flex",
+                              flexDirection: "column",
+                              padding: 12,
+                              background: "rgba(255,255,255,0.04)",
+                              border: "1px solid rgba(255,255,255,0.1)",
+                              borderRadius: 10,
+                              gap: 10,
+                              minHeight: 0,
+                            }}
+                          >
+                            {hoveredCardId === cardKey && (
                               <div
                                 style={{
-                                  fontSize: 14,
-                                  fontWeight: 600,
+                                  position: "absolute",
+                                  left: 0,
+                                  right: 0,
+                                  top: 0,
+                                  padding: "10px 12px",
+                                  background: "rgba(15, 23, 42, 0.98)",
+                                  borderBottom: "1px solid rgba(255,255,255,0.1)",
+                                  borderRadius: "10px 10px 0 0",
+                                  fontSize: 11,
                                   color: "var(--text-main)",
-                                  letterSpacing: "0.01em",
+                                  lineHeight: 1.5,
+                                  pointerEvents: "none",
+                                  zIndex: 1,
+                                  boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
                                 }}
                               >
-                                {m.label}
+                                <div style={{ fontWeight: 600, marginBottom: 4 }}>
+                                  {grupo.familia}
+                                  {esp != null ? ` · ${esp} mm` : ""}
+                                </div>
+                                <div style={{ color: "var(--text-muted)" }}>
+                                  REF: {refLabel} · Preço: {preco ?? "—"} €/m²
+                                  {precoVenda != null ? ` · Venda: ${precoVenda} €/m²` : ""}
+                                </div>
+                                {row.nomeAtual ? (
+                                  <div style={{ marginTop: 4, fontSize: 10, opacity: 0.85 }}>
+                                    Nome antigo: {row.nomeAtual}
+                                  </div>
+                                ) : null}
+                              </div>
+                            )}
+                            <div>
+                              <div
+                                style={{
+                                  fontSize: 15,
+                                  fontWeight: 700,
+                                  color: "var(--text-main)",
+                                }}
+                              >
+                                {title}
                               </div>
                               <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
-                                {getCategoryLabel(m.categoryId ?? "")} · {m.espessura ?? "—"} mm ·{" "}
-                                {m.precoPorM2 ?? "—"} €/m²
+                                REF: {refLabel}
                               </div>
-                              <span
-                                style={{
-                                  display: "inline-block",
-                                  marginTop: 6,
-                                  padding: "2px 6px",
-                                  fontSize: 10,
-                                  fontWeight: 500,
-                                  borderRadius: 4,
-                                  background: "rgba(59, 130, 246, 0.15)",
-                                  color: "var(--text-muted)",
-                                }}
-                              >
-                                {getTypeLabel(m)}
-                              </span>
+                              <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
+                                {preco ?? "—"} €/m²
+                                {precoVenda != null && precoVenda !== preco
+                                  ? ` · venda ${precoVenda} €/m²`
+                                  : ""}
+                              </div>
+                            </div>
+                            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                              {m ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    className="button button-ghost"
+                                    style={{ fontSize: 11, padding: "5px 10px" }}
+                                    onClick={() => openEdit(m.id)}
+                                  >
+                                    Editar
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="button button-ghost"
+                                    style={{ fontSize: 11, padding: "5px 10px" }}
+                                    onClick={() => handleDuplicate(m.id)}
+                                  >
+                                    Duplicar
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="button button-ghost"
+                                    style={{
+                                      fontSize: 11,
+                                      padding: "5px 10px",
+                                      color: "var(--red, #ef4444)",
+                                    }}
+                                    onClick={() => handleDelete(m.id, m.label)}
+                                  >
+                                    Eliminar
+                                  </button>
+                                </>
+                              ) : (
+                                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                                  Só SSOT (sem CRUD)
+                                </span>
+                              )}
                             </div>
                           </div>
-                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                            <button
-                              type="button"
-                              className="button button-ghost"
-                              style={{ fontSize: 11, padding: "5px 10px" }}
-                              onClick={() => openEdit(m.id)}
-                            >
-                              Editar
-                            </button>
-                            <button
-                              type="button"
-                              className="button button-ghost"
-                              style={{ fontSize: 11, padding: "5px 10px" }}
-                              onClick={() => handleDuplicate(m.id)}
-                            >
-                              Duplicar
-                            </button>
-                            <button
-                              type="button"
-                              className="button button-ghost"
-                              style={{
-                                fontSize: 11,
-                                padding: "5px 10px",
-                                color: "var(--red, #ef4444)",
-                              }}
-                              onClick={() => handleDelete(m.id, m.label)}
-                            >
-                              Eliminar
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
-                  )}
-                </div>
-              );
-            })}
+                  </div>
+                );
+              })}
+            </div>
+        ) : (
+          <div
+            style={{
+              fontSize: 13,
+              color: "var(--text-muted)",
+              padding: 24,
+              textAlign: "center",
+              background: "rgba(255,255,255,0.02)",
+              borderRadius: "var(--radius)",
+              border: "1px dashed rgba(255,255,255,0.08)",
+            }}
+          >
+            Nenhuma família SSOT disponível. Use &quot;Sincronizar SSOT Excel&quot; ou verifique{" "}
+            <code>public/config/materiais-ssot.xlsx</code>.
+            {ssotLoadError ? (
+              <div style={{ marginTop: 8, color: "var(--red, #ef4444)" }}>{ssotLoadError}</div>
+            ) : null}
           </div>
         )}
       </Panel>

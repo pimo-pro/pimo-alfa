@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseMateriaisSsotWorkbook } from "./materiaisSsotReader";
-import { resolveSsotChapas, propagateSsotChapaFamilies } from "./materiaisSsotNormalize";
+import { resolveSsotChapas, propagateSsotChapaFamilies, groupSsotChapasByFamilia } from "./materiaisSsotNormalize";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const XLSX = path.join(ROOT, "public", "config", "materiais-ssot.xlsx");
@@ -21,5 +21,11 @@ describe("materiaisSsotNormalize + apply mapping", () => {
 
     const withIndustrial = resolved.filter((r) => r.industrialCanonicalId);
     expect(withIndustrial.length).toBeGreaterThanOrEqual(8);
+
+    const grupos = groupSsotChapasByFamilia(resolved);
+    const mdfBranco = grupos.find((g) => g.familia === "MDF Branco");
+    expect(mdfBranco).toBeTruthy();
+    expect(mdfBranco!.espessuras.length).toBeGreaterThanOrEqual(2);
+    expect(grupos.every((g) => g.familia && !/\d+\s*mm$/i.test(g.familia))).toBe(true);
   });
 });
