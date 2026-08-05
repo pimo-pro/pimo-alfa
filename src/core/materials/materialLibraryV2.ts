@@ -43,7 +43,7 @@ export function buildVisualMaterial(
       : preset.color;
   return {
     color: color ?? "#f5f5f5",
-    textureUrl: preset.textureUrl ?? materialRecord?.textureUrl,
+    textureUrl: materialRecord?.textureUrl ?? preset.textureUrl,
     uvScale: preset.uvScale
       ? { x: Number(preset.uvScale.x) || 1, y: Number(preset.uvScale.y) || 1 }
       : DEFAULT_UV_SCALE,

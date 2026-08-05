@@ -1,9 +1,10 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { buildMaterialsApiPayload } from './src/server/materialsApi'
+import { attachMaterialsApiMiddleware } from './src/server/materialsApiMiddleware'
 import { fileURLToPath, URL } from 'node:url'
 
 const buildVersion = `${process.env.npm_package_version ?? '0.0.0'}+${(process.env.GITHUB_SHA ?? 'local').slice(0, 7)}`;
+const projectRoot = fileURLToPath(new URL('.', import.meta.url));
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -29,52 +30,10 @@ export default defineConfig({
     {
       name: 'materials-api-middleware',
       configureServer(server) {
-        server.middlewares.use('/api/materials', (req, res) => {
-          if (req.method === 'OPTIONS') {
-            res.statusCode = 200;
-            res.setHeader('Access-Control-Allow-Origin', '*');
-            res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
-            res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-            res.end(JSON.stringify({ ok: true }));
-            return;
-          }
-          if (req.method !== 'GET') {
-            res.statusCode = 405;
-            res.setHeader('Content-Type', 'application/json; charset=utf-8');
-            res.end(JSON.stringify({ ok: false, error: 'Method not allowed' }));
-            return;
-          }
-          res.statusCode = 200;
-          res.setHeader('Access-Control-Allow-Origin', '*');
-          res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
-          res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-          res.setHeader('Content-Type', 'application/json; charset=utf-8');
-          res.end(JSON.stringify(buildMaterialsApiPayload()));
-        });
+        attachMaterialsApiMiddleware(server, projectRoot);
       },
       configurePreviewServer(server) {
-        server.middlewares.use('/api/materials', (req, res) => {
-          if (req.method === 'OPTIONS') {
-            res.statusCode = 200;
-            res.setHeader('Access-Control-Allow-Origin', '*');
-            res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
-            res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-            res.end(JSON.stringify({ ok: true }));
-            return;
-          }
-          if (req.method !== 'GET') {
-            res.statusCode = 405;
-            res.setHeader('Content-Type', 'application/json; charset=utf-8');
-            res.end(JSON.stringify({ ok: false, error: 'Method not allowed' }));
-            return;
-          }
-          res.statusCode = 200;
-          res.setHeader('Access-Control-Allow-Origin', '*');
-          res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
-          res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-          res.setHeader('Content-Type', 'application/json; charset=utf-8');
-          res.end(JSON.stringify(buildMaterialsApiPayload()));
-        });
+        attachMaterialsApiMiddleware(server, projectRoot);
       },
     },
   ],
@@ -85,6 +44,10 @@ export default defineConfig({
         target: 'https://pimo.pro',
         changeOrigin: true,
         secure: true,
+        bypass(req) {
+          const u = req.url ?? '';
+          if (u.startsWith('/api/materials')) return u;
+        },
       },
     },
   },

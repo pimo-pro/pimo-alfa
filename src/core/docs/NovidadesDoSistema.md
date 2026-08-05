@@ -1,5 +1,12 @@
 # Novidades do Sistema
 
+### Seleção de materiais alinhada ao SSOT
+- Famílias com Nome novo padronizado (MDF Branco, HDF LACADO, etc.) — sem números no nome
+- Espessuras escolhidas em campo próprio (10 / 16 / 17 / 19 mm…)
+- Miniatura com textura real (`/textures/mdf/…`, `/textures/wood/…`) ou cor HEX
+- Gestão de Materiais: cartas por família + upload de textura para o 3D
+- IDs industriais canónicos preservados (CNC / nesting / TCN / cutlist / PI)
+
 ### Fase 5 — Chapas Reais (activação controlada)
 - €/chapa derivado de €/m² × área da chapa (sem tarifa manual nova)
 - Nesting estimado → Chapas reais = 0 € + avisos no Unificado

@@ -35,6 +35,14 @@ import {
   type MateriaisSsotFamiliaGrupo,
 } from "../../../core/catalog/materiaisSsotNormalize";
 import type { MateriaisSsotCatalog } from "../../../core/catalog/materiaisSsotTypes";
+import { mergeCrudEspessurasIntoSsotGrupos } from "../../../core/catalog/materiaisSsotUiMerge";
+import {
+  applyFamiliaTextureToMaterialsSystem,
+  clearFamiliaTexturePath,
+  resolveFamiliaAppearance,
+  textureExtensionFromFile,
+  type FamiliaAppearance,
+} from "../../../core/catalog/materiaisFamiliaAppearance";
 
 const labelStyle: React.CSSProperties = {
   fontSize: 11,
@@ -62,6 +70,49 @@ function getMaterialType(m: MaterialRecord): "industrial" | "visual" | "migrado"
   if (m.industrialMaterialId) return "industrial";
   if (m.visualPresetId) return "visual";
   return "outro";
+}
+
+function FamiliaThumb({
+  appearance,
+  imageTick,
+}: {
+  appearance: FamiliaAppearance;
+  imageTick: number;
+}) {
+  const [errored, setErrored] = useState(false);
+  void imageTick;
+  const url = appearance.textureUrl;
+  if (url && !errored) {
+    return (
+      <img
+        src={url}
+        alt=""
+        onError={() => setErrored(true)}
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 8,
+          objectFit: "cover",
+          border: "1px solid rgba(255,255,255,0.25)",
+          flexShrink: 0,
+        }}
+      />
+    );
+  }
+  return (
+    <span
+      style={{
+        width: 36,
+        height: 36,
+        borderRadius: 8,
+        background: appearance.color || "rgba(255,255,255,0.12)",
+        border: "1px solid rgba(255,255,255,0.25)",
+        flexShrink: 0,
+        display: "inline-block",
+      }}
+      aria-hidden
+    />
+  );
 }
 
 function MaterialTexturePreview({ url }: { url: string }) {
@@ -147,6 +198,8 @@ export default function GestaoMateriaisPage() {
   const [ssotCatalog, setSsotCatalog] = useState<MateriaisSsotCatalog | null>(null);
   const [ssotLoadError, setSsotLoadError] = useState<string | null>(null);
   const [ssotReady, setSsotReady] = useState(false);
+  const [familiaImageTick, setFamiliaImageTick] = useState(0);
+  const [familiaUrlDraft, setFamiliaUrlDraft] = useState<Record<string, string>>({});
   const texturePreviewUrl = String(form.textureUrl ?? "").trim();
 
   /** Garante SSOT aplicado + catálogo em memória antes de desenhar a grelha. */
@@ -211,50 +264,65 @@ export default function GestaoMateriaisPage() {
     return undefined;
   };
 
-  /** Fonte principal da grelha: famílias do SSOT (Nome novo padronizado). */
+  /** Fonte principal da grelha: famílias do SSOT + espessuras CRUD extra. */
   const ssotGruposFiltrados = useMemo((): MateriaisSsotFamiliaGrupo[] | null => {
     if (!ssotCatalog) return null;
-    let rows = resolveSsotChapas(ssotCatalog);
+    let grupos = mergeCrudEspessurasIntoSsotGrupos(
+      groupSsotChapasByFamilia(resolveSsotChapas(ssotCatalog)),
+      materials
+    );
+
     const q = search.trim().toLowerCase();
-    if (q) {
-      rows = rows.filter(
-        (r) =>
-          r.familia.toLowerCase().includes(q) ||
-          r.nomeAtual.toLowerCase().includes(q) ||
-          r.nomeNovoPadronizado.toLowerCase().includes(q) ||
-          r.ref.toLowerCase().includes(q) ||
-          r.displayLabel.toLowerCase().includes(q) ||
-          String(r.espessuraMm ?? "").includes(q) ||
-          String(r.precoPorM2Eur ?? "").includes(q) ||
-          String(r.precoVendaPorM2Eur ?? "").includes(q)
-      );
-    }
     const pMin = filterPriceMin !== "" ? Number(filterPriceMin) : null;
     const pMax = filterPriceMax !== "" ? Number(filterPriceMax) : null;
-    if (pMin !== null && !Number.isNaN(pMin)) {
-      rows = rows.filter((r) => Number(r.precoPorM2Eur ?? r.precoVendaPorM2Eur ?? 0) >= pMin);
-    }
-    if (pMax !== null && !Number.isNaN(pMax)) {
-      rows = rows.filter((r) => Number(r.precoPorM2Eur ?? r.precoVendaPorM2Eur ?? 0) <= pMax);
-    }
     const eMin = filterEspessuraMin !== "" ? Number(filterEspessuraMin) : null;
     const eMax = filterEspessuraMax !== "" ? Number(filterEspessuraMax) : null;
-    if (eMin !== null && !Number.isNaN(eMin)) {
-      rows = rows.filter((r) => Number(r.espessuraMm ?? 0) >= eMin);
-    }
-    if (eMax !== null && !Number.isNaN(eMax)) {
-      rows = rows.filter((r) => Number(r.espessuraMm ?? 0) <= eMax);
-    }
-    if (filterCategory || filterType !== "all") {
-      rows = rows.filter((r) => {
-        const m = findMaterialForSsotRow(r);
-        if (!m) return filterType === "all" && !filterCategory;
-        if (filterCategory && (m.categoryId ?? "") !== filterCategory) return false;
-        if (filterType !== "all" && getMaterialType(m) !== filterType) return false;
-        return true;
-      });
-    }
-    let grupos = groupSsotChapasByFamilia(rows);
+
+    grupos = grupos
+      .map((g) => {
+        let espessuras = g.espessuras;
+        if (q) {
+          const famHit = g.familia.toLowerCase().includes(q);
+          if (!famHit) {
+            espessuras = espessuras.filter(
+              (r) =>
+                r.nomeAtual.toLowerCase().includes(q) ||
+                r.ref.toLowerCase().includes(q) ||
+                r.displayLabel.toLowerCase().includes(q) ||
+                String(r.espessuraMm ?? "").includes(q) ||
+                String(r.precoPorM2Eur ?? "").includes(q)
+            );
+          }
+        }
+        if (pMin !== null && !Number.isNaN(pMin)) {
+          espessuras = espessuras.filter(
+            (r) => Number(r.precoPorM2Eur ?? r.precoVendaPorM2Eur ?? 0) >= pMin
+          );
+        }
+        if (pMax !== null && !Number.isNaN(pMax)) {
+          espessuras = espessuras.filter(
+            (r) => Number(r.precoPorM2Eur ?? r.precoVendaPorM2Eur ?? 0) <= pMax
+          );
+        }
+        if (eMin !== null && !Number.isNaN(eMin)) {
+          espessuras = espessuras.filter((r) => Number(r.espessuraMm ?? 0) >= eMin);
+        }
+        if (eMax !== null && !Number.isNaN(eMax)) {
+          espessuras = espessuras.filter((r) => Number(r.espessuraMm ?? 0) <= eMax);
+        }
+        if (filterCategory || filterType !== "all") {
+          espessuras = espessuras.filter((r) => {
+            const m = findMaterialForSsotRow(r);
+            if (!m) return filterType === "all" && !filterCategory;
+            if (filterCategory && (m.categoryId ?? "") !== filterCategory) return false;
+            if (filterType !== "all" && getMaterialType(m) !== filterType) return false;
+            return true;
+          });
+        }
+        return { familia: g.familia, espessuras };
+      })
+      .filter((g) => g.espessuras.length > 0);
+
     grupos = [...grupos].sort((a, b) => {
       let cmp = 0;
       if (sortField === "label") {
@@ -308,6 +376,105 @@ export default function GestaoMateriaisPage() {
     setPanelOpen(true);
   };
 
+  /** Nova espessura/variante dentro de uma família SSOT (sem inventar ID industrial). */
+  const openNewFromFamilia = (grupo: MateriaisSsotFamiliaGrupo) => {
+    const first = grupo.espessuras[0];
+    const linked = first ? findMaterialForSsotRow(first) : undefined;
+    const existingEsp = new Set(
+      grupo.espessuras
+        .map((r) => r.espessuraMm)
+        .filter((n): n is number => n != null && n > 0)
+    );
+    let defaultEsp = 19;
+    for (const candidate of [19, 16, 10, 20, 17, 12]) {
+      if (!existingEsp.has(candidate)) {
+        defaultEsp = candidate;
+        break;
+      }
+    }
+    const medida = first?.medidaChapa?.match(/(\d+)\s*[x×]\s*(\d+)/i);
+    const w = medida ? Number(medida[1]) : linked?.sheetWidthMm ?? 2800;
+    const h = medida ? Number(medida[2]) : linked?.sheetHeightMm ?? 2070;
+    setEditingId(null);
+    setForm({
+      label: `${grupo.familia} ${defaultEsp}`,
+      categoryId: linked?.categoryId ?? "",
+      color: linked?.color ?? "#ffffff",
+      textureUrl: linked?.textureUrl || "",
+      espessura: defaultEsp,
+      precoPorM2: first?.precoPorM2Eur ?? linked?.precoPorM2 ?? 0,
+      sheetWidthMm: Number.isFinite(w) && w > 0 ? w : 2800,
+      sheetHeightMm: Number.isFinite(h) && h > 0 ? h : 2070,
+      sheetThicknessMm: defaultEsp,
+      sheetWeightKg: linked?.sheetWeightKg,
+      sheetDensity: linked?.sheetDensity,
+      industrialMaterialId: "",
+      visualPresetId: linked?.visualPresetId ?? "",
+      materialMadeira: linked?.materialMadeira ?? false,
+    });
+    setPanelOpen(true);
+  };
+
+  const handleFamiliaImageFile = async (familia: string, file: File | null) => {
+    if (!file || !file.type.startsWith("image/")) {
+      showToast("Seleccione um ficheiro de imagem.", "error");
+      return;
+    }
+    try {
+      const buf = await file.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      let binary = "";
+      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]!);
+      const dataBase64 = btoa(binary);
+      const res = await fetch("/api/materials/familia-texture", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          familia,
+          fileName: file.name || `texture.${textureExtensionFromFile(file.name, file.type)}`,
+          mimeType: file.type,
+          dataBase64,
+        }),
+      });
+      const json = (await res.json()) as { ok?: boolean; url?: string; error?: string };
+      if (!res.ok || !json.ok || !json.url) {
+        showToast(json.error ?? "Não foi possível gravar a textura na pasta de materiais.", "error");
+        return;
+      }
+      const applied = applyFamiliaTextureToMaterialsSystem(familia, json.url);
+      reload();
+      setFamiliaImageTick((t) => t + 1);
+      showToast(
+        `Textura aplicada: ${json.url} · ${applied.updatedMaterials} materiais · ${applied.updatedPresets} presets.`,
+        "info"
+      );
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : "Erro ao carregar imagem (reinicie o servidor de desenvolvimento).",
+        "error"
+      );
+    }
+  };
+
+  const handleFamiliaImageUrl = (familia: string) => {
+    const url = (familiaUrlDraft[familia] ?? "").trim();
+    if (!url) {
+      showToast("Indique a URL ou caminho da textura (ex.: /textures/mdf/mdf-branco.jpg).", "error");
+      return;
+    }
+    if (url.startsWith("data:")) {
+      showToast("Use um ficheiro em /textures/… ou URL http — data-URL não é aceite.", "error");
+      return;
+    }
+    const applied = applyFamiliaTextureToMaterialsSystem(familia, url);
+    reload();
+    setFamiliaImageTick((t) => t + 1);
+    showToast(
+      `Textura associada · ${applied.updatedMaterials} materiais · ${applied.updatedPresets} presets.`,
+      "info"
+    );
+  };
+
   const openEdit = (id: string) => {
     const m = getMaterialByIdOrLabel(id);
     setEditingId(id);
@@ -338,26 +505,34 @@ export default function GestaoMateriaisPage() {
     setEditingId(null);
   };
 
-  const buildFormData = (): CreateMaterialData => ({
-    label: String(form.label ?? "").trim(),
-    categoryId: form.categoryId,
-    color: form.color,
-    textureUrl: texturePreviewUrl || undefined,
-    espessura: Number(form.espessura) || 19,
-    precoPorM2: Number(form.precoPorM2 ?? 0),
-    sheetWidthMm: Number(form.sheetWidthMm) || 2800,
-    sheetHeightMm: Number(form.sheetHeightMm) || 2070,
-    sheetThicknessMm: Number(form.sheetThicknessMm) || 19,
-    sheetWeightKg: form.sheetWeightKg === undefined || form.sheetWeightKg === null
-      ? undefined
-      : Number(form.sheetWeightKg),
-    sheetDensity: form.sheetDensity === undefined || form.sheetDensity === null
-      ? undefined
-      : Number(form.sheetDensity),
-    industrialMaterialId: form.industrialMaterialId || undefined,
-    visualPresetId: form.visualPresetId || undefined,
-    materialMadeira: form.materialMadeira === true,
-  });
+  const buildFormData = (): CreateMaterialData => {
+    const esp = Number(form.espessura) || 19;
+    let label = String(form.label ?? "").trim();
+    // Mantém label alinhado com espessura quando o utilizador só altera o campo mm.
+    if (label && /\s+\d+(?:[.,]\d+)?\s*$/.test(label)) {
+      label = label.replace(/\s+\d+(?:[.,]\d+)?\s*$/, ` ${esp}`);
+    }
+    return {
+      label,
+      categoryId: form.categoryId,
+      color: form.color,
+      textureUrl: texturePreviewUrl || undefined,
+      espessura: esp,
+      precoPorM2: Number(form.precoPorM2 ?? 0),
+      sheetWidthMm: Number(form.sheetWidthMm) || 2800,
+      sheetHeightMm: Number(form.sheetHeightMm) || 2070,
+      sheetThicknessMm: esp,
+      sheetWeightKg: form.sheetWeightKg === undefined || form.sheetWeightKg === null
+        ? undefined
+        : Number(form.sheetWeightKg),
+      sheetDensity: form.sheetDensity === undefined || form.sheetDensity === null
+        ? undefined
+        : Number(form.sheetDensity),
+      industrialMaterialId: form.industrialMaterialId || undefined,
+      visualPresetId: form.visualPresetId || undefined,
+      materialMadeira: form.materialMadeira === true,
+    };
+  };
 
   const handleSave = () => {
     const data = buildFormData();
@@ -675,19 +850,19 @@ export default function GestaoMateriaisPage() {
         </button>
         <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
           {usarSsot && ssotGruposFiltrados
-            ? `${ssotGruposFiltrados.length} famílias · ${totalEspessurasSsot} espessuras (SSOT)`
-            : "A aguardar SSOT…"}
+            ? `${ssotGruposFiltrados.length} materiais · ${totalEspessurasSsot} espessuras`
+            : "A carregar…"}
         </span>
       </div>
 
-      <Panel title="Materiais existentes (SSOT — 1 carta por família)">
+      <Panel title="Materiais existentes">
         {!ssotReady ? (
           <div style={{ fontSize: 13, color: "var(--text-muted)", padding: 24, textAlign: "center" }}>
-            A carregar famílias do SSOT Excel…
+            A carregar materiais…
           </div>
         ) : ssotLoadError && !ssotCatalog ? (
           <div style={{ fontSize: 13, color: "var(--red, #ef4444)", padding: 24, textAlign: "center" }}>
-            Não foi possível carregar o SSOT: {ssotLoadError}
+            Não foi possível carregar o catálogo de materiais: {ssotLoadError}
             <div style={{ marginTop: 12 }}>
               <button type="button" className="button" onClick={() => void handleSyncSsot()}>
                 Tentar novamente
@@ -706,21 +881,19 @@ export default function GestaoMateriaisPage() {
               border: "1px dashed rgba(255,255,255,0.08)",
             }}
           >
-            Nenhuma família SSOT corresponde aos filtros. Ajuste a pesquisa ou sincronize o Excel.
+            Nenhum material corresponde aos filtros. Ajuste a pesquisa ou os filtros.
           </div>
         ) : usarSsot && ssotGruposFiltrados && ssotGruposFiltrados.length > 0 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                Fonte: <code>public/config/materiais-ssot.xlsx</code> · Nome novo padronizado ·
-                espessuras sempre visíveis dentro de cada família.
-              </div>
               {ssotGruposFiltrados.map((grupo) => {
                 const first = grupo.espessuras[0];
                 const linkedFirst = first ? findMaterialForSsotRow(first) : undefined;
+                const appearance = resolveFamiliaAppearance(grupo.familia, materials);
                 const espessurasLabel = grupo.espessuras
                   .map((r) => r.espessuraMm)
                   .filter((t): t is number => t != null && t > 0)
                   .join(", ");
+                const fileInputId = `familia-img-${grupo.familia.replace(/\s+/g, "-")}`;
                 return (
                   <div
                     key={grupo.familia}
@@ -735,20 +908,13 @@ export default function GestaoMateriaisPage() {
                       gap: 14,
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-                      {linkedFirst?.color && (
-                        <span
-                          style={{
-                            width: 36,
-                            height: 36,
-                            borderRadius: 8,
-                            background: linkedFirst.color,
-                            border: "1px solid rgba(255,255,255,0.25)",
-                            flexShrink: 0,
-                          }}
-                        />
-                      )}
-                      <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
+                      <FamiliaThumb
+                        key={`${grupo.familia}-${familiaImageTick}-${appearance.textureUrl ?? appearance.color ?? ""}`}
+                        appearance={appearance}
+                        imageTick={familiaImageTick}
+                      />
+                      <div style={{ flex: 1, minWidth: 160 }}>
                         <div
                           style={{
                             fontSize: 16,
@@ -763,6 +929,82 @@ export default function GestaoMateriaisPage() {
                           {grupo.espessuras.length} espessura
                           {grupo.espessuras.length === 1 ? "" : "s"}
                           {espessurasLabel ? ` · ${espessurasLabel} mm` : ""}
+                          {appearance.textureUrl
+                            ? ` · textura`
+                            : appearance.color
+                              ? ` · cor`
+                              : ""}
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "stretch" }}>
+                        <button
+                          type="button"
+                          className="button"
+                          style={{ fontSize: 11, padding: "6px 10px", whiteSpace: "nowrap" }}
+                          onClick={() => openNewFromFamilia(grupo)}
+                        >
+                          Adicionar espessura / variante
+                        </button>
+                        <label
+                          className="button button-ghost"
+                          style={{
+                            fontSize: 11,
+                            padding: "6px 10px",
+                            cursor: "pointer",
+                            margin: 0,
+                            textAlign: "center",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          <input
+                            id={fileInputId}
+                            type="file"
+                            accept="image/*"
+                            style={{ display: "none" }}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0] ?? null;
+                              void handleFamiliaImageFile(grupo.familia, file);
+                              e.target.value = "";
+                            }}
+                          />
+                          Carregar imagem da matéria-prima
+                        </label>
+                        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                          <input
+                            className="input"
+                            type="text"
+                            placeholder="/textures/… ou URL"
+                            value={familiaUrlDraft[grupo.familia] ?? appearance.textureUrl ?? ""}
+                            onChange={(e) =>
+                              setFamiliaUrlDraft((prev) => ({
+                                ...prev,
+                                [grupo.familia]: e.target.value,
+                              }))
+                            }
+                            style={{ fontSize: 11, padding: "4px 8px", minWidth: 140, flex: 1 }}
+                          />
+                          <button
+                            type="button"
+                            className="button button-ghost"
+                            style={{ fontSize: 11, padding: "4px 8px" }}
+                            onClick={() => handleFamiliaImageUrl(grupo.familia)}
+                          >
+                            Aplicar textura
+                          </button>
+                          {appearance.source === "override" || linkedFirst?.textureUrl ? (
+                            <button
+                              type="button"
+                              className="button button-ghost"
+                              style={{ fontSize: 11, padding: "4px 8px", color: "var(--red, #ef4444)" }}
+                              onClick={() => {
+                                clearFamiliaTexturePath(grupo.familia);
+                                setFamiliaImageTick((t) => t + 1);
+                                showToast("Override de textura removido (volta ao preset/padrão).", "info");
+                              }}
+                            >
+                              Remover override
+                            </button>
+                          ) : null}
                         </div>
                       </div>
                     </div>
@@ -919,8 +1161,7 @@ export default function GestaoMateriaisPage() {
               border: "1px dashed rgba(255,255,255,0.08)",
             }}
           >
-            Nenhuma família SSOT disponível. Use &quot;Sincronizar SSOT Excel&quot; ou verifique{" "}
-            <code>public/config/materiais-ssot.xlsx</code>.
+            Nenhuma família disponível. Use &quot;Sincronizar SSOT Excel&quot; ou verifique o catálogo.
             {ssotLoadError ? (
               <div style={{ marginTop: 8, color: "var(--red, #ef4444)" }}>{ssotLoadError}</div>
             ) : null}

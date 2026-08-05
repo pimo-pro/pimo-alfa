@@ -205,6 +205,6 @@ export function resolveChapaNomePadronizado(row: MateriaisSsotChapaRow): string 
   // Fallback: nome atual sem sufixo de espessura (não usar nome antigo com mm na família).
   return row.nomeAtual
     .trim()
-    .replace(/\s+\d+(?:[.,]\d+)?\s*mm?\s*$/i, "")
+    .replace(/\s+\d+(?:[.,]\d+)?(?:\s*mm)?\s*$/i, "")
     .trim();
 }

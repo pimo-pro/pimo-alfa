@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import type { OfficialWoodMaterial } from "../../../core/materials/materials.api";
+import { resolveFamiliaAppearance } from "../../../core/catalog/materiaisFamiliaAppearance";
 import {
   findGrupoByMaterialId,
   getMaterialEspessuraMm,
@@ -17,6 +18,44 @@ type Props = {
   thicknessSelectId?: string;
 };
 
+function FamiliaSwatch({ familia }: { familia: string }) {
+  const appearance = resolveFamiliaAppearance(familia, []);
+  if (appearance.textureUrl) {
+    return (
+      <span
+        aria-hidden
+        style={{
+          width: 18,
+          height: 18,
+          borderRadius: 4,
+          flexShrink: 0,
+          border: "1px solid rgba(255,255,255,0.25)",
+          backgroundImage: `url(${appearance.textureUrl})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      />
+    );
+  }
+  return (
+    <span
+      aria-hidden
+      style={{
+        width: 18,
+        height: 18,
+        borderRadius: 4,
+        flexShrink: 0,
+        border: "1px solid rgba(255,255,255,0.25)",
+        background: appearance.color || "rgba(255,255,255,0.12)",
+      }}
+    />
+  );
+}
+
+/**
+ * Selecção em 2 passos alinhada ao SSOT: família (Nome novo padronizado) + espessura (mm).
+ * Não altera IDs canónicos — onChange continua a emitir o canonicalId industrial.
+ */
 export default function GroupedMaterialSelect({
   materials,
   value,
@@ -65,26 +104,31 @@ export default function GroupedMaterialSelect({
   }
 
   return (
-    <div className={className} style={{ display: "flex", flexDirection: "column", gap: 4, width: "100%" }}>
-      <select
-        id={materialSelectId}
-        className={selectClassName}
-        value={currentGrupo?.materialPadronizado ?? ""}
-        onChange={(e) => handleFamilyChange(e.target.value)}
-        style={{ width: "100%" }}
-      >
-        {grupos.map((g) => (
-          <option key={g.materialPadronizado} value={g.materialPadronizado}>
-            {g.materialPadronizado}
-          </option>
-        ))}
-      </select>
+    <div className={className} style={{ display: "flex", flexDirection: "column", gap: 6, width: "100%" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%" }}>
+        {currentGrupo ? <FamiliaSwatch familia={currentGrupo.materialPadronizado} /> : null}
+        <select
+          id={materialSelectId}
+          className={selectClassName}
+          value={currentGrupo?.materialPadronizado ?? ""}
+          onChange={(e) => handleFamilyChange(e.target.value)}
+          style={{ width: "100%", flex: 1 }}
+          aria-label="Família de material"
+        >
+          {grupos.map((g) => (
+            <option key={g.materialPadronizado} value={g.materialPadronizado}>
+              {g.materialPadronizado}
+            </option>
+          ))}
+        </select>
+      </div>
       <select
         id={thicknessSelectId}
         className={selectClassName}
         value={thicknessSelectValue || ""}
         onChange={(e) => handleThicknessChange(Number(e.target.value))}
         style={{ width: "100%" }}
+        aria-label="Espessura"
       >
         {thicknessOptions.map((m) => {
           const t = getMaterialEspessuraMm(m);

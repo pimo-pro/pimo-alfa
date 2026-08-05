@@ -521,7 +521,7 @@ export function listIndustrialMaterialFamilyOptions(): IndustrialMaterialFamilyO
   for (const m of listIndustrialWoodMaterials()) {
     const key = materialFamilyKey(m);
     if (byFamily.has(key)) continue;
-    const baseLabel = m.label.replace(/\s+\d+(?:[.,]\d+)?\s*$/, "").trim();
+    const baseLabel = m.label.replace(/\s+\d+(?:[.,]\d+)?(?:\s*mm)?\s*$/i, "").trim();
     byFamily.set(key, baseLabel || m.label);
   }
   return [...byFamily.entries()]

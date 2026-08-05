@@ -37,7 +37,7 @@ export type MaterialLikeForGrouping = {
 /** Remove sufixo de espessura do label (ex.: "MDF Branco 19" → "MDF Branco"). */
 export function extractMaterialBaseName(label: string): string {
   return String(label ?? "")
-    .replace(/\s+\d+(?:[.,]\d+)?\s*mm?\s*$/i, "")
+    .replace(/\s+\d+(?:[.,]\d+)?(?:\s*mm)?\s*$/i, "")
     .trim();
 }
 
@@ -59,7 +59,10 @@ export function toMaterialPadronizado(
     .filter(Boolean);
   for (const key of keys) {
     const fromSsot = getSsotFamiliaForMaterialId(key);
-    if (fromSsot) return fromSsot;
+    if (fromSsot) {
+      // Garante família sem espessura mesmo se o runtime tiver displayLabel poluído.
+      return extractMaterialBaseName(fromSsot) || fromSsot.trim();
+    }
   }
   const base = extractMaterialBaseName(baseNameOrLabel);
   const key = normalizeBaseKey(base);

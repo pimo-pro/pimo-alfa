@@ -30,7 +30,7 @@ function normalizeKey(s: string): string {
 /** Remove sufixo de espessura do nome de família (segurança SSOT). */
 export function stripEspessuraFromFamilia(name: string): string {
   return String(name ?? "")
-    .replace(/\s+\d+(?:[.,]\d+)?\s*mm?\s*$/i, "")
+    .replace(/\s+\d+(?:[.,]\d+)?(?:\s*mm)?\s*$/i, "")
     .trim();
 }
 
@@ -67,7 +67,7 @@ function familyHints(family: string): string[] {
 
 function officialMatchesFamily(m: OfficialWoodMaterial, family: string): boolean {
   const hints = familyHints(family);
-  const labelKey = normalizeKey(m.label.replace(/\s+\d+(?:[.,]\d+)?\s*mm?\s*$/i, ""));
+  const labelKey = normalizeKey(m.label.replace(/\s+\d+(?:[.,]\d+)?(?:\s*mm)?\s*$/i, ""));
   const viewer = normalizeKey(m.viewerMaterialId ?? "");
   const id = normalizeKey(m.canonicalId);
   return hints.some(
