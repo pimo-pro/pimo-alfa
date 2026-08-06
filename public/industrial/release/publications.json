@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-08-06T11:37:13.592Z",
+      "author": "pimo-pro",
+      "commitMessage": "Auto deploy",
+      "version": "v6.0806.1237"
+    },
+    {
       "publishedAt": "2026-08-05T15:48:56.842Z",
       "author": "pimo-pro",
       "commitMessage": "fix(industrial): Quadro V6 intermédios oficiais 38+b1(NL)",
