@@ -240,7 +240,6 @@ function drillTopBottomForDiv(
   panels: TopBottomPanels
 ): void {
   const internal = getDivSepInternalDims(box);
-  const dims = resolveDivisorDimensions(box, item);
   const centerX = resolveDivisorCenterX(box, item);
   // Receptores CIMA/FUNDO: comprimento = Pint (altura/profundidade real do painel). Peça DIV = Pint−5.
   const depthPos = calcDepthHolePositions(internal.profundidadeInterna, rules);
