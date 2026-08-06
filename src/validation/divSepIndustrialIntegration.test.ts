@@ -60,13 +60,17 @@ describe("DIV/SEP — integração industrial (cutlist + furação)", () => {
     const latEsq = findByTipo(cutlist, "lateral_esquerda");
     const latDir = findByTipo(cutlist, "lateral_direita");
 
+    // Peças: cavilhas de aresta 10×30 (sem parafusos na peça).
     expect(div?.drillHoles?.some((h) => h.holeType === "cavilha")).toBe(true);
-    expect(div?.drillHoles?.some((h) => h.holeType === "parafuso")).toBe(true);
     expect(sep?.drillHoles?.some((h) => h.holeType === "cavilha")).toBe(true);
-    expect(sep?.drillHoles?.some((h) => h.holeType === "parafuso")).toBe(true);
+    expect(div?.drillHoles?.some((h) => h.holeType === "parafuso")).toBe(false);
+    expect(sep?.drillHoles?.some((h) => h.holeType === "parafuso")).toBe(false);
 
+    // Receptores: faces/cavilhas; parafusos em CIMA/FUNDO (DIV sem ligação SEP).
     expect(cima?.drillHoles?.some((h) => h.holeType === "cavilha")).toBe(true);
     expect(fundo?.drillHoles?.some((h) => h.holeType === "cavilha")).toBe(true);
+    expect(cima?.drillHoles?.some((h) => h.holeType === "parafuso")).toBe(true);
+    expect(fundo?.drillHoles?.some((h) => h.holeType === "parafuso")).toBe(true);
     expect(latEsq?.drillHoles?.some((h) => h.holeType === "cavilha")).toBe(true);
     expect(latDir?.drillHoles?.some((h) => h.holeType === "cavilha")).toBe(true);
   });

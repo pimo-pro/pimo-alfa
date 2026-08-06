@@ -41,6 +41,7 @@ describe("buildDivSepDrilling — SEP", () => {
   const sepDims = resolveSeparadorDimensions(box, defaultSeparadorItem());
   const sepCenterY = resolveSeparadorCenterY(box, defaultSeparadorItem());
   const panelLarguraMm = defaultSeparadorItem().larguraMm ?? sepDims.larguraMm;
+  const internal = getDivSepInternalDims(box);
 
   it("cria cavilhas na espessura do SEP (XML, profundidade 30 mm)", () => {
     const sepHoles = getExtraHoles("separador", panelIds.separadores[0]);
@@ -58,14 +59,18 @@ describe("buildDivSepDrilling — SEP", () => {
     expect(sepHoles.some((h) => h.holeType === "parafuso")).toBe(false);
   });
 
-  it("cria cavilhas nas laterais a 60 mm (SEP isolado sem parafusos laterais)", () => {
-    const depthPos = calcDepthHolePositions(sepDims.profundidadeMm, rules);
+  it("cria cavilhas nas laterais com X sobre Pint (não Pint−5)", () => {
+    const depthPosPint = calcDepthHolePositions(internal.profundidadeInterna, rules);
+    const depthPosPeca = calcDepthHolePositions(sepDims.profundidadeMm, rules);
     const latLeft = getExtraHoles("lateral_esquerda");
     const cavilhas = latLeft.filter((h) => h.holeType === "cavilha");
     const parafusos = latLeft.filter((h) => h.holeType === "parafuso");
     expect(cavilhas.every((h) => h.topDrillable === true)).toBe(true);
     expect(parafusos.length).toBe(0);
-    expect(cavilhas.map((h) => roundMm(h.x)).sort()).toEqual(depthPos.cavilha.map(roundMm).sort());
+    expect(cavilhas.map((h) => roundMm(h.x)).sort()).toEqual(depthPosPint.cavilha.map(roundMm).sort());
+    expect(roundMm(depthPosPint.cavilha[depthPosPint.cavilha.length - 1]!)).not.toBe(
+      roundMm(depthPosPeca.cavilha[depthPosPeca.cavilha.length - 1]!)
+    );
     expect(new Set(cavilhas.map((h) => roundMm(h.y)))).toEqual(
       new Set([roundMm(absoluteYToLateralPanelY(box, sepCenterY))])
     );
@@ -80,23 +85,40 @@ describe("buildDivSepDrilling — DIV", () => {
   const box = makeDivSepTestBox({ divisores: [defaultDivisorItem()] });
   const panelIds = box.panelIds!;
   const { getExtraHoles } = buildDivSepDrilling(box, panelIds, rules);
+  const internal = getDivSepInternalDims(box);
   const divDims = resolveDivisorDimensions(box, defaultDivisorItem());
 
-  it("cria furos de bordo em CIMA e FUNDO (XML)", () => {
-    const depthPos = calcDepthHolePositions(divDims.profundidadeMm, rules);
+  it("cria faces 10×13 em CIMA e FUNDO (receptores, comprimento Pint)", () => {
+    const depthPosPint = calcDepthHolePositions(internal.profundidadeInterna, rules);
+    const depthPosPeca = calcDepthHolePositions(divDims.profundidadeMm, rules);
     const cima = getExtraHoles("cima").filter((h) => h.holeType === "cavilha");
     const fundo = getExtraHoles("fundo").filter((h) => h.holeType === "cavilha");
     expect(cima.length).toBeGreaterThan(0);
     expect(fundo.length).toBeGreaterThan(0);
     for (const h of [...cima, ...fundo]) {
-      expect(h.topDrillable).toBe(false);
-      expect(roundMm(h.depth)).toBe(CORNER_FF_EDGE_DOWEL_DEPTH_MM);
+      expect(h.topDrillable).toBe(true);
+      expect(roundMm(h.depth)).toBe(CAVILHA_FACE_DEPTH_MM);
     }
-    expect(cima.map((h) => roundMm(h.y)).sort()).toEqual(depthPos.cavilha.map(roundMm).sort());
+    expect(cima.map((h) => roundMm(h.y)).sort()).toEqual(depthPosPint.cavilha.map(roundMm).sort());
+    expect(roundMm(depthPosPint.cavilha[depthPosPint.cavilha.length - 1]!)).not.toBe(
+      roundMm(depthPosPeca.cavilha[depthPosPeca.cavilha.length - 1]!)
+    );
   });
 
-  it("não cria furos estruturais na peça DIV", () => {
-    expect(getExtraHoles("divisorio", panelIds.divisores[0]).length).toBe(0);
+  it("cria arestas 10×30 na peça DIV (comprimento Pint−5)", () => {
+    const depthPosPeca = calcDepthHolePositions(divDims.profundidadeMm, rules);
+    const divHoles = getExtraHoles("divisorio", panelIds.divisores[0]);
+    const edgeCavilhas = divHoles.filter(
+      (h) => h.holeType === "cavilha" && h.topDrillable === false
+    );
+    expect(edgeCavilhas.length).toBe(4);
+    for (const h of edgeCavilhas) {
+      expect(roundMm(h.depth)).toBe(CORNER_FF_EDGE_DOWEL_DEPTH_MM);
+      expect(roundMm(h.diameter)).toBe(getCavilhaDiameterMm(rules));
+    }
+    expect(edgeCavilhas.map((h) => roundMm(h.x)).sort()).toEqual(
+      [...depthPosPeca.cavilha, ...depthPosPeca.cavilha].map(roundMm).sort()
+    );
   });
 });
 
@@ -115,6 +137,7 @@ describe("buildDivSepDrilling — SEP+DIV combinados", () => {
   });
   const panelIds = box.panelIds!;
   const { getExtraHoles } = buildDivSepDrilling(box, panelIds, rules);
+  const internal = getDivSepInternalDims(box);
 
   it("ajusta altura do DIV ao SEP ligado", () => {
     const dims = resolveDivisorDimensions(box, div);
@@ -135,17 +158,20 @@ describe("buildDivSepDrilling — SEP+DIV combinados", () => {
     }
   });
 
-  it("cria cavilhas e parafusos nas laterais quando SEP tem DIV ligado", () => {
+  it("cria cavilhas e parafusos nas laterais com X sobre Pint", () => {
     const sepDims = resolveSeparadorDimensions(box, sep);
-    const depthPos = calcDepthHolePositions(sepDims.profundidadeMm, rules);
+    const depthPosPint = calcDepthHolePositions(internal.profundidadeInterna, rules);
+    const depthPosPeca = calcDepthHolePositions(sepDims.profundidadeMm, rules);
     const sepCenterY = resolveSeparadorCenterY(box, sep);
     const latLeft = getExtraHoles("lateral_esquerda");
     const cavilhas = latLeft.filter((h) => h.holeType === "cavilha");
     const parafusos = latLeft.filter((h) => h.holeType === "parafuso");
     expect(cavilhas.length).toBeGreaterThan(0);
     expect(parafusos.length).toBeGreaterThan(0);
-    expect(cavilhas.map((h) => roundMm(h.x)).sort()).toEqual(depthPos.cavilha.map(roundMm).sort());
-    expect(parafusos.map((h) => roundMm(h.x)).sort()).toEqual(depthPos.parafuso.map(roundMm).sort());
+    expect(cavilhas.map((h) => roundMm(h.x)).sort()).toEqual(depthPosPint.cavilha.map(roundMm).sort());
+    expect(parafusos.map((h) => roundMm(h.x)).sort()).toEqual(depthPosPint.parafuso.map(roundMm).sort());
+    expect(roundMm(depthPosPint.cavilha[1]!)).not.toBe(roundMm(depthPosPeca.cavilha[1]!));
+    expect(roundMm(depthPosPint.parafuso[1]!)).not.toBe(roundMm(depthPosPeca.parafuso[1]!));
     expect(new Set(cavilhas.map((h) => roundMm(h.y)))).toEqual(
       new Set([roundMm(absoluteYToLateralPanelY(box, sepCenterY))])
     );
@@ -161,10 +187,11 @@ describe("buildDivSepDrilling — SEP+DIV combinados", () => {
     expect(cimaStructural.length).toBe(0);
   });
 
-  it("cria furos de bordo em FUNDO para o DIV ligado", () => {
+  it("cria furos de bordo em FUNDO para o DIV ligado (comprimento Pint)", () => {
     const divCenterX = resolveDivisorCenterX(box, div);
     const divDims = resolveDivisorDimensions(box, div);
-    const depthPos = calcDepthHolePositions(divDims.profundidadeMm, rules);
+    const depthPosPint = calcDepthHolePositions(internal.profundidadeInterna, rules);
+    const depthPosPeca = calcDepthHolePositions(divDims.profundidadeMm, rules);
     const fundoCavilhas = getExtraHoles("fundo").filter((h) => h.holeType === "cavilha");
     const fundoParafusos = getExtraHoles("fundo").filter((h) => h.holeType === "parafuso");
 
@@ -172,8 +199,9 @@ describe("buildDivSepDrilling — SEP+DIV combinados", () => {
     expect(fundoParafusos.length).toBeGreaterThan(0);
     expect(fundoCavilhas.every((h) => roundMm(h.x) === roundMm(divCenterX))).toBe(true);
     expect(fundoParafusos.every((h) => roundMm(h.x) === roundMm(divCenterX))).toBe(true);
-    expect(fundoCavilhas.map((h) => roundMm(h.y)).sort()).toEqual(depthPos.cavilha.map(roundMm).sort());
-    expect(fundoParafusos.map((h) => roundMm(h.y)).sort()).toEqual(depthPos.parafuso.map(roundMm).sort());
+    expect(fundoCavilhas.map((h) => roundMm(h.y)).sort()).toEqual(depthPosPint.cavilha.map(roundMm).sort());
+    expect(fundoParafusos.map((h) => roundMm(h.y)).sort()).toEqual(depthPosPint.parafuso.map(roundMm).sort());
+    expect(roundMm(depthPosPint.cavilha[1]!)).not.toBe(roundMm(depthPosPeca.cavilha[1]!));
     for (const p of fundoParafusos) {
       expect(roundMm(p.depth)).toBe(DIV_SEP_ESPESSURA);
     }

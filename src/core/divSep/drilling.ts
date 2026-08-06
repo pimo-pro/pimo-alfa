@@ -197,10 +197,11 @@ function drillSeparador(
   const panelLarguraMm = item.larguraMm ?? dims.larguraMm;
 
   drillSeparadorEdgeHoles(sepHoles, panelLarguraMm, dims.profundidadeMm, rules, panelId);
+  // Receptores LAT: comprimento = Pint (largura real do painel). Peça SEP continua Pint−5.
   drillLateralAtSepHeight(
     bucket,
     box,
-    dims.profundidadeMm,
+    internal.profundidadeInterna,
     centerY,
     internal.espessura,
     rules,
@@ -241,7 +242,8 @@ function drillTopBottomForDiv(
   const internal = getDivSepInternalDims(box);
   const dims = resolveDivisorDimensions(box, item);
   const centerX = resolveDivisorCenterX(box, item);
-  const depthPos = calcDepthHolePositions(dims.profundidadeMm, rules);
+  // Receptores CIMA/FUNDO: comprimento = Pint (altura/profundidade real do painel). Peça DIV = Pint−5.
+  const depthPos = calcDepthHolePositions(internal.profundidadeInterna, rules);
   const cavilhaD = getCavilhaDiameterMm(rules);
   const faceDepth = Math.min(getCavilhaDepthMm(rules), CAVILHA_FACE_DEPTH_MM);
   const divId = item.id ?? "div";

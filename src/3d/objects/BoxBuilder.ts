@@ -121,6 +121,10 @@ export type BoxOptions = {
   noBackPanel?: boolean;
   /** @deprecated Preferir `noBackPanel`; mantido para compatibilidade de sync. */
   costaAtiva?: boolean;
+  /** Tipo de porta da caixa (contexto industrial DIV/SEP → Pint). */
+  portaTipo?: string;
+  /** Número de gavetas (contexto industrial DIV/SEP → Pint com frente). */
+  gavetas?: number;
   /** Divisórios e separadores dinâmicos (estado da caixa). */
   divisores?: import("../../core/divSep/types").DivisorItem[];
   separadores?: import("../../core/divSep/types").SeparadorItem[];

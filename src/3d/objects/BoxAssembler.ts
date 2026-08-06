@@ -161,6 +161,11 @@ export function buildBoxWithDeps(options: BoxOptions | undefined, deps: BoxAssem
     },
     espessura: deps.thicknessM * 1000,
     profundidadeExterna: (opts?.layoutDepthM ?? depth) * 1000,
+    portaTipo: opts?.portaTipo,
+    costaAtiva: opts?.costaAtiva,
+    doorsLayer: opts?.doorLayerItems,
+    drawersLayer: opts?.drawerLayerItems,
+    gavetas: opts?.gavetas,
     divisores: opts?.divisores ?? [],
     separadores: opts?.separadores ?? [],
   };
