@@ -22,6 +22,13 @@ export const DRAWER_DOWEL_EDGE_CLEARANCE_MM = 2;
 
 /** Y inferior golden (desde a base). */
 export const DRAWER_LAT_DOWEL_Y_FROM_BOTTOM_MM = 15;
+/**
+ * Y inferior da cavilha de aresta (interlock frente↔lateral) para a gaveta 1 (lowest).
+ * Baixado de 15 para 0 (base do corpo) para libertar espaço ao novo rasgo do fundo
+ * a 53 mm da base da frente (DRAWER_LOWEST_FRONT_BOTTOM_GROOVE_FROM_BASE_MM) —
+ * sem isto, a cavilha (elev+15) e o rasgo (53) colidiam (~0,5 mm de distância).
+ */
+export const DRAWER_LOWEST_LAT_EDGE_DOWEL_Y_FROM_BOTTOM_MM = 0;
 /** Face superior: W?38. */
 export const DRAWER_LAT_FACE_DOWEL_Y_FROM_TOP_MM = 38;
 /** Aresta superior (interlock frente): W?35. */
@@ -67,10 +74,20 @@ export function getDrawerLateralFaceDowelYPositionsMm(alturaMm: number): number[
   return [y0, y1];
 }
 
-/** Y aresta laterais (TypeNo=2, interlock frente): 15 e H?35. */
-export function getDrawerLateralEdgeDowelYPositionsMm(alturaMm: number): number[] {
+/**
+ * Y aresta laterais (TypeNo=2, interlock frente): 15 e H?35.
+ * Gaveta 1 (isLowestDrawer): y0 desce para 0 (base do corpo) — liberta espaço ao
+ * rasgo do fundo a 53 mm (DRAWER_LOWEST_FRONT_BOTTOM_GROOVE_FROM_BASE_MM), evitando
+ * colisão entre a cavilha inferior e o rasgo.
+ */
+export function getDrawerLateralEdgeDowelYPositionsMm(
+  alturaMm: number,
+  isLowestDrawer?: boolean
+): number[] {
   const h = Math.max(0, Number(alturaMm) || 0);
-  const y0 = DRAWER_LAT_DOWEL_Y_FROM_BOTTOM_MM;
+  const y0 = isLowestDrawer
+    ? DRAWER_LOWEST_LAT_EDGE_DOWEL_Y_FROM_BOTTOM_MM
+    : DRAWER_LAT_DOWEL_Y_FROM_BOTTOM_MM;
   const y1 = h - DRAWER_LAT_EDGE_DOWEL_Y_FROM_TOP_MM;
   if (h <= 0) return [];
   if (y1 <= y0 + 1) return [Math.min(y0, h / 2)];

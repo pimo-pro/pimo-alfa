@@ -37,11 +37,12 @@ describe("gaveta inferior — posição absoluta corpo/frente", () => {
     expect(DRAWER_HIGHEST_BODY_ELEVATION_FROM_FRONT_MM).toBe(12.5);
     expect(resolveDrawerBodyElevationForStackRoleMm("lowest", T)).toBe(elevLowest);
     expect(resolveDrawerBodyElevationForStackRoleMm("middle", T)).toBe(17);
-    expect(resolveDrawerBodyElevationForStackRoleMm("highest", T)).toBe(12.5);
+    // middle/highest unificados (intercambiabilidade 2ª/3ª gaveta) — ver drawerStackPosition.ts
+    expect(resolveDrawerBodyElevationForStackRoleMm("highest", T)).toBe(17);
     expect(DRAWER_SLIDE_OFFSET_FROM_BOTTOM_MM).toBe(41);
   });
 
-  it("generateDrawerGroup — frente 0; corpo T+18,5 (=18,5 acima do FUNDO); superior 12,5", () => {
+  it("generateDrawerGroup — frente 0; corpo T+18,5 (=18,5 acima do FUNDO); superior 17 (unificado)", () => {
     const boxH = 720;
     const group = generateDrawerGroup({
       boxWidth: 600,
@@ -68,9 +69,8 @@ describe("gaveta inferior — posição absoluta corpo/frente", () => {
 
     expect(geo0.frontBottomFromModuleBaseMm).toBeCloseTo(0, 5);
     expect(layers[0]!.metadata?.sideBaseElevationMm).toBe(elevLowest);
-    expect(layers[1]!.metadata?.sideBaseElevationMm).toBe(
-      DRAWER_HIGHEST_BODY_ELEVATION_FROM_FRONT_MM
-    );
+    // middle/highest unificados — ver drawerStackPosition.ts
+    expect(layers[1]!.metadata?.sideBaseElevationMm).toBe(DRAWER_SIDE_BASE_ELEVATION_MM);
     expect(layers[0]!.bodyHeight).toBeCloseTo(layers[1]!.bodyHeight!, 5);
 
     const frontH = layers[0]!.height!;
@@ -96,12 +96,13 @@ describe("gaveta inferior — posição absoluta corpo/frente", () => {
     const offsetY1 = layers[1]!.bodyCenterOffsetY!;
     const bodyTop1 = layers[1]!.posY! + offsetY1 + bodyH1 / 2;
     const cimaUnderside = moduleBase + boxH - T;
-    expect(cimaUnderside - bodyTop1).toBeGreaterThanOrEqual(33 - 0.05);
-    expect(elevHigh).toBe(12.5);
+    // folga CIMA = 64,5 − T − elevação = 64,5 − 19 − 17 = 28,5 mm (era 33 mm com elev=12,5)
+    expect(cimaUnderside - bodyTop1).toBeGreaterThanOrEqual(28.5 - 0.05);
+    expect(elevHigh).toBe(17);
     expect(DRAWER_SIDE_BASE_ELEVATION_MM).toBe(17);
   });
 
-  it("furos: pairing elev+sideH−13; Y acompanha elev T+18,5", () => {
+  it("furos: rasgo lowest fixo 53mm (cavilha desce a elev+0); highest mantém elev+sideH−13", () => {
     const frontH = 358;
     const sideH = resolveDrawerWoodBodyHeightMm(frontH, "lowest");
     const elevLow = elevLowest;
@@ -129,17 +130,21 @@ describe("gaveta inferior — posição absoluta corpo/frente", () => {
       bottomThicknessMm: 10,
       sideBaseElevationMm: elevHigh,
     });
-    const grooveYLow = elevLow + sideH - 13;
     const grooveYHigh = elevHigh + sideH - 13;
-    expect(lowest.find((h) => h.holeSubtype === "groove")?.y).toBe(grooveYLow);
+    // Lowest: rasgo fixo 53mm (independente de elev/sideH); cavilha inferior em elev+0.
+    expect(lowest.find((h) => h.holeSubtype === "groove")?.y).toBe(53);
     expect(highest.find((h) => h.holeSubtype === "groove")?.y).toBe(grooveYHigh);
     expect(lowest.filter((h) => h.tipo === "cavilha").length).toBe(
       highest.filter((h) => h.tipo === "cavilha").length
     );
-    const upperCav = Math.max(
+    const lowerCavLow = Math.min(
       ...lowest.filter((h) => h.tipo === "cavilha").map((h) => h.y)
     );
-    expect(grooveYLow - upperCav).toBeCloseTo(22, 5);
+    expect(lowerCavLow).toBeCloseTo(elevLow, 5);
+    const upperCavHigh = Math.max(
+      ...highest.filter((h) => h.tipo === "cavilha").map((h) => h.y)
+    );
+    expect(grooveYHigh - upperCavHigh).toBeCloseTo(22, 5);
     expect(lowest.find((h) => h.holeSubtype === "groove")?.profundidade).toBe(11);
   });
 
@@ -193,7 +198,8 @@ describe("gaveta inferior — posição absoluta corpo/frente", () => {
       bottomThicknessMm: L0.bottomThickness ?? 10,
       sideBaseElevationMm: elev,
     });
-    expect(holes.find((h) => h.holeSubtype === "groove")?.y).toBe(elev + sideH - 13);
+    // Rasgo fixo 53mm da base da frente (DRAWER_LOWEST_FRONT_BOTTOM_GROOVE_FROM_BASE_MM).
+    expect(holes.find((h) => h.holeSubtype === "groove")?.y).toBe(53);
     expect(holes.filter((h) => h.tipo === "cavilha").length).toBeGreaterThanOrEqual(2);
     expect(holes.find((h) => h.holeSubtype === "groove")?.profundidade).toBe(11);
   });

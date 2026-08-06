@@ -323,10 +323,12 @@ export const settingsDefaults: SettingsSchema = {
     gavetaProfundidadesDisponiveisMm: [350, 400, 450, 500, 550, 600],
     gavetaAlturaMinimaMm: 80,
     gavetaAlturaMaximaMm: 350,
-    gavetaTipoCorredica: "Hettich ArciTech",
+    // Único sistema ativo (KHALED-PRO); restantes = "EM BREVE" (ver drawerUiConstants.ts).
+    gavetaTipoCorredica: "Hettich Quadro V6 You M Silent System",
     gavetaSoftClose: true,
     gavetaCursoTotalMm: 0,
     gavetaCapacidadeCargaKg: 40,
+    // Único sistema ativo (com "Nenhuma") é "Hettich AvanTech"; restantes = "EM BREVE".
     gavetaTipoCaixaMetalica: "Nenhuma",
     gavetaAlturaCaixaMetalicaMm: 0,
     gavetaProfundidadesCompativeisMm: [350, 400, 450, 500, 550, 600],

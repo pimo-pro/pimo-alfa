@@ -9,6 +9,10 @@ import {
   DRAWER_HANDLE_TYPES,
   DRAWER_METAL_BOX_TYPES,
   DRAWER_SLIDE_TYPES,
+  isDrawerSlideTypeActive,
+  isDrawerMetalBoxTypeActive,
+  drawerSlideTypeOptionLabel,
+  drawerMetalBoxTypeOptionLabel,
 } from "../../core/drawers/drawerUiConstants";
 import {
   getDefaultProfileForHandleType,
@@ -223,8 +227,8 @@ export default function DrawerConfigPanel({
               onChange={(e) => update({ slideType: e.target.value as DrawerSlideType })}
             >
               {DRAWER_SLIDE_TYPES.map((option) => (
-                <option key={option} value={option}>
-                  {option}
+                <option key={option} value={option} disabled={!isDrawerSlideTypeActive(option)}>
+                  {drawerSlideTypeOptionLabel(option)}
                 </option>
               ))}
             </select>
@@ -260,8 +264,12 @@ export default function DrawerConfigPanel({
               }}
             >
               {DRAWER_METAL_BOX_TYPES.map((option) => (
-                <option key={option} value={option}>
-                  {option}
+                <option
+                  key={option}
+                  value={option}
+                  disabled={option !== "Nenhuma" && !isDrawerMetalBoxTypeActive(option)}
+                >
+                  {option === "Nenhuma" ? option : drawerMetalBoxTypeOptionLabel(option)}
                 </option>
               ))}
             </select>

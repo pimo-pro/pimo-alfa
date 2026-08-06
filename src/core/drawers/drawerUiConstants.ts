@@ -29,6 +29,39 @@ export const DRAWER_METAL_BOX_TYPES: readonly DrawerMetalBoxType[] = [
   "Genérica",
 ] as const;
 
+/**
+ * Restrição industrial temporária (KHALED-PRO): único sistema de corrediça ativo é
+ * "Hettich Quadro V6 You M Silent System" (madeira) / "Hettich AvanTech" (caixa metálica,
+ * junto com "Nenhuma"). Todos os outros aparecem como "EM BREVE" na UI e não são
+ * selecionáveis. Não altera geometria/drilling — apenas seleção/validação.
+ */
+export const EM_BREVE_LABEL_SUFFIX = " (EM BREVE)";
+
+export const ACTIVE_DRAWER_SLIDE_TYPES: ReadonlySet<DrawerSlideType> = new Set([
+  "Hettich Quadro V6 You M Silent System",
+]);
+
+export const ACTIVE_DRAWER_METAL_BOX_TYPES: ReadonlySet<DrawerMetalBoxType> = new Set([
+  "Nenhuma",
+  "Hettich AvanTech",
+]);
+
+export function isDrawerSlideTypeActive(type: DrawerSlideType | string): boolean {
+  return ACTIVE_DRAWER_SLIDE_TYPES.has(type as DrawerSlideType);
+}
+
+export function isDrawerMetalBoxTypeActive(type: DrawerMetalBoxType | string): boolean {
+  return ACTIVE_DRAWER_METAL_BOX_TYPES.has(type as DrawerMetalBoxType);
+}
+
+export function drawerSlideTypeOptionLabel(type: DrawerSlideType): string {
+  return isDrawerSlideTypeActive(type) ? type : `${type}${EM_BREVE_LABEL_SUFFIX}`;
+}
+
+export function drawerMetalBoxTypeOptionLabel(type: DrawerMetalBoxType): string {
+  return isDrawerMetalBoxTypeActive(type) ? type : `${type}${EM_BREVE_LABEL_SUFFIX}`;
+}
+
 export const DRAWER_HANDLE_TYPES: readonly DrawerHandleType[] = [
   "Nenhum",
   "Puxador",

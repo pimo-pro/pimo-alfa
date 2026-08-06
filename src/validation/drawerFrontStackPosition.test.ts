@@ -16,8 +16,14 @@ import {
   DRAWER_VERTICAL_GAP_MM,
 } from "../core/drawers/drawerGeometryConstants";
 import { resolveDrawerWoodBodyHeightMm } from "../core/drawers/drawerViewerLayout";
-import { getDrawerFrontDowelYPositionsMm } from "../core/drawers/drilling/drawerDowelInterlock";
-import { computeDrawerFrenteExtStructuralHoles } from "../core/drawers/drilling/DrawerDrillingRules";
+import {
+  getDrawerFrontDowelYPositionsMm,
+  getDrawerLateralEdgeDowelYPositionsMm,
+} from "../core/drawers/drilling/drawerDowelInterlock";
+import {
+  computeDrawerFrenteExtStructuralHoles,
+  DRAWER_LOWEST_FRONT_BOTTOM_GROOVE_FROM_BASE_MM,
+} from "../core/drawers/drilling/DrawerDrillingRules";
 import { cutlistComPrecoFromBox } from "../core/manufacturing/cutlistFromBoxes";
 import { defaultRulesConfig } from "../core/rules/rulesConfig";
 import { buildDrillStationXmlFilesForProject } from "../core/drill/drillExport";
@@ -61,7 +67,7 @@ describe("gav_frente — stack vertical por posição no módulo", () => {
     expect(upper.frontTopFromModuleBaseMm).toBeCloseTo(boxH, 5);
   });
 
-  it("furos/rasgo — todas as frentes: pairing laterais + rasgo elev+sideH−13 (dist. 22 mm)", () => {
+  it("furos/rasgo — inferior: rasgo fixo 53mm + cavilha desce a elev+0; superior: elev+sideH−13 (dist. 22 mm)", () => {
     const frontH = 358;
     const sideH = resolveDrawerWoodBodyHeightMm(frontH);
     const elev = DRAWER_SIDE_BASE_ELEVATION_MM;
@@ -90,21 +96,27 @@ describe("gav_frente — stack vertical por posição no módulo", () => {
       sideBaseElevationMm: elev,
     });
 
-    const expectedYs = getDrawerFrontDowelYPositionsMm(sideH, false).map((y) => y + elev);
-    const ysLowest = [...new Set(holesLowest.filter((h) => h.tipo === "cavilha").map((h) => h.y))].sort(
-      (a, b) => a - b
-    );
+    // Superior: comportamento inalterado (cavilhas 15 / sideH-35; rasgo a 22mm da superior).
+    const expectedYsUpper = getDrawerFrontDowelYPositionsMm(sideH, false).map((y) => y + elev);
     const ysUpper = [...new Set(holesUpper.filter((h) => h.tipo === "cavilha").map((h) => h.y))].sort(
       (a, b) => a - b
     );
-    expect(ysLowest).toEqual(expectedYs);
-    expect(ysUpper).toEqual(expectedYs);
+    expect(ysUpper).toEqual(expectedYsUpper);
+    const grooveYUpper = elev + sideH - 13;
+    expect(holesUpper.find((h) => h.holeSubtype === "groove")?.y).toBe(grooveYUpper);
+    const upperCavY = Math.max(...expectedYsUpper);
+    expect(grooveYUpper - upperCavY).toBeCloseTo(22, 5);
 
-    const grooveY = elev + sideH - 13;
-    expect(holesLowest.find((h) => h.holeSubtype === "groove")?.y).toBe(grooveY);
-    expect(holesUpper.find((h) => h.holeSubtype === "groove")?.y).toBe(grooveY);
-    const upperCavY = Math.max(...expectedYs);
-    expect(grooveY - upperCavY).toBeCloseTo(22, 5);
+    // Inferior: cavilha desce para elev+0 (não elev+15); rasgo fixo em 53mm da base da frente.
+    const expectedYsLowest = getDrawerLateralEdgeDowelYPositionsMm(sideH, true).map((y) => y + elev);
+    const ysLowest = [...new Set(holesLowest.filter((h) => h.tipo === "cavilha").map((h) => h.y))].sort(
+      (a, b) => a - b
+    );
+    expect(ysLowest).toEqual(expectedYsLowest);
+    expect(Math.min(...expectedYsLowest)).toBe(elev);
+    expect(holesLowest.find((h) => h.holeSubtype === "groove")?.y).toBe(
+      DRAWER_LOWEST_FRONT_BOTTOM_GROOVE_FROM_BASE_MM
+    );
   });
 
   it("pipeline 2 gavetas — cutlist + DRILL: roles e furos", () => {
@@ -132,11 +144,14 @@ describe("gav_frente — stack vertical por posição no módulo", () => {
     const groove1 = fronts[1]!.drillHoles?.find((h) => h.holeSubtype === "groove");
     expect(groove0).toBeDefined();
     expect(groove1).toBeDefined();
-    // Mesmo padrão relativo: rasgo = elev + sideH − 13 (não o golden W−56.5 da frente 1)
+    // Inferior: rasgo fixo a 53 mm da base da frente (não o golden W−56.5 nem elev+sideH−13).
+    expect(groove0!.y).toBeCloseTo(DRAWER_LOWEST_FRONT_BOTTOM_GROOVE_FROM_BASE_MM, 5);
     expect(groove0!.y).not.toBe(56.5);
+    // Inferior (T=19): elev = T+18,5 = 37,5; cavilha inferior desce para elev+0.
     const cav0 = fronts[0]!.drillHoles!.filter((h) => h.holeType === "cavilha");
-    const upperCav0 = Math.max(...cav0.map((h) => h.y));
-    expect(groove0!.y - upperCav0).toBeCloseTo(22, 5);
+    const lowerCav0 = Math.min(...cav0.map((h) => h.y));
+    expect(lowerCav0).toBeCloseTo(19 + 18.5, 5);
+    // Superior: comportamento inalterado — rasgo a 22mm da cavilha superior.
     const cav1 = fronts[1]!.drillHoles!.filter((h) => h.holeType === "cavilha");
     const upperCav1 = Math.max(...cav1.map((h) => h.y));
     expect(groove1!.y - upperCav1).toBeCloseTo(22, 5);

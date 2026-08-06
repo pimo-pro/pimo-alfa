@@ -11,27 +11,18 @@ import { normalizeFinanceiroAdminSettings } from "../financeiro/financeiroAdminR
 import { FINANCEIRO_IVA_DEFAULT_PCT } from "../financeiro/financeiroUnificadoTypes";
 import { orcamentosDefaultsFromCentral } from "../pricing/centralPricingConfig";
 
+/**
+ * Restrição industrial temporária (KHALED-PRO): apenas estes tipos são aceites na
+ * normalização de settings globais — qualquer outro valor (legado ou "EM BREVE")
+ * é silenciosamente substituído pelo default via pickOption (sem erro/crash).
+ * Ver drawerUiConstants.ts para a mesma restrição espelhada na UI.
+ */
 const DRAWER_SLIDE_TYPES = [
   "Hettich Quadro V6 You M Silent System",
-  "Blum Tandem",
-  "Blum Movento",
-  "Hettich InnoTech",
-  "Hettich ArciTech",
-  "Hafele Matrix",
-  "Genérica",
 ] as const;
 const DRAWER_METAL_BOX_TYPES = [
   "Nenhuma",
-  "Blum Legrabox",
-  "Blum Antaro",
-  "Blum Metabox",
-  "Hettich InnoTech",
-  "Hettich ArciTech",
   "Hettich AvanTech",
-  "Grass Nova Pro",
-  "Grass Vionaro",
-  "Hafele Alto",
-  "Genérica",
 ] as const;
 const DRAWER_HANDLE_TYPES = ["Nenhum", "Puxador", "Cava", "Perfil Alumínio"] as const;
 const DRAWER_HANDLE_POSITIONS = ["Centro", "Topo", "Inferior", "Percentual"] as const;

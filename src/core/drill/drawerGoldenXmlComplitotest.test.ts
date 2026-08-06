@@ -193,11 +193,11 @@ describe("golden XML_COMPLITO — frente inferior pairing laterais", () => {
     expect(Math.abs(upperY - lowerY)).toBeGreaterThan(50);
   });
 
-  it("produção GAV_FRENTE_EXT_01: mesmo padrão das frentes 2/3 (rasgo elev+sideH−13)", () => {
-    const lowerY = elev + 15;
+  it("produção GAV_FRENTE_EXT_01 (lowest): cavilha inferior desce a elev+0; rasgo fixo 53mm", () => {
+    // Inferior: cavilha desce de elev+15 para elev+0 (liberta espaço ao rasgo fixo).
+    const lowerY = elev;
     const upperY = elev + (sideH - 35);
-    const grooveY = elev + sideH - 13;
-    expect(grooveY - upperY).toBeCloseTo(22, 5);
+    const grooveY = 53; // DRAWER_LOWEST_FRONT_BOTTOM_GROOVE_FROM_BASE_MM — fixo, não elev+sideH−13
 
     const xml = xmlFor(
       "gaveta_frente_ext",
@@ -216,8 +216,12 @@ describe("golden XML_COMPLITO — frente inferior pairing laterais", () => {
     expect(xml).toContain("<X1>33.00</X1>");
     expect(xml).toContain(`<Y1>${lowerY.toFixed(2)}</Y1>`);
     expect(xml).toContain(`<Y1>${upperY.toFixed(2)}</Y1>`);
-    expect(xml).toContain("<BeginX>25.00</BeginX>");
-    expect(xml).toContain(`<EndX>${(L - 25).toFixed(2)}</EndX>`);
+    // Rasgo alinhado ao gav_fundo (bottomWidth = bodyWidth − 2×(16−10)), não ao bodyWidth.
+    const bodyWidthMm = L - 50;
+    const bottomWidthMm = bodyWidthMm - 2 * (16 - 10);
+    const grooveOverhang = (L - bottomWidthMm) / 2;
+    expect(xml).toContain(`<BeginX>${grooveOverhang.toFixed(2)}</BeginX>`);
+    expect(xml).toContain(`<EndX>${(grooveOverhang + bottomWidthMm).toFixed(2)}</EndX>`);
     expect(xml).toContain(`<BeginY>${grooveY.toFixed(2)}</BeginY>`);
     expect(xml).toContain("<Width>11.00</Width>");
     expect(xml).toContain("<Depth>11.00</Depth>");

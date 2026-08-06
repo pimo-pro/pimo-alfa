@@ -25,11 +25,18 @@ export const DRAWER_SIDE_HEIGHT_RATIO = 1 - DRAWER_SIDE_TOP_CLEARANCE_RATIO;
  */
 export const DRAWER_SIDE_BASE_ELEVATION_MIN_MM = 12.5;
 export const DRAWER_SIDE_BASE_ELEVATION_MAX_MM = 60;
-/** Elevação corpo — gavetas intermédias (vs frente). */
+/**
+ * Elevação corpo — gavetas middle e highest (unificado).
+ * Com sideH = h−64,5 e T=19 → folga até face inferior da CIMA = 28,5 mm.
+ * Unificado para que a 2ª e a 3ª gaveta (mesmas peças físicas) fiquem com a mesma
+ * relação frente↔corpo↔corrediça e sejam totalmente intercambiáveis entre si.
+ */
 export const DRAWER_SIDE_BASE_ELEVATION_MM = 17;
 /**
- * Elevação corpo — gaveta superior (stackRole=highest).
- * Com sideH = h−64,5 e T=19 → folga até face inferior da CIMA = 33 mm.
+ * @deprecated Valor legado de `highest` antes da unificação com `middle`.
+ * `resolveDrawerBodyElevationForStackRoleMm` já não usa esta constante — usa
+ * `DRAWER_SIDE_BASE_ELEVATION_MM` para middle e highest. Mantida só por compatibilidade
+ * de import; não usar para gerar geometria nova.
  */
 export const DRAWER_HIGHEST_BODY_ELEVATION_FROM_FRONT_MM = 12.5;
 

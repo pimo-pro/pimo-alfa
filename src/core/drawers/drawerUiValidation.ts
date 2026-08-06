@@ -2,7 +2,11 @@ import type { WorkspaceBox } from "../types";
 import type { SettingsSchema } from "../settings/settingsSchema";
 import type { DrawerLayerItem } from "../../models/BoxLayers";
 import { canBoxHaveDrawers } from "./DrawerGenerationService";
-import { SOFT_CLOSE_COMPATIBLE_SLIDES } from "./drawerUiConstants";
+import {
+  SOFT_CLOSE_COMPATIBLE_SLIDES,
+  isDrawerSlideTypeActive,
+  isDrawerMetalBoxTypeActive,
+} from "./drawerUiConstants";
 import {
   isMetalBoxCatalogType,
   resolveMetalBoxHeightMm,
@@ -173,6 +177,22 @@ export function validateDrawerLayerItem(
   const metalBoxType = drawer.metalBoxType ?? settings.gavetaTipoCaixaMetalica;
   const softClose = drawer.softClose ?? settings.gavetaSoftClose;
   const nominalDepth = drawer.metadata?.nominalDepth ?? drawer.depth;
+
+  // Restrição industrial temporária (KHALED-PRO): apenas Quadro V6 / AvanTech ativos.
+  if (!isDrawerSlideTypeActive(slideType)) {
+    alerts.push({
+      level: "error",
+      message: `Corrediça "${slideType}" — EM BREVE (usar Hettich Quadro V6 You M Silent System).`,
+      drawerId,
+    });
+  }
+  if (metalBoxType !== "Nenhuma" && !isDrawerMetalBoxTypeActive(metalBoxType)) {
+    alerts.push({
+      level: "error",
+      message: `Caixa metálica "${metalBoxType}" — EM BREVE (usar Hettich AvanTech).`,
+      drawerId,
+    });
+  }
 
   if (height < settings.gavetaAlturaMinimaMm) {
     alerts.push({

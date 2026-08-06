@@ -1,4 +1,4 @@
-# SPA: pasta física public/industrial/release/ nao pode bloquear a rota /industrial
+# SPA: pasta fï¿½sica public/industrial/release/ nao pode bloquear a rota /industrial
 Options -Indexes
 RewriteEngine On
 RewriteCond %{REQUEST_FILENAME} -f

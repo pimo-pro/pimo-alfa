@@ -33,6 +33,7 @@ import { DRAWER_VERTICAL_BASE_OFFSET_MM } from "../drawerVerticalPosition";
 import {
   DRAWER_BOTTOM_GROOVE_WIDTH_MM,
   DRAWER_BOTTOM_GROOVE_Y_FROM_TOP_MM,
+  DRAWER_BOTTOM_SIDE_ENTRY_MM,
   DRAWER_COSTA_BOTTOM_FACE_DEPTH_MM,
   DRAWER_COSTA_BOTTOM_FACE_DIAMETER_MM,
   DRAWER_FRONT_BOTTOM_GROOVE_DEPTH_MM,
@@ -55,7 +56,7 @@ import {
   CAVILHA_EDGE_HOLE_TYPE_ID,
   CAVILHA_FACE_HOLE_TYPE_ID,
 } from "../../drill/cavilha10x40Rule";
-import type { DrawerStackRole } from "../drawerStackPosition";
+import { resolveDrawerStackRole, type DrawerStackRole } from "../drawerStackPosition";
 import {
   clampDrawerFaceDowelDepthMm,
   DRAWER_DOWEL_DIAMETER_MM,
@@ -433,10 +434,19 @@ export function computePiModuleLateralCorredicaHoles(params: {
 }
 
 /**
+ * Eixo da corrediça para gavetas middle/highest (mm acima da base da gaveta).
+ * Valor fixo, igual para as duas — não depende de T — garante que a 2ª e a 3ª
+ * gaveta (mesmas peças físicas) fiquem com a mesma relação corpo↔corrediça e
+ * sejam totalmente intercambiáveis entre si.
+ */
+const DRAWER_UPPER_SLIDE_AXIS_FROM_BOTTOM_MM = 22.5;
+
+/**
  * Linhas Y (topo=0) nas laterais do módulo europeu.
  *
  * Regra industrial:
- * - eixo da corrediça = 41 mm acima da base de cada gaveta
+ * - gaveta inferior (lowest/single): eixo da corrediça = 41 mm acima da base da gaveta (inalterado)
+ * - gavetas middle/highest: eixo da corrediça = 22,5 mm acima da base da gaveta (fixo, igual para ambas)
  * - nunca < 41 mm acima do bordo inferior do painel lateral
  * - nunca < 41 mm abaixo do bordo superior
  */
@@ -452,14 +462,20 @@ export function resolveEuropeanModuleRunnerLinesYMm(params: {
       mode: "pi_module_lateral",
       panelDepthMm: 500,
     });
-  const axisFromDrawerBottomMm = Math.max(1, rules.alturaRelativaFundoMm); // 41
-  const minFromPanelBottomMm = axisFromDrawerBottomMm;
+  const lowestAxisFromDrawerBottomMm = Math.max(1, rules.alturaRelativaFundoMm); // 41
+  const minFromPanelBottomMm = lowestAxisFromDrawerBottomMm;
   const panelH = Math.max(1, params.panelHeightMm);
   const internalH = Math.max(1, params.boxInternalHeightMm);
   const internalBottomCenterY = -internalH / 2;
   const sorted = [...params.drawers].sort((a, b) => a.posYMm - b.posYMm);
+  const drawerCount = sorted.length;
 
-  return sorted.map((drawer) => {
+  return sorted.map((drawer, index) => {
+    const stackRole = resolveDrawerStackRole(index, drawerCount);
+    const axisFromDrawerBottomMm =
+      stackRole === "lowest" || stackRole === "single"
+        ? lowestAxisFromDrawerBottomMm
+        : DRAWER_UPPER_SLIDE_AXIS_FROM_BOTTOM_MM;
     const frontH = Math.max(0, Number(drawer.frontHeightMm) || 0);
     const drawerBottomCenterY = Number(drawer.posYMm) - frontH / 2;
     /** mm acima do piso interno do vão. */
@@ -570,8 +586,7 @@ export function computeDrawerLateralStructuralHoles(params: {
   side: "esq" | "dir";
   isLowestDrawer?: boolean;
 }): TechnicalDrillHole[] {
-  void params.isLowestDrawer;
-  const { largura, altura, espessura, side } = params;
+  const { largura, altura, espessura, side, isLowestDrawer } = params;
   const holes: TechnicalDrillHole[] = [];
   const dia = DRAWER_DOWEL_DIAMETER_MM;
   const faceDepth = clampDrawerFaceDowelDepthMm(espessura);
@@ -595,7 +610,7 @@ export function computeDrawerLateralStructuralHoles(params: {
   const edgeX = side === "dir" ? 0 : largura;
   const edgeFace: DrillFace = side === "dir" ? "frente" : "tras";
   let edgeIdx = 0;
-  for (const y of getDrawerLateralEdgeDowelYPositionsMm(altura)) {
+  for (const y of getDrawerLateralEdgeDowelYPositionsMm(altura, isLowestDrawer)) {
     if (y <= 0 || y >= altura) continue;
     const sideKey = side === "dir" ? "dir" : "esq";
     holes.push({
@@ -770,7 +785,9 @@ export function computeDrawerFrenteIntStructuralHoles(params: {
 /**
  * Frente externa madeira — regra global CAVILHA_10×40 (todas as frentes, incl. GAV_FRENTE_EXT_01):
  * cada 10×30 na aresta dos laterais → 10×13 na face da frente (Y = elev + Y_lateral).
- * Rasgo: Y = elev + sideH − 13 (distância fixa 22 mm à cavilha superior).
+ * Rasgo (middle/highest): Y = elev + sideH − 13 (distância fixa 22 mm à cavilha superior).
+ * Rasgo (lowest): Y = 53 mm fixo desde a base da frente (DRAWER_LOWEST_FRONT_BOTTOM_GROOVE_FROM_BASE_MM)
+ * — cavilha inferior desce para elev+0 (ver DRAWER_LOWEST_LAT_EDGE_DOWEL_Y_FROM_BOTTOM_MM) para não colidir.
  * Furação exclusiva DRILL — o pipeline CNC remove estes furos do TCN.
  */
 export function computeDrawerFrenteExtStructuralHoles(params: {
@@ -785,9 +802,10 @@ export function computeDrawerFrenteExtStructuralHoles(params: {
   bottomThicknessMm: number;
   sideBaseElevationMm?: number;
 }): TechnicalDrillHole[] {
-  // stackRole / isLowestDrawer: mantidos na assinatura (cutlist/metadata); não alteram a geometria.
-  void params.stackRole;
-  void params.isLowestDrawer;
+  const isLowest =
+    params.isLowestDrawer === true ||
+    params.stackRole === "lowest" ||
+    params.stackRole === "single";
 
   const {
     largura,
@@ -811,18 +829,28 @@ export function computeDrawerFrenteExtStructuralHoles(params: {
     sideBaseElevationMm: elev,
     bodyWidthMm,
     sideThicknessMm,
+    isLowestDrawer: isLowest,
   });
 
-  const bodyW = Math.min(Math.max(0, bodyWidthMm), largura);
-  const overhang = Math.max(0, (largura - bodyW) / 2);
+  // Rasgo do fundo: deve acompanhar bottomWidthMm (peça gav_fundo), não bodyWidthMm
+  // (envelope das laterais) — bottomWidthMm = bodyWidthMm − 2×(sideThicknessMm − entrada
+  // do fundo), i.e. 16−10=6mm úteis de cada lado. Cavilhas (acima) mantêm-se em bodyWidthMm,
+  // que é o valor correto para o encaixe frente↔lateral.
+  const bottomWidthMm = Math.max(
+    0,
+    bodyWidthMm - 2 * (sideThicknessMm - DRAWER_BOTTOM_SIDE_ENTRY_MM)
+  );
+  const grooveW = Math.min(Math.max(0, bottomWidthMm), largura);
+  const overhang = Math.max(0, (largura - grooveW) / 2);
   const groove = buildDrawerFrenteBottomGroove({
     largura,
     altura,
     bottomThicknessMm,
     sideHeightMm,
     sideBaseElevationMm: elev,
-    grooveLengthMm: bodyW > 0 ? bodyW : largura,
+    grooveLengthMm: grooveW > 0 ? grooveW : largura,
     grooveStartXMm: overhang,
+    fixedYFromBaseMm: isLowest ? DRAWER_LOWEST_FRONT_BOTTOM_GROOVE_FROM_BASE_MM : undefined,
   });
   if (groove) holes.push(groove);
 
@@ -843,6 +871,7 @@ export function projectDrawerLateralEdgeCavilhasOntoFront(params: {
   bodyWidthMm?: number;
   sideThicknessMm?: number;
   xInsetMm?: number;
+  isLowestDrawer?: boolean;
 }): TechnicalDrillHole[] {
   const {
     frontWidthMm: largura,
@@ -870,7 +899,7 @@ export function projectDrawerLateralEdgeCavilhasOntoFront(params: {
     xRight > largura / 2 && xRight < largura ? xRight : Math.max(largura - xInset, largura / 2);
 
   const holes: TechnicalDrillHole[] = [];
-  const edgeYs = getDrawerLateralEdgeDowelYPositionsMm(sideH);
+  const edgeYs = getDrawerLateralEdgeDowelYPositionsMm(sideH, params.isLowestDrawer);
   let pairIdx = 0;
   for (const yLat of edgeYs) {
     const y = elev + yLat;
@@ -961,6 +990,13 @@ export function computeDrawerLowestFrenteExtFixedHoles(params: {
   return holes;
 }
 
+/**
+ * Rasgo do fundo na frente da gaveta 1 (lowest) — distância fixa desde a base da
+ * frente, independente de T/altura. Corrige posição anterior (elev+sideH−13, sempre
+ * perto do topo) que não correspondia à posição real do fundo na montagem.
+ */
+export const DRAWER_LOWEST_FRONT_BOTTOM_GROOVE_FROM_BASE_MM = 53;
+
 function buildDrawerFrenteBottomGroove(params: {
   largura: number;
   altura: number;
@@ -969,13 +1005,17 @@ function buildDrawerFrenteBottomGroove(params: {
   sideBaseElevationMm: number;
   grooveLengthMm?: number;
   grooveStartXMm?: number;
+  /** Gaveta 1: sobrepõe o Y calculado por um valor fixo (ver DRAWER_LOWEST_FRONT_BOTTOM_GROOVE_FROM_BASE_MM). */
+  fixedYFromBaseMm?: number;
 }): TechnicalDrillHole | null {
   const bottomT = Number(params.bottomThicknessMm);
   if (!Number.isFinite(bottomT) || bottomT <= 0) return null;
   const y =
-    params.sideBaseElevationMm +
-    params.sideHeightMm -
-    DRAWER_BOTTOM_GROOVE_Y_FROM_TOP_MM;
+    params.fixedYFromBaseMm != null && Number.isFinite(params.fixedYFromBaseMm)
+      ? params.fixedYFromBaseMm
+      : params.sideBaseElevationMm +
+        params.sideHeightMm -
+        DRAWER_BOTTOM_GROOVE_Y_FROM_TOP_MM;
   if (y <= 0 || y >= params.altura) return null;
   return {
     x: params.grooveStartXMm ?? 0,

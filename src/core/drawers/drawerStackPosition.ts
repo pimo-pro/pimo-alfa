@@ -8,7 +8,6 @@
  */
 
 import {
-  DRAWER_HIGHEST_BODY_ELEVATION_FROM_FRONT_MM,
   DRAWER_LOWEST_BODY_ABOVE_MODULE_BASE_MM,
   DRAWER_SIDE_BASE_ELEVATION_MM,
 } from "./drawerGeometryConstants";
@@ -41,7 +40,12 @@ export function resolveLowestDrawerBodyElevationFromFrontMm(
 
 /**
  * Elevação industrial do corpo vs frente por papel no stack.
- * lowest/single: T+18,5 · middle: 17 · highest: 12,5 (folga CIMA ≥33 mm).
+ * lowest/single: T+18,5 · middle/highest: 17 (unificado — folga CIMA ≥28,5 mm com T=19).
+ *
+ * middle e highest usam agora o mesmo valor (antes: 17 / 12,5) para que a 2ª e a 3ª
+ * gaveta fiquem com a mesma relação frente↔corpo↔corrediça e sejam totalmente
+ * intercambiáveis entre si. DRAWER_HIGHEST_BODY_ELEVATION_FROM_FRONT_MM mantém-se
+ * exportada (valor antigo, 12,5) apenas como referência legada — deixou de ser usada aqui.
  */
 export function resolveDrawerBodyElevationForStackRoleMm(
   stackRole: DrawerStackRole,
@@ -52,7 +56,6 @@ export function resolveDrawerBodyElevationForStackRoleMm(
     case "single":
       return resolveLowestDrawerBodyElevationFromFrontMm(boxFloorThicknessMm);
     case "highest":
-      return DRAWER_HIGHEST_BODY_ELEVATION_FROM_FRONT_MM;
     case "middle":
     default:
       return DRAWER_SIDE_BASE_ELEVATION_MM;

@@ -98,8 +98,9 @@ describe("stack din?mico anti-sobreposi??o", () => {
     expect(anti.ok).toBe(true);
 
     expect(layers[0]!.metadata?.sideBaseElevationMm).toBe(19 + 18.5);
+    // middle/highest unificados (intercambiabilidade 2ª/3ª gaveta) — ver drawerStackPosition.ts
     expect(layers[1]!.metadata?.sideBaseElevationMm).toBe(17);
-    expect(layers[2]!.metadata?.sideBaseElevationMm).toBe(12.5);
+    expect(layers[2]!.metadata?.sideBaseElevationMm).toBe(17);
     // Mesmas dimens?es industriais
     expect(layers[0]!.bodyHeight).toBeCloseTo(layers[1]!.bodyHeight!, 5);
     expect(layers[1]!.bodyHeight).toBeCloseTo(layers[2]!.bodyHeight!, 5);
@@ -116,7 +117,8 @@ describe("stack din?mico anti-sobreposi??o", () => {
     const offsetY2 = layers[2]!.bodyCenterOffsetY!;
     const bodyTop2 = layers[2]!.posY! + offsetY2 + bodyH2 / 2;
     const cimaUnderside = moduleBase + H - T;
-    expect(cimaUnderside - bodyTop2).toBeCloseTo(33, 1);
+    // folga CIMA = 64,5 − T − elevação = 64,5 − 19 − 17 = 28,5 mm (era 33 mm antes da unificação)
+    expect(cimaUnderside - bodyTop2).toBeCloseTo(28.5, 1);
 
     const geo2 = resolveDrawerFrontStackGeometry({
       drawerIndex0Based: 2,
@@ -137,8 +139,9 @@ describe("stack din?mico anti-sobreposi??o", () => {
     const panelH = H - 2 * T;
     const fromBottom = runnerFromTop.map((yTop) => panelH - yTop);
     expect(fromBottom[0]).toBeCloseTo(41, 3);
-    expect(fromBottom[1]).toBeCloseTo(296.333, 3);
-    expect(fromBottom[2]).toBeCloseTo(551.667, 3);
+    // middle/highest: eixo fixo 22,5 mm (intercambiáveis) — SSOT em DrawerDrillingRules.ts
+    expect(fromBottom[1]).toBeCloseTo(277.833, 3);
+    expect(fromBottom[2]).toBeCloseTo(533.167, 3);
   });
 
   it("calculateDrawerHeights equal cl?ssico (n?o SW fixo)", () => {

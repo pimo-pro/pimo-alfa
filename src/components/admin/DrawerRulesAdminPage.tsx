@@ -8,9 +8,15 @@ import {
   adminPageShellStyle,
 } from "./AdminUi";
 import { useAdminFeedback } from "../../hooks/useAdminFeedback";
+import {
+  DRAWER_SLIDE_TYPES as SLIDE_TYPES,
+  DRAWER_METAL_BOX_TYPES as METAL_BOX_TYPES,
+  isDrawerSlideTypeActive,
+  isDrawerMetalBoxTypeActive,
+  drawerSlideTypeOptionLabel,
+  drawerMetalBoxTypeOptionLabel,
+} from "../../core/drawers/drawerUiConstants";
 
-const SLIDE_TYPES = ["Blum Tandem", "Blum Movento", "Hettich InnoTech", "Hettich ArciTech", "Hafele Matrix", "Genérica"] as const;
-const METAL_BOX_TYPES = ["Nenhuma", "Blum Legrabox", "Blum Antaro", "Hettich AvanTech", "Hafele Alto", "Genérica"] as const;
 const HANDLE_TYPES = ["Nenhum", "Puxador", "Cava", "Perfil Alumínio"] as const;
 const HANDLE_POSITIONS = ["Centro", "Topo", "Inferior"] as const;
 const LOAD_CAPACITIES = [30, 40, 50, 70] as const;
@@ -45,19 +51,24 @@ function SelectField<T extends string>({
   value,
   options,
   onChange,
+  isOptionDisabled,
+  labelForOption,
 }: {
   label: string;
   value: T;
   options: readonly T[];
   onChange: (_value: T) => void;
+  /** Opcional: marca opções como desativadas (ex.: "EM BREVE"). Não afeta chamadas existentes. */
+  isOptionDisabled?: (_option: T) => boolean;
+  labelForOption?: (_option: T) => string;
 }) {
   return (
     <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
       <span style={{ fontSize: 11, color: "var(--text-muted)" }}>{label}</span>
       <select className="input" value={value} onChange={(event) => onChange(event.target.value as T)}>
         {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
+          <option key={option} value={option} disabled={isOptionDisabled?.(option) ?? false}>
+            {labelForOption?.(option) ?? option}
           </option>
         ))}
       </select>
@@ -170,7 +181,14 @@ export default function DrawerRulesAdminPage() {
 
       <Panel title="Ferragens / Corrediças" description="Tipo de corrediça, soft-close, curso e carga.">
         <div className="form-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 12 }}>
-          <SelectField label="tipoCorredica" value={draft.gavetaTipoCorredica} options={SLIDE_TYPES} onChange={(v) => updateDrawerRules({ gavetaTipoCorredica: v })} />
+          <SelectField
+            label="tipoCorredica"
+            value={draft.gavetaTipoCorredica}
+            options={SLIDE_TYPES}
+            onChange={(v) => updateDrawerRules({ gavetaTipoCorredica: v })}
+            isOptionDisabled={(o) => !isDrawerSlideTypeActive(o)}
+            labelForOption={drawerSlideTypeOptionLabel}
+          />
           <BooleanField label="softClose" checked={draft.gavetaSoftClose} onChange={(v) => updateDrawerRules({ gavetaSoftClose: v })} />
           <NumberField label="cursoTotalMm (0 = automático)" value={draft.gavetaCursoTotalMm} onChange={(v) => updateDrawerRules({ gavetaCursoTotalMm: v })} />
           <SelectField label="capacidadeCargaKg" value={String(draft.gavetaCapacidadeCargaKg)} options={LOAD_CAPACITIES.map(String)} onChange={(v) => updateDrawerRules({ gavetaCapacidadeCargaKg: Number(v) as 30 | 40 | 50 | 70 })} />
@@ -179,7 +197,14 @@ export default function DrawerRulesAdminPage() {
 
       <Panel title="Caixas metálicas / pré-fabricadas" description="Regras para Legrabox, Antaro, AvanTech, Alto ou genéricas.">
         <div className="form-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 12 }}>
-          <SelectField label="tipoCaixaMetalica" value={draft.gavetaTipoCaixaMetalica} options={METAL_BOX_TYPES} onChange={(v) => updateDrawerRules({ gavetaTipoCaixaMetalica: v })} />
+          <SelectField
+            label="tipoCaixaMetalica"
+            value={draft.gavetaTipoCaixaMetalica}
+            options={METAL_BOX_TYPES}
+            onChange={(v) => updateDrawerRules({ gavetaTipoCaixaMetalica: v })}
+            isOptionDisabled={(o) => o !== "Nenhuma" && !isDrawerMetalBoxTypeActive(o)}
+            labelForOption={(o) => (o === "Nenhuma" ? o : drawerMetalBoxTypeOptionLabel(o))}
+          />
           <NumberField label="alturaCaixaMetalica" value={draft.gavetaAlturaCaixaMetalicaMm} onChange={(v) => updateDrawerRules({ gavetaAlturaCaixaMetalicaMm: v })} />
           <DepthListField label="profundidadeCompatível" value={draft.gavetaProfundidadesCompativeisMm} onChange={(v) => updateDrawerRules({ gavetaProfundidadesCompativeisMm: v })} />
         </div>

@@ -17,8 +17,12 @@ describe("Drawer Rules — settings e parametrizacao", () => {
       },
     });
 
-    expect(result.normalized.gavetas.gavetaTipoCorredica).toBe("Blum Movento");
-    expect(result.normalized.gavetas.gavetaTipoCaixaMetalica).toBe("Blum Legrabox");
+    // Restrição industrial temporária (KHALED-PRO): só Quadro V6 / AvanTech + Nenhuma
+    // são aceites — qualquer outro valor é normalizado para o default (sem erro).
+    expect(result.normalized.gavetas.gavetaTipoCorredica).toBe(
+      "Hettich Quadro V6 You M Silent System"
+    );
+    expect(result.normalized.gavetas.gavetaTipoCaixaMetalica).toBe("Nenhuma");
     expect(result.normalized.gavetas.gavetaTipoHandle).toBe("Perfil Alumínio");
     expect(result.normalized.gavetas.gavetaCapacidadeCargaKg).toBe(70);
   });

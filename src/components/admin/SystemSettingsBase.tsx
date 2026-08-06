@@ -12,6 +12,14 @@ import {
 } from "./AdminUi";
 import { useAdminFeedback } from "../../hooks/useAdminFeedback";
 import { useProject } from "../../context/useProject";
+import {
+  DRAWER_SLIDE_TYPES,
+  DRAWER_METAL_BOX_TYPES,
+  isDrawerSlideTypeActive,
+  isDrawerMetalBoxTypeActive,
+  drawerSlideTypeOptionLabel,
+  drawerMetalBoxTypeOptionLabel,
+} from "../../core/drawers/drawerUiConstants";
 import JSZip from "jszip";
 import { buildCncFromCutlistItems, buildTcnExportBaseName } from "../../core/cnc/cncPipeline";
 import type { CutlistItemForPieces } from "../../core/cutlayout/cutLayoutEngine";
@@ -941,8 +949,10 @@ export default function SystemSettingsBase() {
                 }))
               }
             >
-              {["Blum Tandem", "Blum Movento", "Hettich InnoTech", "Hettich ArciTech", "Hafele Matrix", "Genérica"].map((option) => (
-                <option key={option} value={option}>{option}</option>
+              {DRAWER_SLIDE_TYPES.map((option) => (
+                <option key={option} value={option} disabled={!isDrawerSlideTypeActive(option)}>
+                  {drawerSlideTypeOptionLabel(option)}
+                </option>
               ))}
             </select>
           </label>
@@ -991,8 +1001,14 @@ export default function SystemSettingsBase() {
                 }))
               }
             >
-              {["Nenhuma", "Blum Legrabox", "Blum Antaro", "Hettich AvanTech", "Hafele Alto", "Genérica"].map((option) => (
-                <option key={option} value={option}>{option}</option>
+              {DRAWER_METAL_BOX_TYPES.map((option) => (
+                <option
+                  key={option}
+                  value={option}
+                  disabled={option !== "Nenhuma" && !isDrawerMetalBoxTypeActive(option)}
+                >
+                  {option === "Nenhuma" ? option : drawerMetalBoxTypeOptionLabel(option)}
+                </option>
               ))}
             </select>
           </label>
