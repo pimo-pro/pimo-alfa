@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-08-06T14:33:45.003Z",
+      "author": "pimo-pro",
+      "commitMessage": "Correção matemática DIV+SEP — altura do DIV agora igual à distância rosto FUNDO → rosto SEP; folga vertical anulada (gap 0), furos laterais mantidos no centro da peça (positionMm); modelo industrial T/2 exacto respeitado (DIV=2000 → furos=2009.5 com T=19, 2008 com T=16); 52 testes a passar, encaixe rosto a rosto sem desvio.",
+      "version": "v6.0806.1533"
+    },
+    {
       "publishedAt": "2026-08-06T13:56:57.462Z",
       "author": "pimo-pro",
       "commitMessage": "fix(divsep): remover variável dims não usada em drillTopBottomForDiv (build tsc).",
