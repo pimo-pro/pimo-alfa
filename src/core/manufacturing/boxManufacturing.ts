@@ -130,6 +130,8 @@ type ModeloIndustrial = {
 };
 
 const clampPositive = (value: number) => Math.max(0, Math.round(value));
+/** Sem Math.round — preserva .5 mm (ex.: altura DIV com T ímpar, gap 0). */
+const clampPositiveExact = (value: number) => Math.max(0, Number(value) || 0);
 
 const buildId = (prefix: string, index: number) => `${prefix}-${index + 1}`;
 
@@ -466,7 +468,8 @@ export function gerarPaineis(box: BoxModule, rules: RulesConfig): PainelIndustri
       id: getArrayPanelId(box, "divisores", i),
       tipo: "divisorio",
       largura_mm: clampPositive(dims.profundidadeMm),
-      altura_mm: clampPositive(dims.alturaMm),
+      // Altura exacta (rosto a rosto): não arredondar — T=19 → 1990.5, não 1991.
+      altura_mm: clampPositiveExact(dims.alturaMm),
       espessura_mm: clampPositive(dims.larguraMm),
       material,
       orientacaoFibra: "vertical",

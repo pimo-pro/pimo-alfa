@@ -44,6 +44,39 @@ describe("DIV/SEP — integração industrial (cutlist + furação)", () => {
     expect(sep?.metadata?.industrialLabel).toBe("Armario_Test_SEP_01");
   });
 
+  it("preserva altura exacta do DIV (1990.5) sem Math.round; furos LAT = positionMm", () => {
+    const T = 19;
+    const positionMm = 2000;
+    const sep = defaultSeparadorItem({ id: "sep-exact", positionMm });
+    const div = defaultDivisorItem({
+      id: "div-exact",
+      linkedSeparadorId: "sep-exact",
+      positionMm: 400,
+    });
+    const box = makeDivSepTestBox({
+      id: "box-divsep-exact-height",
+      dimensoes: { largura: 800, altura: 2400, profundidade: 560 },
+      espessura: T,
+      divisores: [div],
+      separadores: [sep],
+    });
+
+    const cutlist = cutlistComPrecoFromBox(box, defaultRulesConfig);
+    const divItem = findByTipo(cutlist, "divisorio");
+    const latEsq = findByTipo(cutlist, "lateral_esquerda");
+
+    expect(divItem).toBeDefined();
+    expect(divItem?.dimensoes.altura).toBe(1990.5);
+    expect(divItem?.dimensoes.altura).not.toBe(1991);
+
+    const sepLatYs = (latEsq?.drillHoles ?? [])
+      .filter((h) => typeof h.pairedHoleKey === "string" && h.pairedHoleKey.startsWith("divsep-sep-"))
+      .map((h) => Math.round(h.y * 1000) / 1000);
+    expect(sepLatYs.length).toBeGreaterThan(0);
+    expect(new Set(sepLatYs)).toEqual(new Set([2000]));
+    expect(Math.round((divItem!.dimensoes.altura + T / 2) * 1000) / 1000).toBe(2000);
+  });
+
   it("gera cavilhas e parafusos nas peças DIV/SEP e nos painéis adjacentes", () => {
     const box = makeDivSepTestBox({
       id: "box-divsep-holes",
