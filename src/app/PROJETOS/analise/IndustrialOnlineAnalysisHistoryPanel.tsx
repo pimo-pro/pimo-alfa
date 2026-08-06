@@ -18,9 +18,18 @@ type Props = {
 const panel: CSSProperties = {
   marginTop: 24,
   padding: 14,
-  border: "1px solid #e2e8f0",
+  border: "1px solid var(--card-border)",
   borderRadius: 8,
-  background: "#fff",
+  background: "var(--card-bg)",
+};
+
+const selectStyle: CSSProperties = {
+  padding: "6px 8px",
+  borderRadius: 6,
+  border: "1px solid var(--input-border, var(--ui-color-input-border))",
+  background: "var(--input-bg, var(--ui-color-input-bg))",
+  color: "var(--text-main)",
+  fontSize: 12,
 };
 
 const TYPE_LABEL: Record<string, string> = {
@@ -99,22 +108,22 @@ export default function IndustrialOnlineAnalysisHistoryPanel({
 
   return (
     <section style={panel} aria-label={title}>
-      <h2 style={{ margin: "0 0 12px", fontSize: 15, fontWeight: 700, color: "#0f172a" }}>
+      <h2 style={{ margin: "0 0 12px", fontSize: 15, fontWeight: 700, color: "var(--text-main)" }}>
         {title}
-        <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 500, color: "#64748b" }}>
+        <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 500, color: "var(--text-muted)" }}>
           ({filtered.length})
         </span>
       </h2>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
         {!lockedDocId ? (
-          <label style={{ fontSize: 12, color: "#64748b" }}>
+          <label style={{ fontSize: 12, color: "var(--text-muted)" }}>
             Documento{" "}
             <select
               value={docFilter}
               aria-label="Filtrar por documento"
               onChange={(e) => setDocFilter(e.target.value)}
-              style={{ padding: "6px 8px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: 12 }}
+              style={selectStyle}
             >
               <option value="">Todos os documentos</option>
               {INDUSTRIAL_ONLINE_ANALYSIS_DOCS.map((d) => (
@@ -125,13 +134,13 @@ export default function IndustrialOnlineAnalysisHistoryPanel({
             </select>
           </label>
         ) : null}
-        <label style={{ fontSize: 12, color: "#64748b" }}>
+        <label style={{ fontSize: 12, color: "var(--text-muted)" }}>
           Utilizador{" "}
           <select
             value={userFilter}
             aria-label="Filtrar por utilizador"
             onChange={(e) => setUserFilter(e.target.value)}
-            style={{ padding: "6px 8px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: 12 }}
+            style={selectStyle}
           >
             <option value="">Todos os utilizadores</option>
             {users.map((u) => (
@@ -141,13 +150,13 @@ export default function IndustrialOnlineAnalysisHistoryPanel({
             ))}
           </select>
         </label>
-        <label style={{ fontSize: 12, color: "#64748b" }}>
+        <label style={{ fontSize: 12, color: "var(--text-muted)" }}>
           Tipo{" "}
           <select
             value={typeFilter}
             aria-label="Filtrar por tipo"
             onChange={(e) => setTypeFilter(e.target.value)}
-            style={{ padding: "6px 8px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: 12 }}
+            style={selectStyle}
           >
             <option value="">Todos os tipos</option>
             <option value="modify">Modificação</option>
@@ -164,7 +173,7 @@ export default function IndustrialOnlineAnalysisHistoryPanel({
       ) : null}
 
       {filtered.length === 0 ? (
-        <p style={{ margin: 0, fontSize: 13, color: "#64748b" }} role="status">
+        <p style={{ margin: 0, fontSize: 13, color: "var(--text-muted)" }} role="status">
           Sem entradas de histórico.
         </p>
       ) : (
@@ -179,15 +188,15 @@ export default function IndustrialOnlineAnalysisHistoryPanel({
                   textAlign: "left",
                   padding: "10px 12px",
                   borderRadius: 6,
-                  border: "1px solid #e2e8f0",
-                  background: "#f8fafc",
+                  border: "1px solid var(--card-border)",
+                  background: "rgba(127,127,127,0.06)",
                   cursor: "pointer",
                   fontSize: 12,
-                  color: "#0f172a",
+                  color: "var(--text-main)",
                 }}
               >
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 4 }}>
-                  <span style={{ color: "#64748b" }}>{formatTs(entry.ts)}</span>
+                  <span style={{ color: "var(--text-muted)" }}>{formatTs(entry.ts)}</span>
                   <span style={{ fontWeight: 600 }}>{entry.userName}</span>
                   {!lockedDocId ? (
                     <code style={{ fontSize: 11 }}>{entry.docId}</code>
@@ -198,13 +207,14 @@ export default function IndustrialOnlineAnalysisHistoryPanel({
                       fontWeight: 700,
                       padding: "1px 6px",
                       borderRadius: 999,
-                      background: "#e2e8f0",
+                      background: "rgba(127,127,127,0.15)",
+                      color: "var(--text-main)",
                     }}
                   >
                     {TYPE_LABEL[entry.changeType] ?? entry.changeType}
                   </span>
                 </div>
-                <div style={{ color: "#334155" }}>
+                <div style={{ color: "var(--text-main)" }}>
                   <code>{entry.fieldKey}</code>: {truncate(entry.oldValue)} ?{" "}
                   {truncate(entry.newValue)}
                 </div>

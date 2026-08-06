@@ -21,6 +21,8 @@ import { resolveDocumentaryOverride } from "@/core/industrial/onlineAnalysis/ind
 import { jumpToIndustrialHistoryCell } from "@/core/industrial/onlineAnalysis/jumpToIndustrialHistoryCell";
 import { industrialFeatureFlags } from "@/industrial/config/featureFlags";
 
+import Button from "@/components/ui/Button";
+
 import IndustrialOnlineAnalysisLayout from "../../../analise/IndustrialOnlineAnalysisLayout";
 import IndustrialOnlineAnalysisTable from "../../../analise/IndustrialOnlineAnalysisTable";
 import IndustrialOnlineAnalysisHistoryPanel from "../../../analise/IndustrialOnlineAnalysisHistoryPanel";
@@ -229,7 +231,7 @@ export default function ProjetosAnaliseDocPage() {
         pageSlug={pageSlug ?? projectName}
         docLabel={validDoc ? docId : undefined}
       >
-        <p style={{ color: "#64748b", fontSize: 14 }}>
+        <p style={{ color: "var(--text-muted)", fontSize: 14 }}>
           A funcionalidade — Análise arquivo completo… está desativada (
           <code>industrialOnlineAnalysis = false</code>).
         </p>
@@ -240,8 +242,13 @@ export default function ProjetosAnaliseDocPage() {
   if (!validDoc) {
     return (
       <IndustrialOnlineAnalysisLayout projectName={projectName} pageSlug={pageSlug ?? projectName}>
-        <p style={{ color: "#dc2626" }}>Documento industrial desconhecido: {docId}</p>
-        <Link to={buildIndustrialOnlineAnalysisIndexPath(projectName)} style={{ color: "#2563eb" }}>
+        <p style={{ color: "var(--pi-btn-danger-bg, #dc2626)" }}>
+          Documento industrial desconhecido: {docId}
+        </p>
+        <Link
+          to={buildIndustrialOnlineAnalysisIndexPath(projectName)}
+          style={{ color: "var(--blue-light, #2563eb)" }}
+        >
           Voltar ao índice
         </Link>
       </IndustrialOnlineAnalysisLayout>
@@ -254,10 +261,14 @@ export default function ProjetosAnaliseDocPage() {
       pageSlug={pageSlug ?? projectName}
       docLabel={view?.label ?? docId}
     >
-      {loading ? <p style={{ color: "#64748b" }}>A carregar projeto…</p> : null}
-      {!loading && error ? <p style={{ color: "#dc2626" }}>{error}</p> : null}
+      {loading ? <p style={{ color: "var(--text-muted)" }}>A carregar projeto…</p> : null}
+      {!loading && error ? (
+        <p style={{ color: "var(--pi-btn-danger-bg, #dc2626)" }}>{error}</p>
+      ) : null}
       {!loading && !error && !view ? (
-        <p style={{ color: "#dc2626" }}>Não foi possível construir a vista deste documento.</p>
+        <p style={{ color: "var(--pi-btn-danger-bg, #dc2626)" }}>
+          Não foi possível construir a vista deste documento.
+        </p>
       ) : null}
       {!loading && !error && view ? (
         <>
@@ -270,92 +281,45 @@ export default function ProjetosAnaliseDocPage() {
               marginBottom: 16,
             }}
           >
-            <p style={{ margin: 0, fontSize: 13, color: "#64748b", flex: 1 }}>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--text-muted)", flex: 1 }}>
               {view.description} — projeto <strong>{view.projectName}</strong>
               {editing ? " — modo edição (draft local)" : ""}
             </p>
             {!editing ? (
               <>
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   disabled={generatingPdf}
                   onClick={() => void generatePdf("effective")}
-                  style={{
-                    padding: "8px 12px",
-                    borderRadius: 6,
-                    border: "none",
-                    background: "#1d4ed8",
-                    color: "#fff",
-                    cursor: generatingPdf ? "wait" : "pointer",
-                    fontSize: 13,
-                  }}
                 >
                   {generatingPdf ? "A gerar…" : "Gerar PDF"}
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant="secondary"
                   disabled={generatingPdf}
                   onClick={() => void generatePdf("canonical")}
-                  style={{
-                    padding: "8px 12px",
-                    borderRadius: 6,
-                    border: "1px solid #cbd5e1",
-                    background: "#fff",
-                    cursor: generatingPdf ? "wait" : "pointer",
-                    fontSize: 13,
-                  }}
                 >
                   Gerar PDF original
-                </button>
-                <button
-                  type="button"
-                  onClick={startEdit}
-                  style={{
-                    padding: "8px 12px",
-                    borderRadius: 6,
-                    border: "none",
-                    background: "#0f172a",
-                    color: "#fff",
-                    cursor: "pointer",
-                    fontSize: 13,
-                  }}
-                >
+                </Button>
+                <Button type="button" variant="primary" onClick={startEdit}>
                   Editar
-                </button>
+                </Button>
               </>
             ) : (
               <>
-                <button
+                <Button
                   type="button"
+                  variant="primary"
                   disabled={saving}
                   onClick={() => void saveEdit()}
-                  style={{
-                    padding: "8px 12px",
-                    borderRadius: 6,
-                    border: "none",
-                    background: "#15803d",
-                    color: "#fff",
-                    cursor: saving ? "wait" : "pointer",
-                    fontSize: 13,
-                  }}
                 >
                   {saving ? "A guardar…" : "Guardar"}
-                </button>
-                <button
-                  type="button"
-                  disabled={saving}
-                  onClick={cancelEdit}
-                  style={{
-                    padding: "8px 12px",
-                    borderRadius: 6,
-                    border: "1px solid #cbd5e1",
-                    background: "#fff",
-                    cursor: "pointer",
-                    fontSize: 13,
-                  }}
-                >
+                </Button>
+                <Button type="button" variant="secondary" disabled={saving} onClick={cancelEdit}>
                   Cancelar
-                </button>
+                </Button>
               </>
             )}
           </div>
@@ -364,7 +328,9 @@ export default function ProjetosAnaliseDocPage() {
               style={{
                 margin: "0 0 12px",
                 fontSize: 13,
-                color: saveMsg.startsWith("Guardar bloqueado") ? "#b91c1c" : "#15803d",
+                color: saveMsg.startsWith("Guardar bloqueado")
+                  ? "var(--pi-btn-danger-bg, #dc2626)"
+                  : "var(--pi-btn-confirm-bg, #16a34a)",
               }}
               role={saveMsg.startsWith("Guardar bloqueado") ? "alert" : "status"}
             >
@@ -372,9 +338,11 @@ export default function ProjetosAnaliseDocPage() {
             </p>
           ) : null}
           {pdfMsg ? (
-            <p style={{ margin: "0 0 12px", fontSize: 13, color: "#1d4ed8" }}>{pdfMsg}</p>
+            <p style={{ margin: "0 0 12px", fontSize: 13, color: "var(--blue-light, #2563eb)" }}>
+              {pdfMsg}
+            </p>
           ) : null}
-          <p style={{ margin: "0 0 16px", fontSize: 12, color: "#64748b" }}>
+          <p style={{ margin: "0 0 16px", fontSize: 12, color: "var(--text-muted)" }}>
             Overrides documentais: design 3D e CNC/TCN/drill não são alterados. A cutlist editada
             alimenta as etiquetas UEE (whitelist). Remover linha omite só a etiqueta. Downloads não
             registam histórico. Quantidade e material inválidos bloqueiam o Guardar.
@@ -402,7 +370,7 @@ export default function ProjetosAnaliseDocPage() {
           ) : null}
           <Link
             to={buildIndustrialOnlineAnalysisIndexPath(projectName)}
-            style={{ fontSize: 13, color: "#2563eb" }}
+            style={{ fontSize: 13, color: "var(--blue-light, #2563eb)" }}
           >
             Voltar ao índice de análise
           </Link>

@@ -14,6 +14,8 @@ import {
 } from "@/core/industrial/onlineAnalysis";
 import { industrialFeatureFlags } from "@/industrial/config/featureFlags";
 
+import Button from "@/components/ui/Button";
+
 import IndustrialOnlineAnalysisLayout from "../../analise/IndustrialOnlineAnalysisLayout";
 import IndustrialOnlineAnalysisHistoryPanel from "../../analise/IndustrialOnlineAnalysisHistoryPanel";
 import IndustrialOnlineAnalysisDownloadBar from "../../analise/IndustrialOnlineAnalysisDownloadBar";
@@ -91,7 +93,7 @@ export default function ProjetosAnaliseIndexPage() {
         projectName={projectName}
         pageSlug={pageSlug ?? projectName}
       >
-        <p style={{ color: "#64748b", fontSize: 14 }}>
+        <p style={{ color: "var(--text-muted)", fontSize: 14 }}>
           A funcionalidade — Análise arquivo completo… está desativada (
           <code>industrialOnlineAnalysis = false</code>).
         </p>
@@ -101,10 +103,14 @@ export default function ProjetosAnaliseIndexPage() {
 
   return (
     <IndustrialOnlineAnalysisLayout projectName={projectName} pageSlug={pageSlug ?? projectName}>
-      {loading ? <p style={{ color: "#64748b" }}>A carregar projeto…</p> : null}
-      {!loading && error ? <p style={{ color: "#dc2626" }}>{error}</p> : null}
+      {loading ? <p style={{ color: "var(--text-muted)" }}>A carregar projeto…</p> : null}
+      {!loading && error ? (
+        <p style={{ color: "var(--pi-btn-danger-bg, #dc2626)" }}>{error}</p>
+      ) : null}
       {!loading && !error && !revivedOk ? (
-        <p style={{ color: "#dc2626" }}>Não foi possível ler o estado do projeto.</p>
+        <p style={{ color: "var(--pi-btn-danger-bg, #dc2626)" }}>
+          Não foi possível ler o estado do projeto.
+        </p>
       ) : null}
       {!loading && !error && revivedOk && projectState ? (
         <>
@@ -134,7 +140,7 @@ export default function ProjetosAnaliseIndexPage() {
             }}
           />
           <div style={{ display: "grid", gap: 10 }}>
-            <p style={{ margin: "0 0 8px", fontSize: 13, color: "#64748b" }}>
+            <p style={{ margin: "0 0 8px", fontSize: 13, color: "var(--text-muted)" }}>
               Documentos industriais (leitura + edição documental + download seletivo). A cutlist
               editada alimenta as etiquetas UEE (material/obs/qtd/peça/caixa) sem alterar CNC.
             </p>
@@ -168,8 +174,10 @@ export default function ProjetosAnaliseIndexPage() {
                     alignItems: "stretch",
                     padding: "10px 12px",
                     borderRadius: 8,
-                    border: `1px solid ${isSelected ? "#93c5fd" : "#e2e8f0"}`,
-                    background: isSelected ? "#eff6ff" : "#fff",
+                    border: `1px solid ${
+                      isSelected ? "var(--blue-light, #2563eb)" : "var(--card-border)"
+                    }`,
+                    background: isSelected ? "rgba(37,99,235,0.08)" : "var(--card-bg)",
                   }}
                 >
                   <label
@@ -187,14 +195,14 @@ export default function ProjetosAnaliseIndexPage() {
                       onChange={() => toggleDoc(doc.id)}
                       disabled={busy}
                     />
-                    <span style={{ fontSize: 12, color: "#64748b" }}>Sel.</span>
+                    <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Sel.</span>
                   </label>
                   <Link
                     to={buildIndustrialOnlineAnalysisDocPath(projectName, doc.id)}
                     style={{
                       flex: 1,
                       textDecoration: "none",
-                      color: "#0f172a",
+                      color: "var(--text-main)",
                       minWidth: 0,
                     }}
                   >
@@ -215,27 +223,19 @@ export default function ProjetosAnaliseIndexPage() {
                         </span>
                       ) : null}
                     </div>
-                    <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
+                    <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
                       {doc.description} — <code style={{ fontSize: 11 }}>{doc.id}</code>
                     </div>
                   </Link>
-                  <button
+                  <Button
                     type="button"
+                    variant="secondary"
                     disabled={busy}
                     onClick={() => void runDownload([doc.id], "effective", "")}
-                    style={{
-                      alignSelf: "center",
-                      padding: "6px 10px",
-                      borderRadius: 6,
-                      border: "1px solid #cbd5e1",
-                      background: "#fff",
-                      cursor: busy ? "wait" : "pointer",
-                      fontSize: 12,
-                      flexShrink: 0,
-                    }}
+                    style={{ alignSelf: "center", flexShrink: 0 }}
                   >
                     PDF
-                  </button>
+                  </Button>
                 </div>
               );
             })}

@@ -1,5 +1,7 @@
 import type { CSSProperties } from "react";
 
+import Button from "@/components/ui/Button";
+
 type Props = {
   selectedCount: number;
   modifiedCount: number;
@@ -20,9 +22,9 @@ const bar: CSSProperties = {
   gap: 10,
   marginBottom: 16,
   padding: 12,
-  border: "1px solid #e2e8f0",
+  border: "1px solid var(--card-border)",
   borderRadius: 8,
-  background: "#fff",
+  background: "var(--card-bg)",
 };
 
 const row: CSSProperties = {
@@ -30,23 +32,6 @@ const row: CSSProperties = {
   flexWrap: "wrap",
   gap: 8,
   alignItems: "center",
-};
-
-const btn: CSSProperties = {
-  padding: "7px 11px",
-  borderRadius: 6,
-  border: "1px solid #cbd5e1",
-  background: "#fff",
-  cursor: "pointer",
-  fontSize: 12,
-  color: "#0f172a",
-};
-
-const btnPrimary: CSSProperties = {
-  ...btn,
-  border: "none",
-  background: "#0f172a",
-  color: "#fff",
 };
 
 export default function IndustrialOnlineAnalysisDownloadBar({
@@ -83,13 +68,18 @@ export default function IndustrialOnlineAnalysisDownloadBar({
       ) : null}
 
       <div style={row}>
-        <button type="button" disabled={busy} onClick={onSelectAll} style={btn}>
+        <Button type="button" variant="secondary" disabled={busy} onClick={onSelectAll}>
           Selecionar todos
-        </button>
-        <button type="button" disabled={busy || selectedCount === 0} onClick={onClearSelection} style={btn}>
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={busy || selectedCount === 0}
+          onClick={onClearSelection}
+        >
           Limpar seleção
-        </button>
-        <span style={{ fontSize: 12, color: "#64748b" }}>
+        </Button>
+        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
           {selectedCount} selecionado{selectedCount === 1 ? "" : "s"}
           {modifiedCount > 0
             ? ` — ${modifiedCount} modificado${modifiedCount === 1 ? "" : "s"}`
@@ -98,33 +88,33 @@ export default function IndustrialOnlineAnalysisDownloadBar({
       </div>
 
       <div style={row}>
-        <button
+        <Button
           type="button"
+          variant="primary"
           disabled={busy || selectedCount === 0}
           onClick={onGenerateSelected}
-          style={btnPrimary}
         >
           {busy ? "A gerar…" : "Gerar PDFs selecionados"}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="secondary"
           disabled={busy || modifiedCount === 0}
           onClick={onGenerateModified}
-          style={btn}
         >
           Gerar PDFs modificados
-        </button>
-        <button type="button" disabled={busy} onClick={onGenerateAll} style={btn}>
+        </Button>
+        <Button type="button" variant="secondary" disabled={busy} onClick={onGenerateAll}>
           Gerar todos PDFs industriais
-        </button>
-        <button type="button" disabled={busy} onClick={onGenerateOriginals} style={btn}>
+        </Button>
+        <Button type="button" variant="secondary" disabled={busy} onClick={onGenerateOriginals}>
           Gerar PDFs originais
-        </button>
+        </Button>
       </div>
 
       {message ? (
         <p
-          style={{ margin: 0, fontSize: 12, color: "#334155" }}
+          style={{ margin: 0, fontSize: 12, color: "var(--text-main)" }}
           role="status"
           aria-live="polite"
         >

@@ -4,6 +4,8 @@ import type {
   IndustrialOnlineAnalysisRow,
 } from "@/core/industrial/onlineAnalysis/industrialOnlineAnalysisViewTypes";
 
+import Button from "@/components/ui/Button";
+
 type Props = {
   title: string;
   modified?: boolean;
@@ -17,8 +19,8 @@ type Props = {
 
 const wrap: CSSProperties = {
   marginBottom: 28,
-  background: "#fff",
-  border: "1px solid #e2e8f0",
+  background: "var(--card-bg)",
+  border: "1px solid var(--card-border)",
   borderRadius: 8,
   overflow: "hidden",
 };
@@ -28,9 +30,9 @@ const titleStyle: CSSProperties = {
   padding: "12px 14px",
   fontSize: 14,
   fontWeight: 600,
-  borderBottom: "1px solid #e2e8f0",
-  background: "#f8fafc",
-  color: "#0f172a",
+  borderBottom: "1px solid var(--card-border)",
+  background: "rgba(127,127,127,0.06)",
+  color: "var(--text-main)",
   display: "flex",
   alignItems: "center",
   gap: 8,
@@ -45,9 +47,9 @@ const tableStyle: CSSProperties = {
 const thStyle: CSSProperties = {
   textAlign: "left",
   padding: "8px 10px",
-  borderBottom: "1px solid #e2e8f0",
-  background: "#f1f5f9",
-  color: "#334155",
+  borderBottom: "1px solid var(--card-border)",
+  background: "rgba(127,127,127,0.08)",
+  color: "var(--text-main)",
   fontWeight: 600,
   whiteSpace: "nowrap",
 };
@@ -55,7 +57,7 @@ const thStyle: CSSProperties = {
 const emptyStyle: CSSProperties = {
   padding: 16,
   fontSize: 13,
-  color: "#64748b",
+  color: "var(--text-muted)",
 };
 
 const badge: CSSProperties = {
@@ -102,21 +104,14 @@ export default function IndustrialOnlineAnalysisTable({
         <span>{title}</span>
         {modified ? <span style={badge}>Modificado</span> : null}
         {editing && onAddRow ? (
-          <button
+          <Button
             type="button"
+            variant="secondary"
             onClick={onAddRow}
-            style={{
-              marginLeft: "auto",
-              fontSize: 12,
-              padding: "4px 10px",
-              borderRadius: 6,
-              border: "1px solid #cbd5e1",
-              background: "#fff",
-              cursor: "pointer",
-            }}
+            style={{ marginLeft: "auto", fontSize: 12, padding: "4px 10px", minHeight: "auto" }}
           >
             Adicionar linha
-          </button>
+          </Button>
         ) : null}
       </h2>
       {visibleRows.length === 0 ? (
@@ -162,8 +157,8 @@ export default function IndustrialOnlineAnalysisTable({
                         data-field={c.key}
                         style={{
                           padding: "7px 10px",
-                          borderBottom: "1px solid #f1f5f9",
-                          color: "#1e293b",
+                          borderBottom: "1px solid var(--border, rgba(127,127,127,0.15))",
+                          color: "var(--text-main)",
                           verticalAlign: "top",
                           background: bg,
                           boxShadow: row.modifiedFields.includes(c.key)
@@ -186,9 +181,11 @@ export default function IndustrialOnlineAnalysisTable({
                                 width: "100%",
                                 boxSizing: "border-box",
                                 padding: "4px 6px",
-                                border: "1px solid #cbd5e1",
+                                border: "1px solid var(--input-border, var(--ui-color-input-border))",
                                 borderRadius: 4,
                                 fontSize: 12,
+                                background: "var(--input-bg, var(--ui-color-input-bg))",
+                                color: "var(--text-main)",
                               }}
                             />
                           </>
@@ -204,23 +201,21 @@ export default function IndustrialOnlineAnalysisTable({
                     );
                   })}
                   {editing ? (
-                    <td style={{ padding: "7px 10px", borderBottom: "1px solid #f1f5f9" }}>
-                      <button
+                    <td
+                      style={{
+                        padding: "7px 10px",
+                        borderBottom: "1px solid var(--border, rgba(127,127,127,0.15))",
+                      }}
+                    >
+                      <Button
                         type="button"
+                        variant="danger"
                         aria-label={`Remover linha ${row.rowId}`}
                         onClick={() => onDeleteRow?.(row.rowId)}
-                        style={{
-                          fontSize: 11,
-                          padding: "4px 8px",
-                          borderRadius: 4,
-                          border: "1px solid #fecaca",
-                          background: "#fff",
-                          color: "#b91c1c",
-                          cursor: "pointer",
-                        }}
+                        style={{ fontSize: 11, padding: "4px 8px", minHeight: "auto" }}
                       >
                         Remover
-                      </button>
+                      </Button>
                     </td>
                   ) : null}
                 </tr>
