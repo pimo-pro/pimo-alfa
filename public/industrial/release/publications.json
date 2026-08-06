@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-08-06T13:56:57.462Z",
+      "author": "pimo-pro",
+      "commitMessage": "fix(divsep): remover variável dims não usada em drillTopBottomForDiv (build tsc).",
+      "version": "v6.0806.1456"
+    },
+    {
       "publishedAt": "2026-08-06T11:37:13.592Z",
       "author": "pimo-pro",
       "commitMessage": "Auto deploy",

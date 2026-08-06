@@ -1,11 +1,21 @@
 {
-  "updatedAt": "2026-08-06T11:37:14.516Z",
+  "updatedAt": "2026-08-06T13:56:58.147Z",
   "news": [
+    {
+      "version": "v6.0806.1456",
+      "title": "fix(divsep): remover variável dims não usada em drillTopBottomForDiv (build tsc).",
+      "description": "fix(divsep): remover variável dims não usada em drillTopBottomForDiv (build tsc).",
+      "publishedAt": "2026-08-06T13:56:58.063Z",
+      "type": "fix",
+      "author": "pimo-pro",
+      "icon": "fix",
+      "commit": "f3460199"
+    },
     {
       "version": "v6.0806.1237",
       "title": "Auto deploy",
       "description": "Auto deploy",
-      "publishedAt": "2026-08-06T11:37:14.430Z",
+      "publishedAt": "2026-08-06T12:39:41+01:00",
       "type": "update",
       "author": "pimo-pro",
       "icon": "update",
