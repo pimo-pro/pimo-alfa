@@ -36,8 +36,13 @@ const DRAWER_HEIGHT_MODE_VALUES = [
 ] as const;
 const DRAWER_LOAD_CAPACITIES = [30, 40, 50, 70] as const;
 
-function pickOption<T extends readonly string[]>(value: unknown, options: T, fallback: T[number]): T[number] {
-  return options.includes(value as T[number]) ? (value as T[number]) : fallback;
+function pickOption<T extends readonly string[]>(
+  value: unknown,
+  options: T,
+  /** Aceita string alargada (ex.: DrawerSlideType) — o cast garante T[number] no retorno. */
+  fallback: string
+): T[number] {
+  return options.includes(value as T[number]) ? (value as T[number]) : (fallback as T[number]);
 }
 
 function pickDrawerCapacity(value: unknown): 30 | 40 | 50 | 70 {
