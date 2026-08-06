@@ -26,10 +26,17 @@ export function resolveSeparadorBottomY(box: DivSepBoxLike, sep: SeparadorItem):
   return centerY - dims.alturaMm / 2;
 }
 
-/** Folga vertical mínima (mm) entre DIV.top e SEP.bottom (decisão industrial D). */
-export const DIV_SEP_VERTICAL_CLEARANCE_MM = 5;
+/**
+ * Folga vertical DIV↔SEP (mm).
+ * Encaixe industrial rosto a rosto: 0 (sem folga). Mantido como constante SSOT.
+ */
+export const DIV_SEP_VERTICAL_CLEARANCE_MM = 0;
 
-/** Altura do DIV: termina ≥ clearance abaixo da face inferior do SEP ligado. */
+/**
+ * Altura do DIV ligado ao SEP: rosto a rosto com a face inferior do SEP.
+ * `alturaDIV = SEP.bottomY − FUNDO.topY` (sem floor; aceita .5 quando T é ímpar).
+ * Furos LAT permanecem no centro do SEP (`positionMm`).
+ */
 export function resolveDivisorLinkedHeightMm(
   box: DivSepBoxLike,
   _div: DivisorItem,
@@ -38,10 +45,7 @@ export function resolveDivisorLinkedHeightMm(
   const internal = getDivSepInternalDims(box);
   const sepBottomY = resolveSeparadorBottomY(box, sep);
   const divBottomY = internal.espessura;
-  return Math.max(
-    1,
-    Math.floor(sepBottomY - divBottomY - DIV_SEP_VERTICAL_CLEARANCE_MM)
-  );
+  return Math.max(1, sepBottomY - divBottomY);
 }
 
 /** Altura efetiva do DIV (acoplada ao SEP quando `linkedSeparadorId` definido). */

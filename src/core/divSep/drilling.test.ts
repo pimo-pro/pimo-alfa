@@ -13,7 +13,6 @@ import {
   resolveSeparadorDimensions,
 } from "./dimensions";
 import { absoluteYToLateralPanelY } from "./shelfDrilling";
-import { DIV_SEP_VERTICAL_CLEARANCE_MM } from "./coupling";
 import { CORNER_FF_EDGE_DOWEL_DEPTH_MM } from "../cornerCabinet/cornerFixedFrontDowels";
 import { CAVILHA_FACE_DEPTH_MM } from "../drill/cavilha10x40Rule";
 import { countDivSepFerragens } from "./ferragens";
@@ -142,9 +141,7 @@ describe("buildDivSepDrilling — SEP+DIV combinados", () => {
   it("ajusta altura do DIV ao SEP ligado", () => {
     const dims = resolveDivisorDimensions(box, div);
     const sepBottom = resolveSeparadorCenterY(box, sep) - resolveSeparadorDimensions(box, sep).alturaMm / 2;
-    const expected = Math.floor(
-      sepBottom - DIV_SEP_ESPESSURA - DIV_SEP_VERTICAL_CLEARANCE_MM
-    );
+    const expected = sepBottom - DIV_SEP_ESPESSURA;
     expect(dims.alturaMm).toBe(expected);
   });
 
@@ -320,7 +317,7 @@ describe("SEP LAT Y — caso industrial H=720 T=19 pos=600", () => {
     const divH = resolveDivisorDimensions(box, div).alturaMm;
     const sepBottom =
       sepCenterAbs - resolveSeparadorDimensions(box, sep).alturaMm / 2;
-    expect(divH).toBe(Math.floor(sepBottom - 19 - DIV_SEP_VERTICAL_CLEARANCE_MM));
-    expect(sepBottom - (19 + divH)).toBeGreaterThanOrEqual(DIV_SEP_VERTICAL_CLEARANCE_MM);
+    expect(roundMm(divH)).toBe(roundMm(sepBottom - 19));
+    expect(roundMm(sepBottom - (19 + divH))).toBe(0);
   });
 });

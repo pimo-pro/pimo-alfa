@@ -1,6 +1,6 @@
 /**
- * Folga vertical DIV↔SEP (decisão D): gap ≥ DIV_SEP_VERTICAL_CLEARANCE_MM.
- * Furos LAT permanecem no centro do SEP (positionMm).
+ * Encaixe DIV↔SEP rosto a rosto: gap = 0.
+ * Furos LAT = centro do SEP (positionMm); alturaDIV = positionMm − T/2.
  */
 import { describe, expect, it } from "vitest";
 import {
@@ -38,8 +38,54 @@ function linkedGapMm(
   return { alturaDIV, gap, yLat };
 }
 
-describe("DIV_SEP_VERTICAL_CLEARANCE_MM — folga Y ≥ 5", () => {
-  it("NP26389: T=19 positionMm=1519 → DIV 1504, gap 5.5, furos 1519", () => {
+describe("DIV↔SEP encaixe rosto a rosto (gap 0)", () => {
+  it("caso industrial: DIV=2000 → furos=2009.5 (T=19)", () => {
+    const T = 19;
+    const alturaDivAlvo = 2000;
+    const positionMm = alturaDivAlvo + T / 2; // 2009.5
+    const sep = defaultSeparadorItem({ id: "sep-2000", positionMm });
+    const div = defaultDivisorItem({
+      id: "div-2000",
+      linkedSeparadorId: "sep-2000",
+      positionMm: 400,
+    });
+    const box = makeDivSepTestBox({
+      dimensoes: { largura: 800, altura: 2400, profundidade: 560 },
+      espessura: T,
+      separadores: [sep],
+      divisores: [div],
+    });
+
+    const { alturaDIV, gap, yLat } = linkedGapMm(box, sep, div);
+    expect(roundMm(yLat)).toBe(2009.5);
+    expect(roundMm(alturaDIV)).toBe(2000);
+    expect(roundMm(gap)).toBe(0);
+    expect(DIV_SEP_VERTICAL_CLEARANCE_MM).toBe(0);
+  });
+
+  it("caso industrial: DIV=2000 → furos=2008 (T=16)", () => {
+    const T = 16;
+    const positionMm = 2000 + T / 2;
+    const sep = defaultSeparadorItem({ id: "sep-2000-t16", positionMm });
+    const div = defaultDivisorItem({
+      id: "div-2000-t16",
+      linkedSeparadorId: "sep-2000-t16",
+      positionMm: 400,
+    });
+    const box = makeDivSepTestBox({
+      dimensoes: { largura: 800, altura: 2400, profundidade: 560 },
+      espessura: T,
+      separadores: [sep],
+      divisores: [div],
+    });
+
+    const { alturaDIV, gap, yLat } = linkedGapMm(box, sep, div);
+    expect(roundMm(yLat)).toBe(2008);
+    expect(roundMm(alturaDIV)).toBe(2000);
+    expect(roundMm(gap)).toBe(0);
+  });
+
+  it("NP26389: T=19 positionMm=1519 → DIV 1509.5, gap 0, furos 1519", () => {
     const T = 19;
     const positionMm = 1519;
     const sep = defaultSeparadorItem({ id: "sep-np", positionMm });
@@ -59,12 +105,11 @@ describe("DIV_SEP_VERTICAL_CLEARANCE_MM — folga Y ≥ 5", () => {
     expect(roundMm(sepBottom)).toBe(1528.5);
 
     const { alturaDIV, gap, yLat } = linkedGapMm(box, sep, div);
-    expect(alturaDIV).toBe(1504);
-    expect(roundMm(gap)).toBe(5.5);
+    expect(roundMm(alturaDIV)).toBe(1509.5);
+    expect(roundMm(gap)).toBe(0);
     expect(roundMm(yLat)).toBe(1519);
-    expect(resolveDivisorDimensions(box, div).alturaMm).toBe(1504);
+    expect(roundMm(resolveDivisorDimensions(box, div).alturaMm)).toBe(1509.5);
 
-    // Furos LAT inalterados no centro do SEP
     const { getExtraHoles } = buildDivSepDrilling(box, box.panelIds!, DIV_SEP_TEST_RULES);
     const ys = getExtraHoles("lateral_esquerda")
       .filter((h) => h.holeType === "cavilha" || h.holeType === "parafuso")
@@ -72,7 +117,6 @@ describe("DIV_SEP_VERTICAL_CLEARANCE_MM — folga Y ≥ 5", () => {
     expect(ys.length).toBeGreaterThan(0);
     expect(new Set(ys)).toEqual(new Set([1519]));
 
-    // Viewer: sem penetração + gap ≥ 5
     const H = 2400;
     const specs = getDivSepMeshSpecs(box, 0.8, H / 1000, 0.56, T / 1000);
     const sepSpec = specs.find((s) => s.name.startsWith("divsep-sep-"))!;
@@ -82,17 +126,15 @@ describe("DIV_SEP_VERTICAL_CLEARANCE_MM — folga Y ≥ 5", () => {
       (sepSpec.pos[1]! + heightM / 2) * 1000 - (sepSpec.size[1]! / 2) * 1000;
     const divMeshTop =
       (divSpec.pos[1]! + heightM / 2) * 1000 + (divSpec.size[1]! / 2) * 1000;
-    expect(roundMm(divMeshTop)).toBeLessThanOrEqual(roundMm(sepMeshBottom));
-    expect(roundMm(sepMeshBottom - divMeshTop)).toBeGreaterThanOrEqual(
-      DIV_SEP_VERTICAL_CLEARANCE_MM
-    );
+    expect(roundMm(divMeshTop)).toBe(roundMm(sepMeshBottom));
+    expect(roundMm(sepMeshBottom - divMeshTop)).toBe(0);
   });
 
   it.each([
     { T: 19, label: "ímpar" },
     { T: 18, label: "par" },
     { T: 16, label: "par" },
-  ])("T=$T ($label): gap ≥ 5 em vários positionMm; furos = positionMm", ({ T }) => {
+  ])("T=$T ($label): gap 0; alturaDIV = positionMm − T/2; furos = positionMm", ({ T }) => {
     const positions = [200, 400, 600, 800, 1000];
     for (const positionMm of positions) {
       const sep = defaultSeparadorItem({ id: `sep-t${T}-${positionMm}`, positionMm });
@@ -109,14 +151,12 @@ describe("DIV_SEP_VERTICAL_CLEARANCE_MM — folga Y ≥ 5", () => {
       });
 
       const sepBottom = resolveSeparadorBottomY(box, sep);
-      const expected = Math.floor(
-        sepBottom - T - DIV_SEP_VERTICAL_CLEARANCE_MM
-      );
+      const expected = sepBottom - T;
       const { alturaDIV, gap, yLat } = linkedGapMm(box, sep, div);
 
       expect(alturaDIV).toBe(expected);
-      expect(gap).toBeGreaterThanOrEqual(DIV_SEP_VERTICAL_CLEARANCE_MM);
-      expect(gap).toBeLessThan(DIV_SEP_VERTICAL_CLEARANCE_MM + 1);
+      expect(roundMm(gap)).toBe(0);
+      expect(roundMm(alturaDIV)).toBe(roundMm(positionMm - T / 2));
       expect(roundMm(yLat)).toBe(positionMm);
       expect(resolveSeparadorDimensions(box, sep).alturaMm).toBe(T);
     }

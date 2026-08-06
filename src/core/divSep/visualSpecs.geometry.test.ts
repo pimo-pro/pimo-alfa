@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  DIV_SEP_VERTICAL_CLEARANCE_MM,
   resolveDivisorLinkedHeightMm,
   resolveSeparadorBottomY,
 } from "./coupling";
@@ -33,7 +32,7 @@ function yOverlapMm(a: AabbY, b: AabbY): number {
   return Math.max(0, Math.min(a.yMax, b.yMax) - Math.max(a.yMin, b.yMin));
 }
 
-function assertLinkedDivBelowSep(
+function assertLinkedDivFlushWithSep(
   box: ReturnType<typeof makeDivSepTestBox>,
   sep: ReturnType<typeof defaultSeparadorItem>,
   div: ReturnType<typeof defaultDivisorItem>
@@ -49,14 +48,10 @@ function assertLinkedDivBelowSep(
   const dims = resolveDivisorDimensions(box, div);
   const linkedH = resolveDivisorLinkedHeightMm(box, div, sep);
 
-  expect(dims.alturaMm).toBe(
-    Math.floor(sepBottomY - fundoTopY - DIV_SEP_VERTICAL_CLEARANCE_MM)
-  );
+  expect(dims.alturaMm).toBe(sepBottomY - fundoTopY);
   expect(dims.alturaMm).toBe(linkedH);
-  expect(fundoTopY + dims.alturaMm).toBeLessThanOrEqual(sepBottomY);
-  expect(sepBottomY - (fundoTopY + dims.alturaMm)).toBeGreaterThanOrEqual(
-    DIV_SEP_VERTICAL_CLEARANCE_MM
-  );
+  expect(roundMm(fundoTopY + dims.alturaMm)).toBe(roundMm(sepBottomY));
+  expect(roundMm(sepBottomY - (fundoTopY + dims.alturaMm))).toBe(0);
 
   const specs = getDivSepMeshSpecs(box, widthM, heightM, depthM, thicknessM);
   const sepSpec = specs.find((s) => s.name === `divsep-sep-${sep.id}`);
@@ -67,13 +62,13 @@ function assertLinkedDivBelowSep(
   const sepY = absYRangeFromSpec(sepSpec!, heightM);
   const divY = absYRangeFromSpec(divSpec!, heightM);
 
-  expect(roundMm(divY.yMax)).toBeLessThanOrEqual(roundMm(sepY.yMin));
+  expect(roundMm(divY.yMax)).toBe(roundMm(sepY.yMin));
   expect(yOverlapMm(divY, sepY)).toBe(0);
   expect(roundMm(sepY.yMin)).toBe(roundMm(sepBottomY));
 }
 
-describe("SEP/DIV geometry — P0 Viewer + P1 floor", () => {
-  it("altura industrial = floor(sepBottomY − FUNDO.topY − 5) sem penetração", () => {
+describe("SEP/DIV geometry — encaixe rosto a rosto (gap 0)", () => {
+  it("altura industrial = sepBottomY − FUNDO.topY sem folga", () => {
     const sep = defaultSeparadorItem({ id: "sep-geo", positionMm: 600 });
     const div = defaultDivisorItem({
       id: "div-geo",
@@ -85,10 +80,10 @@ describe("SEP/DIV geometry — P0 Viewer + P1 floor", () => {
       separadores: [sep],
       divisores: [div],
     });
-    assertLinkedDivBelowSep(box, sep, div);
+    assertLinkedDivFlushWithSep(box, sep, div);
   });
 
-  it("Viewer: divTop ≤ sepBottom e AABB sem overlap em Y", () => {
+  it("Viewer: divTop = sepBottom e AABB sem overlap em Y", () => {
     const sep = defaultSeparadorItem({ id: "sep-view", positionMm: 400 });
     const div = defaultDivisorItem({
       id: "div-view",
@@ -100,10 +95,10 @@ describe("SEP/DIV geometry — P0 Viewer + P1 floor", () => {
       separadores: [sep],
       divisores: [div],
     });
-    assertLinkedDivBelowSep(box, sep, div);
+    assertLinkedDivFlushWithSep(box, sep, div);
   });
 
-  it("após mover o SEP, altura e Viewer continuam sem overlap", () => {
+  it("após mover o SEP, altura e Viewer continuam com gap 0", () => {
     const sepBase = defaultSeparadorItem({ id: "sep-move", positionMm: 350 });
     const div = defaultDivisorItem({
       id: "div-move",
@@ -118,7 +113,7 @@ describe("SEP/DIV geometry — P0 Viewer + P1 floor", () => {
         separadores: [sep],
         divisores: [div],
       });
-      assertLinkedDivBelowSep(box, sep, div);
+      assertLinkedDivFlushWithSep(box, sep, div);
 
       const sepDims = resolveSeparadorDimensions(box, sep);
       expect(sepDims.alturaMm).toBe(DIV_SEP_ESPESSURA);

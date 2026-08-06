@@ -22,7 +22,7 @@ import {
 import { getHole2DLocalPosition } from "../../3d/objects/DrillGeometryBuilder";
 
 describe("Viewer visual verify H=720 T=19 pos=600", () => {
-  it("furos LAT alinham com mesh SEP; DIV sob SEP; Y local=600", () => {
+  it("furos LAT alinham com mesh SEP; DIV encaixa no SEP; Y local=600", () => {
     const H = 720;
     const T = 19;
     const sep = defaultSeparadorItem({ id: "sep-720", positionMm: 600 });
@@ -51,12 +51,9 @@ describe("Viewer visual verify H=720 T=19 pos=600", () => {
 
     expect(roundMm(sepCenterAbs)).toBe(619);
     expect(roundMm(absoluteYToLateralPanelY(box, sepCenterAbs))).toBe(600);
-    expect(divH).toBe(
-      Math.floor(sepBottom - fundoTop - DIV_SEP_VERTICAL_CLEARANCE_MM)
-    );
-    expect(sepBottom - (fundoTop + divH)).toBeGreaterThanOrEqual(
-      DIV_SEP_VERTICAL_CLEARANCE_MM
-    );
+    expect(roundMm(divH)).toBe(roundMm(sepBottom - fundoTop));
+    expect(roundMm(sepBottom - (fundoTop + divH))).toBe(DIV_SEP_VERTICAL_CLEARANCE_MM);
+    expect(roundMm(divH)).toBe(roundMm(600 - T / 2));
 
     const { getExtraHoles } = buildDivSepDrilling(box, box.panelIds!, DIV_SEP_TEST_RULES);
     const lat = getExtraHoles("lateral_esquerda").filter(
@@ -74,7 +71,7 @@ describe("Viewer visual verify H=720 T=19 pos=600", () => {
       (divSpec.pos[1]! + heightM / 2) * 1000 - (divSpec.size[1]! / 2) * 1000;
 
     expect(roundMm(sepMeshAbsCenter)).toBe(619);
-    expect(roundMm(divMeshAbsTop)).toBeLessThanOrEqual(roundMm(sepBottom));
+    expect(roundMm(divMeshAbsTop)).toBe(roundMm(sepBottom));
     expect(roundMm(divMeshAbsBot)).toBe(fundoTop);
 
     const sample = lat[0]!;
