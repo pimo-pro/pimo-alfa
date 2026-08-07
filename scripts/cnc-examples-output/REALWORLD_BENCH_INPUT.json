@@ -100,8 +100,8 @@
     {
       "nome": "Roupeiro_RealBench_gav_frent_ext_01",
       "tipo": "gaveta_frente_ext",
-      "largura_mm": 898,
-      "altura_mm": 416,
+      "largura_mm": 896,
+      "altura_mm": 837,
       "espessura_mm": 19,
       "materialId": "carvalho"
     },
@@ -109,7 +109,7 @@
       "nome": "Roupeiro_RealBench_gav_lat_esq_01",
       "tipo": "gaveta_lat_esq",
       "largura_mm": 490,
-      "altura_mm": 312,
+      "altura_mm": 772,
       "espessura_mm": 16,
       "materialId": "mdf_branco-16"
     },
@@ -117,15 +117,15 @@
       "nome": "Roupeiro_RealBench_gav_lat_dir_01",
       "tipo": "gaveta_lat_dir",
       "largura_mm": 490,
-      "altura_mm": 312,
+      "altura_mm": 772,
       "espessura_mm": 16,
       "materialId": "mdf_branco-16"
     },
     {
       "nome": "Roupeiro_RealBench_gav_fun_01",
       "tipo": "gaveta_fundo",
-      "largura_mm": 816,
-      "altura_mm": 500,
+      "largura_mm": 836,
+      "altura_mm": 516,
       "espessura_mm": 10,
       "materialId": "mdf_branco-10"
     },
@@ -133,15 +133,15 @@
       "nome": "Roupeiro_RealBench_gav_cost_01",
       "tipo": "gaveta_traseira",
       "largura_mm": 816,
-      "altura_mm": 312,
+      "altura_mm": 749,
       "espessura_mm": 16,
       "materialId": "mdf_branco-16"
     },
     {
       "nome": "Roupeiro_RealBench_gav_frent_ext_02",
       "tipo": "gaveta_frente_ext",
-      "largura_mm": 898,
-      "altura_mm": 833,
+      "largura_mm": 896,
+      "altura_mm": 837,
       "espessura_mm": 19,
       "materialId": "carvalho"
     },
@@ -149,7 +149,7 @@
       "nome": "Roupeiro_RealBench_gav_lat_esq_02",
       "tipo": "gaveta_lat_esq",
       "largura_mm": 490,
-      "altura_mm": 625,
+      "altura_mm": 772,
       "espessura_mm": 16,
       "materialId": "mdf_branco-16"
     },
@@ -157,15 +157,15 @@
       "nome": "Roupeiro_RealBench_gav_lat_dir_02",
       "tipo": "gaveta_lat_dir",
       "largura_mm": 490,
-      "altura_mm": 625,
+      "altura_mm": 772,
       "espessura_mm": 16,
       "materialId": "mdf_branco-16"
     },
     {
       "nome": "Roupeiro_RealBench_gav_fun_02",
       "tipo": "gaveta_fundo",
-      "largura_mm": 816,
-      "altura_mm": 500,
+      "largura_mm": 836,
+      "altura_mm": 516,
       "espessura_mm": 10,
       "materialId": "mdf_branco-10"
     },
@@ -173,15 +173,15 @@
       "nome": "Roupeiro_RealBench_gav_cost_02",
       "tipo": "gaveta_traseira",
       "largura_mm": 816,
-      "altura_mm": 625,
+      "altura_mm": 749,
       "espessura_mm": 16,
       "materialId": "mdf_branco-16"
     },
     {
       "nome": "Roupeiro_RealBench_gav_frent_ext_03",
       "tipo": "gaveta_frente_ext",
-      "largura_mm": 898,
-      "altura_mm": 833,
+      "largura_mm": 896,
+      "altura_mm": 418,
       "espessura_mm": 19,
       "materialId": "carvalho"
     },
@@ -189,7 +189,7 @@
       "nome": "Roupeiro_RealBench_gav_lat_esq_03",
       "tipo": "gaveta_lat_esq",
       "largura_mm": 490,
-      "altura_mm": 625,
+      "altura_mm": 354,
       "espessura_mm": 16,
       "materialId": "mdf_branco-16"
     },
@@ -197,15 +197,15 @@
       "nome": "Roupeiro_RealBench_gav_lat_dir_03",
       "tipo": "gaveta_lat_dir",
       "largura_mm": 490,
-      "altura_mm": 625,
+      "altura_mm": 354,
       "espessura_mm": 16,
       "materialId": "mdf_branco-16"
     },
     {
       "nome": "Roupeiro_RealBench_gav_fun_03",
       "tipo": "gaveta_fundo",
-      "largura_mm": 816,
-      "altura_mm": 500,
+      "largura_mm": 836,
+      "altura_mm": 516,
       "espessura_mm": 10,
       "materialId": "mdf_branco-10"
     },
@@ -213,7 +213,7 @@
       "nome": "Roupeiro_RealBench_gav_cost_03",
       "tipo": "gaveta_traseira",
       "largura_mm": 816,
-      "altura_mm": 625,
+      "altura_mm": 331,
       "espessura_mm": 16,
       "materialId": "mdf_branco-16"
     },
@@ -235,5 +235,5 @@
     }
   ],
   "fixture": "buildRealWorldBenchmarkScenario()",
-  "generatedAt": "2026-07-13T20:36:05.399Z"
+  "generatedAt": "2026-08-07T13:13:58.575Z"
 }

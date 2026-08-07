@@ -93,64 +93,64 @@
     {
       "nome": "Cozinha_Mono19_gav_frent_ext_01",
       "tipo": "gaveta_frente_ext",
-      "largura_mm": 798,
-      "altura_mm": 356,
+      "largura_mm": 796,
+      "altura_mm": 715,
       "espessura_mm": 19,
       "materialId": "mdf_branco"
     },
     {
       "nome": "Cozinha_Mono19_gav_fun_01",
       "tipo": "gaveta_fundo",
-      "largura_mm": 710,
-      "altura_mm": 500,
+      "largura_mm": 730,
+      "altura_mm": 519,
       "espessura_mm": 19,
       "materialId": "mdf_branco"
     },
     {
       "nome": "Cozinha_Mono19_gav_frent_ext_02",
       "tipo": "gaveta_frente_ext",
-      "largura_mm": 798,
-      "altura_mm": 356,
+      "largura_mm": 796,
+      "altura_mm": 358,
       "espessura_mm": 19,
       "materialId": "mdf_branco"
     },
     {
       "nome": "Cozinha_Mono19_gav_fun_02",
       "tipo": "gaveta_fundo",
-      "largura_mm": 710,
-      "altura_mm": 500,
+      "largura_mm": 730,
+      "altura_mm": 519,
       "espessura_mm": 19,
       "materialId": "mdf_branco"
     },
     {
       "nome": "Cozinha_Mono19_gav_frent_ext_03",
       "tipo": "gaveta_frente_ext",
-      "largura_mm": 798,
-      "altura_mm": 356,
+      "largura_mm": 796,
+      "altura_mm": 358,
       "espessura_mm": 19,
       "materialId": "mdf_branco"
     },
     {
       "nome": "Cozinha_Mono19_gav_fun_03",
       "tipo": "gaveta_fundo",
-      "largura_mm": 710,
-      "altura_mm": 500,
+      "largura_mm": 730,
+      "altura_mm": 519,
       "espessura_mm": 19,
       "materialId": "mdf_branco"
     },
     {
       "nome": "Cozinha_Mono19_gav_frent_ext_04",
       "tipo": "gaveta_frente_ext",
-      "largura_mm": 798,
-      "altura_mm": 711,
+      "largura_mm": 796,
+      "altura_mm": 358,
       "espessura_mm": 19,
       "materialId": "mdf_branco"
     },
     {
       "nome": "Cozinha_Mono19_gav_fun_04",
       "tipo": "gaveta_fundo",
-      "largura_mm": 710,
-      "altura_mm": 500,
+      "largura_mm": 730,
+      "altura_mm": 519,
       "espessura_mm": 19,
       "materialId": "mdf_branco"
     },
@@ -172,5 +172,5 @@
     }
   ],
   "fixture": "buildMono19BenchmarkScenario()",
-  "generatedAt": "2026-07-13T20:36:05.633Z"
+  "generatedAt": "2026-08-07T13:13:58.517Z"
 }

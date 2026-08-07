@@ -1,7 +1,7 @@
 {
   "phase": "after",
   "baselineCommit": "aecf802",
-  "generatedAt": "2026-07-13T20:36:37.880Z",
+  "generatedAt": "2026-08-07T13:14:31.151Z",
   "layoutOptions": "getDefaultCncLayoutOptions()",
   "scenarios": [
     {
@@ -9,7 +9,7 @@
       "description": "Projeto real importado (TEST 1.txt) — mix heterogéneo",
       "pieceCount": 2,
       "mode": "IMPORT",
-      "executionMs": 90.3,
+      "executionMs": 104.9,
       "totalSheets": 1,
       "avgWastePercent": 92.25,
       "totalMicroGapsLt5mm": 0,
@@ -49,44 +49,44 @@
       "description": "Pipeline industrial SPM — caixa completa",
       "pieceCount": 14,
       "mode": "SPM",
-      "executionMs": 154.6,
+      "executionMs": 130.2,
       "totalSheets": 3,
-      "avgWastePercent": 74.58,
+      "avgWastePercent": 73.45,
       "totalMicroGapsLt5mm": 0,
       "totalInternalIslands": 0,
-      "avgWasteScatterIndex": 0.901,
-      "utilizationPercent": 25.42,
-      "selectedStrategy": "skyline",
+      "avgWasteScatterIndex": 0.895,
+      "utilizationPercent": 26.55,
+      "selectedStrategy": "shelf",
       "selectedBinHeuristic": "bestFit",
       "perSheet": [
         {
           "sheetIndex": 1,
-          "usedAreaMm2": 2933356,
-          "wastePercent": 49.39,
+          "usedAreaMm2": 2937896,
+          "wastePercent": 49.31,
           "microGapsLt5mm": 0,
           "internalIslands": 0,
-          "wasteScatterIndex": 0.794,
+          "wasteScatterIndex": 0.795,
           "bboxUsedMaxX": 2164,
           "bboxUsedMaxY": 1628
         },
         {
           "sheetIndex": 2,
-          "usedAreaMm2": 690000,
-          "wastePercent": 88.1,
+          "usedAreaMm2": 708576,
+          "wastePercent": 87.77,
           "microGapsLt5mm": 0,
           "internalIslands": 0,
-          "wasteScatterIndex": 0.974,
+          "wasteScatterIndex": 0.976,
           "bboxUsedMaxX": 730,
-          "bboxUsedMaxY": 1125
+          "bboxUsedMaxY": 1141
         },
         {
           "sheetIndex": 3,
-          "usedAreaMm2": 797368,
-          "wastePercent": 86.24,
+          "usedAreaMm2": 969508,
+          "wastePercent": 83.27,
           "microGapsLt5mm": 0,
           "internalIslands": 0,
-          "wasteScatterIndex": 0.934,
-          "bboxUsedMaxX": 1091,
+          "wasteScatterIndex": 0.915,
+          "bboxUsedMaxX": 1337,
           "bboxUsedMaxY": 1031
         }
       ],
@@ -116,55 +116,55 @@
       "description": "Pipeline industrial MPM — duas caixas",
       "pieceCount": 24,
       "mode": "MPM",
-      "executionMs": 31945.9,
+      "executionMs": 32047.8,
       "totalSheets": 4,
-      "avgWastePercent": 67.7,
+      "avgWastePercent": 66.21,
       "totalMicroGapsLt5mm": 0,
       "totalInternalIslands": 0,
-      "avgWasteScatterIndex": 0.779,
-      "utilizationPercent": 32.3,
+      "avgWasteScatterIndex": 0.831,
+      "utilizationPercent": 33.79,
       "selectedStrategy": "guillotine",
       "selectedBinHeuristic": "bestFit",
       "perSheet": [
         {
           "sheetIndex": 1,
-          "usedAreaMm2": 2695518,
-          "wastePercent": 53.49,
+          "usedAreaMm2": 2828946,
+          "wastePercent": 51.19,
           "microGapsLt5mm": 0,
           "internalIslands": 0,
-          "wasteScatterIndex": 0.814,
+          "wasteScatterIndex": 0.807,
           "bboxUsedMaxX": 2004,
-          "bboxUsedMaxY": 1633
+          "bboxUsedMaxY": 1698
         },
         {
           "sheetIndex": 2,
-          "usedAreaMm2": 1952142,
-          "wastePercent": 66.32,
+          "usedAreaMm2": 1828034,
+          "wastePercent": 68.46,
           "microGapsLt5mm": 0,
           "internalIslands": 0,
-          "wasteScatterIndex": 0.643,
-          "bboxUsedMaxX": 2525,
-          "bboxUsedMaxY": 1316
+          "wasteScatterIndex": 0.923,
+          "bboxUsedMaxX": 1972,
+          "bboxUsedMaxY": 1082
         },
         {
           "sheetIndex": 3,
-          "usedAreaMm2": 1380000,
-          "wastePercent": 76.19,
+          "usedAreaMm2": 1417152,
+          "wastePercent": 75.55,
           "microGapsLt5mm": 0,
           "internalIslands": 0,
-          "wasteScatterIndex": 0.839,
-          "bboxUsedMaxX": 1980,
-          "bboxUsedMaxY": 1057
+          "wasteScatterIndex": 0.824,
+          "bboxUsedMaxX": 1996,
+          "bboxUsedMaxY": 1097
         },
         {
           "sheetIndex": 4,
-          "usedAreaMm2": 1460096,
-          "wastePercent": 74.81,
+          "usedAreaMm2": 1759496,
+          "wastePercent": 69.64,
           "microGapsLt5mm": 0,
           "internalIslands": 0,
-          "wasteScatterIndex": 0.821,
-          "bboxUsedMaxX": 1579,
-          "bboxUsedMaxY": 1416
+          "wasteScatterIndex": 0.771,
+          "bboxUsedMaxX": 1748,
+          "bboxUsedMaxY": 1536
         }
       ],
       "tcnRegression": {
