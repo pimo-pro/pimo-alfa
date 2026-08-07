@@ -13,11 +13,19 @@ import {
   type UnifiedMeasurement,
   type UnifiedMeasurementPoint,
 } from "./unifiedMeasurementTypes";
+import {
+  computeCompositeMetrics,
+  metricsFromWorldPoints,
+  type UnifiedMeasurementMetrics,
+} from "./measurementGeometry";
 import { shortestByDistanceM } from "./parametricDimensions";
 
 type RulerMovementSource = "transform" | "external";
 
-export type UnifiedMeasurementMeasurement = { valueMm: number };
+export type UnifiedMeasurementMeasurement = {
+  valueMm: number;
+  metrics?: UnifiedMeasurementMetrics;
+};
 
 export type UnifiedMeasurementEngineDeps = {
   getCamera: () => THREE.Camera;
@@ -54,6 +62,10 @@ export class UnifiedMeasurementEngine {
 
   private overlayCanvas: HTMLCanvasElement | null = null;
   private overlayCtx: CanvasRenderingContext2D | null = null;
+  /** Dimensões CSS e DPR do último resize real (usadas no draw; nunca alteradas no draw). */
+  private overlayCssW = 1;
+  private overlayCssH = 1;
+  private overlayDpr = 1;
 
   private enabled = false;
   private saved: UnifiedMeasurement[] = [];
@@ -75,13 +87,16 @@ export class UnifiedMeasurementEngine {
   private readonly rulerIdleClearDelayMs = 180;
   private lastSelectedBoxPos: { boxId: string; x: number; y: number; z: number } | null = null;
 
-  private static readonly SAVED_LINE_COLOR = "#0369a1";
-  private static readonly PREVIEW_LINE_COLOR = "rgba(14, 165, 233, 0.95)";
-  private static readonly GUIDE_COLOR = "rgba(148, 163, 184, 0.7)";
+  private static readonly COLOR_DX = "#ef4444";
+  private static readonly COLOR_DY = "#22c55e";
+  private static readonly COLOR_DZ = "#3b82f6";
+  private static readonly COLOR_DIST = "#1f2937";
   private static readonly POINT_COLOR_A = "#f59e0b";
   private static readonly SNAP_HIGHLIGHT_COLOR = "#fde047";
   private static readonly MOVEMENT_COLOR = "#ef4444";
   private static readonly LINE_WIDTH = 2.75;
+  private static readonly AXIS_LINE_WIDTH = 2.25;
+  private static readonly MIN_SEGMENT_M = 1e-6;
 
   constructor(deps: UnifiedMeasurementEngineDeps) {
     this.deps = deps;
@@ -101,13 +116,23 @@ export class UnifiedMeasurementEngine {
     this.enabled = next;
     this.clearDraftState();
     if (this.enabled) {
-      this.resyncFromProject();
+      // Sessão limpa: nunca restaurar medições antigas ao activar.
+      this.saved = [];
+      this.lastMeasurement = null;
       this.attachListeners();
+      this.updateVisibility();
+      this.draw();
     } else {
       this.detachListeners();
+      // Desactivar: limpar rascunho, canvas e esconder overlay.
+      // Nunca redesenhar medições guardadas com enabled=false.
+      this.pointA = null;
+      this.hover = null;
+      this.saved = [];
+      this.lastMeasurement = null;
+      this.clearCanvas();
+      if (this.overlayCanvas) this.overlayCanvas.style.display = "none";
     }
-    this.updateVisibility();
-    this.draw();
   }
 
   isEnabled(): boolean {
@@ -136,13 +161,31 @@ export class UnifiedMeasurementEngine {
   }
 
   syncFromProject(entries: UnifiedMeasurement[]): void {
-    this.saved = Array.isArray(entries) ? entries.map((e) => this.cloneMeasurement(e)) : [];
-    this.updateVisibility();
-    this.draw();
+    // Overlay sessional: ignorar histórico do projecto (nunca reimportar medições antigas).
+    void entries;
+    if (!this.enabled) {
+      this.saved = [];
+      this.clearCanvas();
+      if (this.overlayCanvas) this.overlayCanvas.style.display = "none";
+    }
   }
 
   onSelectionChanged(_nextBoxId: string | null): void {
     // A medição é global; mudar de seleção não cancela nada.
+  }
+
+  /**
+   * Conteúdo do Viewer mudou (caixa/peça removida, clear, etc.).
+   * Limpa o canvas; só redesenha medições guardadas se a régua estiver activa.
+   */
+  onSceneContentChanged(): void {
+    this.saved = [];
+    this.lastMeasurement = null;
+    this.pointA = null;
+    this.hover = null;
+    this.clearCanvas();
+    this.updateVisibility();
+    if (this.enabled) this.draw();
   }
 
   resize(): void {
@@ -153,9 +196,12 @@ export class UnifiedMeasurementEngine {
     const cssH = Math.max(1, container.clientHeight || 1);
     const w = Math.round(cssW * dpr);
     const h = Math.round(cssH * dpr);
+    this.overlayCssW = cssW;
+    this.overlayCssH = cssH;
+    this.overlayDpr = dpr;
     if (this.overlayCanvas.width !== w) this.overlayCanvas.width = w;
     if (this.overlayCanvas.height !== h) this.overlayCanvas.height = h;
-    if (this.shouldShow()) this.draw();
+    // Nunca chamar draw() a partir de resize() — evita loop recursivo.
   }
 
   refreshOverlay(): void {
@@ -273,7 +319,8 @@ export class UnifiedMeasurementEngine {
   private shouldShow(): boolean {
     if (this.enabled) return true;
     if (this.movementHit) return true;
-    return this.saved.some((e) => e.visible);
+    // Medições guardadas NUNCA mantêm o overlay visível com a régua desactivada.
+    return false;
   }
 
   private updateVisibility(): void {
@@ -350,33 +397,59 @@ export class UnifiedMeasurementEngine {
       ? { world: this.pointA.world, boxId: this.pointA.point.ref?.boxId, local: this.pointA.point.ref?.local }
       : null;
     const snap = pickMeasurementSnap(event, this.snapDeps(), anchor);
-    if (!snap) return; // clique em vazio: não consome (permite deseleção normal)
+    if (!snap) {
+      // Clique em vazio: cancela rascunho + medição actual (sem histórico).
+      this.pointA = null;
+      this.hover = null;
+      this.saved = [];
+      this.lastMeasurement = null;
+      this.clearCanvas();
+      this.updateVisibility();
+      return;
+    }
 
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
 
     if (!this.pointA) {
-      this.pointA = { world: snap.world.clone(), point: this.snapToPoint(snap) };
+      // Nova medição: limpar qualquer medição anterior.
+      this.saved = [];
       this.lastMeasurement = null;
+      this.clearCanvas();
+      this.pointA = { world: snap.world.clone(), point: this.snapToPoint(snap) };
       this.hover = null;
       this.draw();
       return;
     }
 
     const bWorld = snap.world.clone();
-    const distanceM = this.pointA.world.distanceTo(bWorld);
-    const valueMm = metersToMm01(distanceM);
+    const bPoint = this.snapToPoint(snap);
+    const meshA = this.resolveMeshFromPoint(this.pointA.point);
+    const meshB = this.resolveMeshFromPoint(bPoint);
+    const metrics = computeCompositeMetrics(
+      this.pointA.world,
+      bWorld,
+      this.pointA.point.kind,
+      bPoint.kind,
+      this.pointA.point.geometry,
+      bPoint.geometry,
+      meshA,
+      meshB
+    );
+    const valueMm = metrics.distanceMm;
     const entry: UnifiedMeasurement = {
       id: createUnifiedMeasurementId(),
       a: this.pointA.point,
-      b: this.snapToPoint(snap),
+      b: bPoint,
       valueMm,
       visible: true,
+      metrics,
     };
-    this.saved = [...this.saved, entry];
+    // Uma única medição activa de cada vez.
+    this.saved = [entry];
     this.deps.onMeasurementSaved?.(entry);
-    this.lastMeasurement = { valueMm };
+    this.lastMeasurement = { valueMm, metrics };
     this.pointA = null;
     this.hover = null;
     this.updateVisibility();
@@ -388,16 +461,27 @@ export class UnifiedMeasurementEngine {
       snap.ref.boxId && snap.ref.local
         ? { boxId: snap.ref.boxId, local: { ...snap.ref.local } }
         : undefined;
+    const geometry = snap.geometry
+      ? {
+          ...snap.geometry,
+          normal: snap.geometry.normal ? { ...snap.geometry.normal } : undefined,
+          tangent: snap.geometry.tangent ? { ...snap.geometry.tangent } : undefined,
+          edgeA: snap.geometry.edgeA ? { ...snap.geometry.edgeA } : undefined,
+          edgeB: snap.geometry.edgeB ? { ...snap.geometry.edgeB } : undefined,
+        }
+      : undefined;
     return {
       world: { x: snap.world.x, y: snap.world.y, z: snap.world.z },
       kind: snap.kind,
       ref,
+      geometry,
     };
   }
 
   private clearDraft(): void {
-    if (!this.pointA && !this.hover) return;
+    if (!this.pointA && !this.hover && this.saved.length === 0) return;
     this.clearDraftState();
+    this.saved = [];
     this.draw();
   }
 
@@ -408,21 +492,22 @@ export class UnifiedMeasurementEngine {
     this.cancelPointerMoveRaf();
   }
 
-  private resyncFromProject(): void {
-    const entries = this.deps.getProjectMeasurements?.() ?? [];
-    this.saved = entries.map((e) => this.cloneMeasurement(e));
-  }
-
-  private cloneMeasurement(e: UnifiedMeasurement): UnifiedMeasurement {
-    return {
-      ...e,
-      a: { ...e.a, world: { ...e.a.world }, ref: e.a.ref ? { ...e.a.ref, local: e.a.ref.local ? { ...e.a.ref.local } : undefined } : undefined },
-      b: { ...e.b, world: { ...e.b.world }, ref: e.b.ref ? { ...e.b.ref, local: e.b.ref.local ? { ...e.b.ref.local } : undefined } : undefined },
-    };
-  }
-
   private getBoxMesh(boxId: string): THREE.Object3D | null {
     return this.deps.getBoxes().get(boxId)?.mesh ?? null;
+  }
+
+  private resolveMeshFromPoint(point: UnifiedMeasurementPoint): THREE.Mesh | null {
+    const uuid = point.geometry?.meshUuid;
+    if (!uuid) return null;
+    for (const entry of this.deps.getBoxes().values()) {
+      let found: THREE.Mesh | null = null;
+      entry.mesh.traverse((node) => {
+        if (found) return;
+        if (node instanceof THREE.Mesh && node.uuid === uuid) found = node;
+      });
+      if (found) return found;
+    }
+    return null;
   }
 
   private pointToWorld(point: UnifiedMeasurementPoint): THREE.Vector3 {
@@ -450,52 +535,39 @@ export class UnifiedMeasurementEngine {
       this.updateVisibility();
       return;
     }
-    this.resize();
     if (!this.overlayCanvas || !this.overlayCtx) return;
     const ctx = this.overlayCtx;
-    const dpr = this.getDpr();
+    // DPI scaling só aplicado no ciclo de desenho a partir do último resize real.
+    const dpr = this.overlayDpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const cssW = this.overlayCanvas.width / dpr;
-    const cssH = this.overlayCanvas.height / dpr;
+    const cssW = this.overlayCssW;
+    const cssH = this.overlayCssH;
     ctx.clearRect(0, 0, cssW, cssH);
 
-    this.drawSavedMeasurements(ctx);
+    // Medições guardadas só com a régua activa.
+    if (this.enabled) {
+      this.drawSavedMeasurements(ctx);
+    }
     this.drawMovementRuler(ctx);
 
-    if (this.hover) {
+    if (this.enabled && this.hover) {
       this.drawSnapHighlight(ctx, this.hover.world, this.hover.kind);
     }
-    if (this.pointA) {
+    // Após o 1.º ponto: só marcador — sem linha de preview nem guias.
+    if (this.enabled && this.pointA) {
       this.drawPointMarker(ctx, this.pointA.world, UnifiedMeasurementEngine.POINT_COLOR_A);
-      if (this.hover) {
-        this.drawAxisGuides(ctx, this.pointA.world, this.hover.world);
-        const previewMm = metersToMm01(this.pointA.world.distanceTo(this.hover.world));
-        this.drawMeasurementLine(
-          ctx,
-          this.pointA.world,
-          this.hover.world,
-          previewMm,
-          UnifiedMeasurementEngine.PREVIEW_LINE_COLOR,
-          UnifiedMeasurementEngine.LINE_WIDTH
-        );
-      }
     }
   }
 
   private drawSavedMeasurements(ctx: CanvasRenderingContext2D): void {
-    for (const entry of this.saved) {
-      if (!entry.visible) continue;
-      const a = this.pointToWorld(entry.a);
-      const b = this.pointToWorld(entry.b);
-      this.drawMeasurementLine(
-        ctx,
-        a,
-        b,
-        entry.valueMm,
-        UnifiedMeasurementEngine.SAVED_LINE_COLOR,
-        UnifiedMeasurementEngine.LINE_WIDTH
-      );
-    }
+    // Só desenhar quando existe exactamente 1 medição activa.
+    if (this.saved.length !== 1) return;
+    const entry = this.saved[0]!;
+    if (!entry.visible) return;
+    const a = this.pointToWorld(entry.a);
+    const b = this.pointToWorld(entry.b);
+    const metrics = entry.metrics ?? metricsFromWorldPoints(a, b);
+    this.drawCompositeAxes(ctx, a, b, metrics);
   }
 
   private drawMovementRuler(ctx: CanvasRenderingContext2D): void {
@@ -519,48 +591,83 @@ export class UnifiedMeasurementEngine {
     this.drawLabel(ctx, (a.x + b.x) * 0.5, (a.y + b.y) * 0.5, `${metersToMm01(hit.distanceM).toFixed(1)} mm`);
   }
 
-  private drawMeasurementLine(
+  /**
+   * Overlay industrial: 4 segmentos + 4 labels.
+   * dX/dY/dZ = cadeia ortogonal A → (Bx,Ay,Az) → (Bx,By,Az) → B
+   * Dist = diagonal A → B
+   */
+  private drawCompositeAxes(
+    ctx: CanvasRenderingContext2D,
+    a: THREE.Vector3,
+    b: THREE.Vector3,
+    metrics: UnifiedMeasurementMetrics
+  ): void {
+    const cornerX = new THREE.Vector3(b.x, a.y, a.z);
+    const cornerY = new THREE.Vector3(b.x, b.y, a.z);
+    const min = UnifiedMeasurementEngine.MIN_SEGMENT_M;
+
+    // Dist (diagonal) por baixo
+    this.drawAxisSegment(
+      ctx,
+      a,
+      b,
+      UnifiedMeasurementEngine.COLOR_DIST,
+      UnifiedMeasurementEngine.LINE_WIDTH,
+      `Dist ${metrics.distanceMm.toFixed(3)} mm`
+    );
+
+    if (Math.abs(b.x - a.x) > min) {
+      this.drawAxisSegment(
+        ctx,
+        a,
+        cornerX,
+        UnifiedMeasurementEngine.COLOR_DX,
+        UnifiedMeasurementEngine.AXIS_LINE_WIDTH,
+        `dX ${metrics.dxMm.toFixed(1)} mm`
+      );
+    }
+    if (Math.abs(b.y - a.y) > min) {
+      this.drawAxisSegment(
+        ctx,
+        cornerX,
+        cornerY,
+        UnifiedMeasurementEngine.COLOR_DY,
+        UnifiedMeasurementEngine.AXIS_LINE_WIDTH,
+        `dY ${metrics.dyMm.toFixed(1)} mm`
+      );
+    }
+    if (Math.abs(b.z - a.z) > min) {
+      this.drawAxisSegment(
+        ctx,
+        cornerY,
+        b,
+        UnifiedMeasurementEngine.COLOR_DZ,
+        UnifiedMeasurementEngine.AXIS_LINE_WIDTH,
+        `dZ ${metrics.dzMm.toFixed(1)} mm`
+      );
+    }
+  }
+
+  private drawAxisSegment(
     ctx: CanvasRenderingContext2D,
     start: THREE.Vector3,
     end: THREE.Vector3,
-    labelMm: number,
-    lineColor: string,
-    lineWidth: number
+    color: string,
+    lineWidth: number,
+    label: string
   ): void {
     const seg = this.projectClippedSegment(start, end);
     if (!seg) return;
-    const [a, b] = seg;
-    ctx.strokeStyle = lineColor;
+    const [p0, p1] = seg;
+    ctx.strokeStyle = color;
     ctx.lineWidth = lineWidth;
     ctx.lineCap = "round";
     ctx.setLineDash([]);
     ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
+    ctx.moveTo(p0.x, p0.y);
+    ctx.lineTo(p1.x, p1.y);
     ctx.stroke();
-    this.drawLabel(ctx, (a.x + b.x) * 0.5, (a.y + b.y) * 0.5, `${labelMm.toFixed(1)} mm`);
-  }
-
-  private drawAxisGuides(ctx: CanvasRenderingContext2D, a: THREE.Vector3, b: THREE.Vector3): void {
-    const cornerX = new THREE.Vector3(b.x, a.y, a.z);
-    const cornerY = new THREE.Vector3(b.x, b.y, a.z);
-    this.drawGuideLine(ctx, a, cornerX);
-    this.drawGuideLine(ctx, cornerX, cornerY);
-    this.drawGuideLine(ctx, cornerY, b);
-  }
-
-  private drawGuideLine(ctx: CanvasRenderingContext2D, start: THREE.Vector3, end: THREE.Vector3): void {
-    const seg = this.projectClippedSegment(start, end);
-    if (!seg) return;
-    const [a, b] = seg;
-    ctx.strokeStyle = UnifiedMeasurementEngine.GUIDE_COLOR;
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([5, 4]);
-    ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
-    ctx.stroke();
-    ctx.setLineDash([]);
+    this.drawLabel(ctx, (p0.x + p1.x) * 0.5, (p0.y + p1.y) * 0.5, label);
   }
 
   private drawPointMarker(ctx: CanvasRenderingContext2D, world: THREE.Vector3, color: string, radius = 5): void {
@@ -592,22 +699,22 @@ export class UnifiedMeasurementEngine {
   }
 
   private drawLabel(ctx: CanvasRenderingContext2D, midX: number, midY: number, label: string): void {
-    ctx.font = "600 13px system-ui, sans-serif";
+    ctx.font = "600 12px system-ui, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    const padX = 8;
-    const padY = 5;
+    const padX = 7;
+    const padY = 4;
     const textWidth = ctx.measureText(label).width;
     const boxW = textWidth + padX * 2;
-    const boxH = 20 + padY;
-    const labelY = midY - 16;
+    const boxH = 18 + padY;
+    const labelY = midY;
 
     ctx.fillStyle = "rgba(15, 23, 42, 0.92)";
     ctx.beginPath();
-    ctx.roundRect(midX - boxW / 2, labelY - boxH / 2, boxW, boxH, 5);
+    ctx.roundRect(midX - boxW / 2, labelY - boxH / 2, boxW, boxH, 4);
     ctx.fill();
-    ctx.strokeStyle = "rgba(56, 189, 248, 0.55)";
-    ctx.lineWidth = 1.25;
+    ctx.strokeStyle = "rgba(148, 163, 184, 0.55)";
+    ctx.lineWidth = 1;
     ctx.stroke();
     ctx.fillStyle = "#f8fafc";
     ctx.fillText(label, midX, labelY);

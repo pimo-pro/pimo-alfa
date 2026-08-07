@@ -3609,7 +3609,7 @@ export class ViewerCore {
   }
 
   removeBox(id: string): boolean {
-    return this.boxSceneController.removeBox({
+    const removed = this.boxSceneController.removeBox({
       id,
       boxes: this.boxes,
       boxManager: this.boxManager,
@@ -3622,10 +3622,13 @@ export class ViewerCore {
       reflowBoxes: () => this.reflowBoxes(),
       updateCameraTarget: () => this.updateCameraTarget(),
     });
+    if (removed) this.unifiedMeasurement.onSceneContentChanged();
+    return removed;
   }
 
   clearBoxes(): void {
     Array.from(this.boxes.keys()).forEach((id) => this.removeBox(id));
+    this.unifiedMeasurement.onSceneContentChanged();
   }
 
   /*

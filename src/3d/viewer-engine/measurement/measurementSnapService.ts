@@ -8,6 +8,12 @@ import { closestPointOnSegment3D } from "./parametricDimensions";
 import { filterTechnicalDrillHolesForViewerMesh } from "../drill/viewerCncDrillFilter";
 import { holeCenterLocal, type HolePanelType } from "./panelHoleGeometry";
 import type { TechnicalDrillHole } from "../../../core/types";
+import {
+  surfaceNormalAt,
+  surfaceTangentAt,
+  type MeasurementSnapGeometry,
+  type SnapSurfaceKind,
+} from "./measurementGeometry";
 
 /**
  * Serviço único de snapping/picking para medição.
@@ -38,6 +44,7 @@ export type MeasurementSnapResult = {
   kind: MeasurementSnapKind;
   ref: MeasurementSnapRef;
   screen: { x: number; y: number };
+  geometry?: MeasurementSnapGeometry;
 };
 
 export type MeasurementSnapAnchor = {
@@ -90,6 +97,8 @@ type Candidate = {
   kind: MeasurementSnapKind;
   world: THREE.Vector3;
   thresholdPx: number;
+  edgeA?: THREE.Vector3;
+  edgeB?: THREE.Vector3;
 };
 
 const _pointer = new THREE.Vector2();
@@ -270,7 +279,15 @@ export function pickMeasurementSnap(
       _tmpA.copy(seg.a).applyMatrix4(hitMesh.matrixWorld);
       _tmpB.copy(seg.b).applyMatrix4(hitMesh.matrixWorld);
       const mid = _tmpC.copy(_tmpA).add(_tmpB).multiplyScalar(0.5).clone();
-      pushIfWithinThreshold(candidates, best, cursor, project, { kind: "edgeMid", world: mid, thresholdPx: config.edgeMidPx });
+      const edgeA = _tmpA.clone();
+      const edgeB = _tmpB.clone();
+      pushIfWithinThreshold(candidates, best, cursor, project, {
+        kind: "edgeMid",
+        world: mid,
+        thresholdPx: config.edgeMidPx,
+        edgeA,
+        edgeB,
+      });
       const closest = closestPointOnSegment3D(
         { x: facePoint.x, y: facePoint.y, z: facePoint.z },
         { x: _tmpA.x, y: _tmpA.y, z: _tmpA.z },
@@ -280,6 +297,8 @@ export function pickMeasurementSnap(
         kind: "edge",
         world: new THREE.Vector3(closest.x, closest.y, closest.z),
         thresholdPx: config.edgePx,
+        edgeA,
+        edgeB,
       });
     }
   }
@@ -337,7 +356,31 @@ export function pickMeasurementSnap(
   }
 
   const screen = project(world) ?? { x: cursor.x, y: cursor.y };
-  return { world, kind, ref, screen };
+
+  const faceNormal = surfaceNormalAt(hitMesh, hit.face);
+  const edgeA = chosen?.edgeA ?? null;
+  const edgeB = chosen?.edgeB ?? null;
+  const tangent = surfaceTangentAt(faceNormal, edgeA, edgeB);
+  let surfaceKind: SnapSurfaceKind = "free";
+  if (kind === "holeCenter") surfaceKind = "hole";
+  else if (kind === "edge" || kind === "edgeMid") surfaceKind = "edge";
+  else if (faceNormal) {
+    const geo = hitMesh.geometry;
+    surfaceKind =
+      geo instanceof THREE.CylinderGeometry || geo instanceof THREE.SphereGeometry
+        ? "curved"
+        : "planar";
+  }
+  const snapGeometry: MeasurementSnapGeometry = {
+    surfaceKind,
+    meshUuid: hitMesh.uuid,
+    normal: faceNormal ? { x: faceNormal.x, y: faceNormal.y, z: faceNormal.z } : undefined,
+    tangent: tangent ? { x: tangent.x, y: tangent.y, z: tangent.z } : undefined,
+    edgeA: edgeA ? { x: edgeA.x, y: edgeA.y, z: edgeA.z } : undefined,
+    edgeB: edgeB ? { x: edgeB.x, y: edgeB.y, z: edgeB.z } : undefined,
+  };
+
+  return { world, kind, ref, screen, geometry: snapGeometry };
 }
 
 function vec3ToPlain(v: THREE.Vector3): { x: number; y: number; z: number } {

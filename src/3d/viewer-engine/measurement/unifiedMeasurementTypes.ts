@@ -1,5 +1,11 @@
 import type * as THREE from "three";
 import type { MeasurementSnapKind } from "./measurementSnapService";
+import type {
+  MeasurementSnapGeometry,
+  UnifiedMeasurementMetrics,
+} from "./measurementGeometry";
+
+export type { MeasurementSnapGeometry, UnifiedMeasurementMetrics };
 
 /** Ponto de uma medição unificada. Se `ref.boxId` existir, o mundo é reconstruído a partir do local. */
 export type UnifiedMeasurementPoint = {
@@ -9,6 +15,8 @@ export type UnifiedMeasurementPoint = {
     boxId?: string;
     local?: { x: number; y: number; z: number };
   };
+  /** Contexto geométrico opcional (normal/tangente/aresta) para métricas compostas. */
+  geometry?: MeasurementSnapGeometry;
 };
 
 /** Medição global (dois pontos livres em qualquer parte da cena). Precisão 0,1 mm. */
@@ -18,6 +26,8 @@ export type UnifiedMeasurement = {
   b: UnifiedMeasurementPoint;
   valueMm: number;
   visible: boolean;
+  /** Métricas compostas (dX/dY/dZ/…) — opcional para retrocompatibilidade. */
+  metrics?: UnifiedMeasurementMetrics;
 };
 
 /** Medição paramétrica da régua de movimento (caixa->caixa/parede/chão), em metros. */
