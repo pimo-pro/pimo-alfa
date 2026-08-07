@@ -50,7 +50,8 @@ function distanceMm(
   const dx = (a.x - b.x) * 1000;
   const dy = (a.y - b.y) * 1000;
   const dz = (a.z - b.z) * 1000;
-  return Math.sqrt(dx * dx + dy * dy + dz * dz);
+  // Precisão unificada de 0,1 mm (igual à régua unificada).
+  return Math.round(Math.sqrt(dx * dx + dy * dy + dz * dz) * 10) / 10;
 }
 
 export function computeAnchorDistances(

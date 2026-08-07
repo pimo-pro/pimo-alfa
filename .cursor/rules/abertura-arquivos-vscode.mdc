@@ -1,0 +1,27 @@
+# Abertura de arquivos — VS Code Desktop (regra permanente)
+
+## Obrigatório
+
+Para abrir **qualquer** arquivo, usar **sempre** o caminho completo do VS Code Desktop:
+
+```
+call "C:\Users\Mofreita\AppData\Local\Programs\Microsoft VS Code\bin\code.cmd" --reuse-window <arquivo>
+```
+
+## Proibido
+
+- Usar o comando `code` simples — o PATH resolve primeiro para o Cursor (`c:\Users\Mofreita\AppData\Local\Programs\cursor\resources\app\codeBin\code`).
+- Usar qualquer resolução do PATH que aponte para o Cursor.
+- Usar `cursor` ou qualquer binário do Cursor para abrir arquivos.
+
+## Contexto
+
+O `where code` retorna nesta ordem:
+1. `c:\Users\Mofreita\AppData\Local\Programs\cursor\resources\app\codeBin\code` (Cursor — ignorar)
+2. `c:\Users\Mofreita\AppData\Local\Programs\cursor\resources\app\codeBin\code.cmd` (Cursor — ignorar)
+3. `C:\Users\Mofreita\AppData\Local\Programs\Microsoft VS Code\bin\code` (VS Code)
+4. `C:\Users\Mofreita\AppData\Local\Programs\Microsoft VS Code\bin\code.cmd` (VS Code — usar este)
+
+## Aplicação
+
+Esta regra aplica-se a **todas** as operações futuras de abertura de arquivos, independentemente do PATH do sistema.

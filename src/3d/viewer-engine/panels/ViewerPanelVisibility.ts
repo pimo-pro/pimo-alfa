@@ -10,6 +10,7 @@ import {
   resolvePanelOutlineColorHex,
   resolvePanelOutlineHighlight,
 } from "../../../core/industrialDesigner/drillHoleViewerColors";
+import { holeLocalB as holeLocalBShared } from "../measurement/panelHoleGeometry";
 
 type ViewerBoxLike = {
   mesh: THREE.Object3D;
@@ -536,14 +537,8 @@ export class ViewerPanelVisibility {
     panelH: number,
     hole: TechnicalDrillHole
   ): number {
-    const useBottomOriginY =
-      panelType === "left" || panelType === "right"
-        ? hole.tipo === "cavilha" || hole.tipo === "parafuso" || hole.tipo === "prateleira"
-        : hole.tipo === "cavilha" && panelType === "front";
-    // Laterais: prateleira usa Y desde a base (igual SEP/cavilha e cutlist industrial).
-    return useBottomOriginY
-      ? hole.y / 1000 - panelH / 2
-      : panelH / 2 - hole.y / 1000;
+    // Fonte única partilhada com o serviço de snapping de medição (comportamento idêntico).
+    return holeLocalBShared(panelType, panelH, hole);
   }
 
   private static createHoleCircleGeometry(

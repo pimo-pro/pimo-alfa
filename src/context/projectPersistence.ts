@@ -204,6 +204,17 @@ export function reviveState(snapshot: unknown, options?: ReviveStateOptions): Pr
               typeof (e as { position?: unknown }).position === "object"
           )
         : [],
+      unified: Array.isArray(restored.measurements?.unified)
+        ? restored.measurements.unified.filter(
+            (e): e is import("./projectTypes").UnifiedMeasurement =>
+              e != null &&
+              typeof e === "object" &&
+              typeof (e as { id?: unknown }).id === "string" &&
+              typeof (e as { a?: unknown }).a === "object" &&
+              typeof (e as { b?: unknown }).b === "object" &&
+              typeof (e as { valueMm?: unknown }).valueMm === "number"
+          )
+        : [],
     },
     objectGroups:
       restored.objectGroups && typeof restored.objectGroups === "object"

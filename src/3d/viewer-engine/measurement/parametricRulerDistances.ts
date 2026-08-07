@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { aabb3FromThreeBox3, parametricRulerHitToThree } from "@/viewer/core/viewerUtils";
 import { setBox3FromObjectExcludingLayoutProxy } from "../box/boxAabbUtils";
 import type { ViewerBoxEntry } from "../types";
-import type { RulerMeasurementHit } from "./ViewerMeasurementOverlay";
+import type { RulerMeasurementHit } from "./unifiedMeasurementTypes";
 import {
   floorClearanceMeasurement,
   nearestBoxGapBetweenPair,

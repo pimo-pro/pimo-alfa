@@ -128,7 +128,10 @@ export type PimoViewerApi = {
   ) => { start: import("three").Vector3; end: import("three").Vector3 } | null;
   /** FASE 6 — Id da caixa sob o ponteiro (raycast). */
   getBoxIdAtPointerPublic?: (_event: { clientX: number; clientY: number }) => string | null;
-  /** Ativa/desativa modo de medição interna por bordas (ferramenta CAD). */
+  /** Modo canónico da régua unificada (botão único "Régua"). */
+  setMeasurementMode?: (_enabled: boolean) => void;
+  getMeasurementMode?: () => boolean;
+  /** Alias compatível da régua unificada (antigo modo de medição interna por bordas). */
   setInternalMeasurementMode?: (_enabled: boolean) => void;
   getInternalMeasurementMode?: () => boolean;
   /** Fase 5 Parte A — seleção interna (faces, arestas, pontos). */
@@ -150,7 +153,7 @@ export type PimoViewerApi = {
     isActive: () => boolean;
     getLastMeasurement: () => { valueMm: number } | null;
     getActiveBoxId?: () => string | null;
-    syncFromProject?: (_entries: import("../3d/viewer-engine/measurement/internalRulerTypes").InternalMeasurementEntry[]) => void;
+    syncFromProject?: (_entries: import("../3d/viewer-engine/measurement/unifiedMeasurementTypes").UnifiedMeasurement[]) => void;
   };
   snapping?: {
     enable: () => void;

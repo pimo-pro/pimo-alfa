@@ -332,9 +332,8 @@ export default function ContextMenu({
   if (!position) return null;
   const estimatedMainHeight = categoryMenu.length * ITEM_HEIGHT + 16;
   const mainPos = placeMenu(position.x, position.y, MENU_MIN_WIDTH, estimatedMainHeight);
-  const internalRulerActive =
-    viewerApi?.internalRuler?.isActive?.() === true &&
-    viewerApi?.internalRuler?.getActiveBoxId?.() === selectedBoxId;
+  // Régua unificada: estado global (não depende da caixa selecionada).
+  const internalRulerActive = viewerApi?.internalRuler?.isActive?.() === true;
   const snappingEnabled = viewerApi?.snapping?.isEnabled?.() === true;
   const snapMode = viewerApi?.snapping?.getMode?.() ?? "basic";
   const roomSnappingEnabled = viewerApi?.snapping?.isRoomSnappingEnabled?.() === true;

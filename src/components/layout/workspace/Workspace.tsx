@@ -742,9 +742,9 @@ const hasShownViewerReadyToastRef = useRef(false);
     viewerApi.setExplodedViewEnabled?.(settings.explodedViewEnabled);
     viewerApi.setExplodedViewIntensity?.(settings.explodedViewIntensity);
     viewerApi.setHighlightEnabled?.(settings.highlightEnabled);
-    viewerApi.setInternalMeasurementMode?.(settings.rulerEnabled);
-    if (settings.internalRulerEnabled) viewerApi.enableInternalRuler?.();
-    else viewerApi.disableInternalRuler?.();
+    // Régua unificada: um único modo canónico controlado por `rulerEnabled`.
+    // `internalRulerEnabled` fica depreciado (absorvido pela régua unificada, sem efeito próprio).
+    viewerApi.setMeasurementMode?.(settings.rulerEnabled);
     viewerApi.setUltraPerformanceModeOptions?.(settings.ultraPerformanceModeOptions);
     viewerApi.setUltraPerformanceMode?.(settings.ultraPerformanceModeOptions.enabled);
     viewerApi.setGlobalLightIntensity?.(settings.globalLightIntensity);
@@ -762,8 +762,8 @@ const hasShownViewerReadyToastRef = useRef(false);
     if (!viewerReady) return;
     const core = window.viewerCore;
     core?.bindInternalMeasurementBridge?.(
-      () => projectRef.current.measurements?.internal ?? [],
-      (entry) => actionsRef.current.addInternalMeasurement(entry)
+      () => projectRef.current.measurements?.unified ?? [],
+      (entry) => actionsRef.current.addUnifiedMeasurement(entry)
     );
     core?.bindAutoLayoutBridge?.({
       getWorkspaceBoxes: () => projectRef.current.workspaceBoxes,
@@ -1053,8 +1053,8 @@ const hasShownViewerReadyToastRef = useRef(false);
 
   useEffect(() => {
     if (!viewerReady) return;
-    viewerApi.internalRuler?.syncFromProject?.(project.measurements?.internal ?? []);
-  }, [project.measurements?.internal, viewerReady, viewerApi.internalRuler]);
+    viewerApi.internalRuler?.syncFromProject?.(project.measurements?.unified ?? []);
+  }, [project.measurements?.unified, viewerReady, viewerApi.internalRuler]);
 
   useEffect(() => {
     const clearKeyboardMoveTimers = () => {

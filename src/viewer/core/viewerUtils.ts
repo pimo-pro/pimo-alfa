@@ -4,7 +4,7 @@ import {
   isViewerLayoutProxyObject,
   setBox3FromObjectExcludingLayoutProxy,
 } from "@/3d/viewer-engine/box/boxAabbUtils";
-import type { RulerMeasurementHit } from "@/3d/viewer-engine/measurement/ViewerMeasurementOverlay";
+import type { RulerMeasurementHit } from "@/3d/viewer-engine/measurement/unifiedMeasurementTypes";
 import type { Aabb3, ParametricRulerHit } from "@/3d/viewer-engine/measurement/parametricDimensions";
 
 export type RoomBoundsXZ = {

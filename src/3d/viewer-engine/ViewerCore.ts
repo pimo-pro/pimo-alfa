@@ -129,20 +129,19 @@ import { SnapDebugOverlay } from "../../debug/SnapDebugOverlay";
 import { ViewerRenderExporter } from "./export/ViewerRenderExporter";
 import { TransformConstraints } from "./constraints/TransformConstraints";
 import { applyFinishMovementConstraints } from "./constraints/finishCollision";
-import { ViewerMeasurementOverlay, type RulerMeasurementHit } from "./measurement/ViewerMeasurementOverlay";
-import { InternalRuler } from "./measurement/InternalRuler";
+import { UnifiedMeasurementEngine } from "./measurement/UnifiedMeasurementEngine";
+import type { RulerMeasurementHit, UnifiedMeasurement } from "./measurement/unifiedMeasurementTypes";
 import { createInternalRulerFacade, type InternalRulerFacade } from "./measurement/internalRulerFacade";
-import { InternalRulerOverlay } from "./measurement/InternalRulerOverlay";
 import type { InternalCavityMeasurements } from "./measurement/internalRulerOverlayTypes";
-import type { InternalMeasurementEntry } from "./measurement/internalRulerTypes";
 import { computeInternalCavityMeasurements } from "./selection/boxCavityBounds";
 import {
   computeDistanceToFloor as computeParametricDistanceToFloor,
   computeDistanceToNearestBox as computeParametricDistanceToNearestBox,
   computeDistanceToNearestWall as computeParametricDistanceToNearestWall,
 } from "./measurement/parametricRulerDistances";
-import { syncInternalRulerOverlay as syncInternalRulerOverlayState } from "./measurement/internalRulerOverlaySync";
+import { pickMeasurementSnap } from "./measurement/measurementSnapService";
 import {
+  createMeasurementAnchorFromSnap,
   createMeasurementAnchorFromWorldHit,
   syncMeasurementAnchorsToVisualizer,
 } from "./measurement/measurementAnchorsBridge";
@@ -299,7 +298,6 @@ export class ViewerCore {
   private onInternalPointSelected: ((_hit: InternalSelectionState) => void) | null = null;
   private internalSelectionOutline: InternalSelectionOutline | null = null;
   private multiSelectionOutline: MultiSelectionOutline | null = null;
-  private internalRulerOverlay: InternalRulerOverlay | null = null;
   private readonly selectedBoxChangeListeners = new Set<(_id: string | null) => void>();
   private onDoorLayerDoubleClick: ((_boxId: string, _doorLayerId: string) => void) | null = null;
   private onDrawerLayerDoubleClick: ((_boxId: string, _drawerLayerId: string) => void) | null = null;
@@ -500,10 +498,9 @@ export class ViewerCore {
    * - runtimeLoop: cadência de frame, resize e pipeline de render.
    * O ViewerCore permanece como orquestrador e ponto único de composição.
    */
-  private measurementOverlay!: ViewerMeasurementOverlay;
-  private internalRulerEngine!: InternalRuler;
-  private getProjectMeasurementsFn: () => InternalMeasurementEntry[] = () => [];
-  private onInternalMeasurementSavedFn: (_entry: InternalMeasurementEntry) => void = () => {};
+  private unifiedMeasurement!: UnifiedMeasurementEngine;
+  private getProjectMeasurementsFn: () => UnifiedMeasurement[] = () => [];
+  private onInternalMeasurementSavedFn: (_entry: UnifiedMeasurement) => void = () => {};
   private smartSnappingEngine!: SmartSnapping;
   private remateSmartSnapping!: RemateSmartSnapping;
   private smartAlignSnapOverlay!: SmartAlignSnapOverlay;
@@ -720,44 +717,29 @@ export class ViewerCore {
     );
     this.applyMousePresetToControls();
     this.applyBackgroundMode();
-    this.measurementOverlay = new ViewerMeasurementOverlay({
+    this.unifiedMeasurement = new UnifiedMeasurementEngine({
       getCamera: () => this.cameraManager.camera,
       getCanvas: () => this.rendererManager.renderer.domElement,
       getContainer: () => this.container,
       getBoxes: () => this.boxes,
-      getSelectedBoxId: () => this.viewerState.getSelectedBox(),
       getRoomWalls: () => this.roomBoxWalls,
-      isTransformDragging: () => this.viewerState.getTransformControlsDragging(),
-      projectWorldToScreen: (worldPoint) => this.projectWorldToScreen(worldPoint),
-      getNearestBoxDistance: () => this.computeDistanceToNearestBox(),
-      getNearestWallDistance: () => this.computeDistanceToNearestWall(),
-      getFloorDistance: () => this.computeDistanceToFloor(),
-    });
-
-    this.internalRulerEngine = new InternalRuler({
-      getCamera: () => this.cameraManager.camera,
-      getCanvas: () => this.rendererManager.renderer.domElement,
-      getContainer: () => this.container,
-      getBoxMesh: (boxId) => this.boxes.get(boxId)?.mesh ?? null,
+      getSelectedBoxId: () => this.viewerState.getSelectedBox(),
       isTransformDragging: () => this.viewerState.getTransformControlsDragging(),
       projectWorldToScreen: (worldPoint) => this.projectWorldToScreen(worldPoint),
       getProjectMeasurements: () => this.getProjectMeasurementsFn(),
       onMeasurementSaved: (entry) => this.onInternalMeasurementSavedFn(entry),
+      getNearestBoxDistance: () => this.computeDistanceToNearestBox(),
+      getNearestWallDistance: () => this.computeDistanceToNearestWall(),
+      getFloorDistance: () => this.computeDistanceToFloor(),
     });
-    this.internalRuler = createInternalRulerFacade(this.internalRulerEngine);
-
-    this.internalRulerOverlay = new InternalRulerOverlay({
-      getContainer: () => this.container,
-      projectWorldToScreen: (worldPoint) => this.projectWorldToScreen(worldPoint),
-      getBoxMesh: (boxId) => this.boxes.get(boxId)?.mesh ?? null,
-    });
+    this.internalRuler = createInternalRulerFacade(this.unifiedMeasurement);
 
     this.smartSnappingEngine = new SmartSnapping({
       getCamera: () => this.cameraManager.camera,
       getCanvas: () => this.rendererManager.renderer.domElement,
       getContainer: () => this.container,
       projectWorldToScreen: (worldPoint) => this.projectWorldToScreen(worldPoint),
-      isInternalRulerActive: () => this.internalRulerEngine.isActive(),
+      isInternalRulerActive: () => this.unifiedMeasurement.isActive(),
       getRoomBounds: () => this.roomBounds,
       getRoomOpenings: () => this.getRoomOpeningsForSnapping(),
     });
@@ -774,7 +756,7 @@ export class ViewerCore {
     this.smartAlignOverlay = createSmartAlignOverlayFacade(this.smartAlignSnapOverlay);
 
     this.smartAlignSnapEngine = new SmartAlignSnapEngine({
-      isInternalRulerActive: () => this.internalRulerEngine.isActive(),
+      isInternalRulerActive: () => this.unifiedMeasurement.isActive(),
     });
     this.smartAlignSnapEngine.enable();
 
@@ -782,11 +764,9 @@ export class ViewerCore {
 
     bindViewerOverlayCoordinator({
       coordinator: this.overlayCoordinator,
-      measurementOverlay: this.measurementOverlay,
-      internalRulerEngine: this.internalRulerEngine,
+      unifiedMeasurement: this.unifiedMeasurement,
       smartSnappingEngine: this.smartSnappingEngine,
       smartAlignSnapEngine: this.smartAlignSnapEngine,
-      refreshInternalRulerOverlay: () => this.refreshInternalRulerOverlay(),
       syncSmartAlignSnapOverlay: () => this.syncSmartAlignSnapOverlayFromEngine(),
       clearSmartAlignSnapOverlay: () => this.clearSmartAlignSnapOverlay(),
     });
@@ -1215,12 +1195,12 @@ export class ViewerCore {
   }
 
   bindInternalMeasurementBridge(
-    getMeasurements: () => InternalMeasurementEntry[],
-    onSaved: (_entry: InternalMeasurementEntry) => void
+    getMeasurements: () => UnifiedMeasurement[],
+    onSaved: (_entry: UnifiedMeasurement) => void
   ): void {
     this.getProjectMeasurementsFn = getMeasurements;
     this.onInternalMeasurementSavedFn = onSaved;
-    this.internalRulerEngine.syncFromProject(getMeasurements());
+    this.unifiedMeasurement.syncFromProject(getMeasurements());
   }
 
   bindAutoLayoutBridge(
@@ -1869,7 +1849,17 @@ export class ViewerCore {
   }
 
   addMeasurementAnchorAtPointer(event: { clientX: number; clientY: number }): MeasurementAnchorEntry | null {
-    return createMeasurementAnchorFromWorldHit(this.pointerPicking.getPointerWorldHit(event));
+    const snap = pickMeasurementSnap(event, {
+      getCamera: () => this.cameraManager.camera,
+      getCanvas: () => this.rendererManager.renderer.domElement,
+      getBoxes: () => this.boxes,
+      getRoomWalls: () => this.roomBoxWalls,
+      projectWorldToScreen: (worldPoint) => this.projectWorldToScreen(worldPoint),
+    });
+    if (snap) return createMeasurementAnchorFromSnap(snap);
+    // Fallback: ponto de interseção cru quando nada faz snap.
+    const hit = this.pointerPicking.getPointerWorldHit(event);
+    return hit ? createMeasurementAnchorFromWorldHit(hit) : null;
   }
 
   /**
@@ -2195,12 +2185,22 @@ export class ViewerCore {
     return inputs;
   }
 
+  /** Modo canónico da régua unificada (activado pelo botão único "Régua"). */
+  setMeasurementMode(enabled: boolean): void {
+    this.unifiedMeasurement.setEnabled(enabled);
+  }
+
+  getMeasurementMode(): boolean {
+    return this.unifiedMeasurement.isEnabled();
+  }
+
+  /** Alias compatível (antigo botão "Régua"). */
   setInternalMeasurementMode(enabled: boolean): void {
-    this.measurementOverlay.setInternalMeasurementMode(enabled);
+    this.setMeasurementMode(enabled);
   }
 
   getInternalMeasurementMode(): boolean {
-    return this.measurementOverlay.getInternalMeasurementMode();
+    return this.getMeasurementMode();
   }
 
   /** Fase 5 Parte A — picking interno (face / aresta / ponto). */
@@ -2225,7 +2225,6 @@ export class ViewerCore {
 
     this.viewerState.setInternalSelection(next);
     this.internalSelectionOutline?.sync(next, (boxId) => this.boxes.get(boxId)?.mesh ?? null);
-    this.syncInternalRulerOverlay();
 
     if (!next) return;
     if (next.type === "internal-face") this.onInternalSurfaceSelected?.(next);
@@ -2237,19 +2236,16 @@ export class ViewerCore {
     this.viewerState.setInternalSelectionEnabled(enabled);
     if (!enabled) {
       this.setInternalSelection(null);
-      this.internalRulerOverlay?.sync(null, null, null);
-      return;
     }
-    this.syncInternalRulerOverlay();
   }
 
+  /** Alias compatível: o botão "Régua interna" passa a activar a régua unificada. */
   enableInternalRuler(): void {
-    this.internalRulerEngine.disable();
-    this.setInternalSelectionEnabled(true);
+    this.setMeasurementMode(true);
   }
 
   disableInternalRuler(): void {
-    this.setInternalSelectionEnabled(false);
+    this.setMeasurementMode(false);
   }
 
   getInternalMeasurements(boxId?: string): InternalCavityMeasurements | null {
@@ -2265,21 +2261,7 @@ export class ViewerCore {
   }
 
   isInternalRulerOverlayActive(): boolean {
-    return this.internalRulerOverlay?.isActive() === true;
-  }
-
-  private syncInternalRulerOverlay(): void {
-    syncInternalRulerOverlayState({
-      enabled: this.viewerState.getInternalSelectionEnabled(),
-      selection: this.viewerState.getInternalSelection(),
-      boxes: this.boxes,
-      overlay: this.internalRulerOverlay,
-    });
-  }
-
-  private refreshInternalRulerOverlay(): void {
-    if (!this.viewerState.getInternalSelectionEnabled()) return;
-    this.internalRulerOverlay?.refresh();
+    return this.unifiedMeasurement.isActive();
   }
 
   getInternalSelectionEnabled(): boolean {
@@ -5281,13 +5263,11 @@ export class ViewerCore {
       }
     });
     if (id == null) {
-      this.measurementOverlay.onSelectionChanged(null);
-      this.internalRulerEngine.onSelectionChanged(null);
+      this.unifiedMeasurement.onSelectionChanged(null);
       this.setInternalSelection(null);
       return;
     }
-    this.measurementOverlay.onSelectionChanged(id);
-    this.internalRulerEngine.onSelectionChanged(id);
+    this.unifiedMeasurement.onSelectionChanged(id);
   }
 
   /**
@@ -5311,7 +5291,7 @@ export class ViewerCore {
         if (obj && "position" in obj) (obj as THREE.Object3D).position.z = this.dragStartZForShiftLock;
       }
       this.viewerTools.applyCurrentTool();
-      this.measurementOverlay.onRulerMovementTick("transform");
+      this.unifiedMeasurement.onRulerMovementTick("transform");
       if (this.groupGizmo?.isActive()) {
         this.notifyGroupTransform();
       } else if (this.viewerState.getSelectedRemate()) {
@@ -6497,9 +6477,7 @@ export class ViewerCore {
 
   private updateCanvasSize = () => {
     this.runtimeLoop.onResize();
-    this.measurementOverlay.resize();
-    this.internalRulerEngine.resize();
-    this.internalRulerOverlay?.resize();
+    this.unifiedMeasurement.resize();
     this.smartSnappingEngine.resize();
     this.smartAlignOverlay.resize();
   };
@@ -6648,13 +6626,8 @@ export class ViewerCore {
       this.internalSelectionOutline.dispose();
       this.internalSelectionOutline = null;
     }
-    if (this.internalRulerOverlay) {
-      this.internalRulerOverlay.dispose();
-      this.internalRulerOverlay = null;
-    }
     this.dimensionsOverlay.dispose();
-    this.measurementOverlay.dispose();
-    this.internalRulerEngine.dispose();
+    this.unifiedMeasurement.dispose();
     this.unregisterAdminSnappingRules?.();
     this.unregisterAdminSnappingRules = null;
     this.smartSnappingEngine.dispose();

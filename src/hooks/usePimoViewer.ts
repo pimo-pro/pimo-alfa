@@ -46,6 +46,8 @@ const VIEWER_CORE_UTILITY_METHODS = [
   "projectWorldToScreen",
   "getSelectedBoxDepthAxisWorldSegment",
   "getBoxIdAtPointerPublic",
+  "setMeasurementMode",
+  "getMeasurementMode",
   "setInternalMeasurementMode",
   "getInternalMeasurementMode",
   "getInternalSelectionHit",

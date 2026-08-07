@@ -65,17 +65,21 @@ declare global {
       setCameraView?: (preset: "top" | "bottom" | "front" | "back" | "right" | "left" | "isometric") => void;
       resetCamera?: () => void;
       frameSelection?: (boxId: string) => boolean;
+      setMeasurementMode?: (enabled: boolean) => void;
+      getMeasurementMode?: () => boolean;
+      setInternalMeasurementMode?: (enabled: boolean) => void;
+      getInternalMeasurementMode?: () => boolean;
       internalRuler?: {
         enableForBox: (boxId: string) => void;
         disable: () => void;
         isActive: () => boolean;
         getLastMeasurement: () => { valueMm: number } | null;
         getActiveBoxId: () => string | null;
-        syncFromProject: (entries: import("../3d/viewer-engine/measurement/internalRulerTypes").InternalMeasurementEntry[]) => void;
+        syncFromProject: (entries: import("../3d/viewer-engine/measurement/unifiedMeasurementTypes").UnifiedMeasurement[]) => void;
       };
       bindInternalMeasurementBridge?: (
-        getMeasurements: () => import("../3d/viewer-engine/measurement/internalRulerTypes").InternalMeasurementEntry[],
-        onSaved: (entry: import("../3d/viewer-engine/measurement/internalRulerTypes").InternalMeasurementEntry) => void
+        getMeasurements: () => import("../3d/viewer-engine/measurement/unifiedMeasurementTypes").UnifiedMeasurement[],
+        onSaved: (entry: import("../3d/viewer-engine/measurement/unifiedMeasurementTypes").UnifiedMeasurement) => void
       ) => void;
       bindAutoLayoutBridge?: (
         bridge: Pick<

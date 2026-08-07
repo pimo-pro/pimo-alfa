@@ -16,13 +16,16 @@ export type InternalMeasurementEntry = {
 };
 
 export type ProjectMeasurementsState = {
+  /** Medições legadas ponto-a-ponto por caixa (mantidas para retrocompatibilidade). */
   internal: InternalMeasurementEntry[];
   /** Âncoras de medição persistentes no espaço 3D (metros). */
   anchors: import("../../../core/viewer/measurementAnchors").MeasurementAnchorEntry[];
+  /** Medições unificadas globais (régua industrial, 0,1 mm). */
+  unified: import("./unifiedMeasurementTypes").UnifiedMeasurement[];
 };
 
 export function createEmptyProjectMeasurements(): ProjectMeasurementsState {
-  return { internal: [], anchors: [] };
+  return { internal: [], anchors: [], unified: [] };
 }
 
 export function createInternalMeasurementId(): string {

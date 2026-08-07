@@ -39,8 +39,18 @@ import type {
   InternalMeasurementPoint,
   ProjectMeasurementsState,
 } from "../3d/viewer-engine/measurement/internalRulerTypes";
+import type {
+  UnifiedMeasurement,
+  UnifiedMeasurementPoint,
+} from "../3d/viewer-engine/measurement/unifiedMeasurementTypes";
 
-export type { InternalMeasurementEntry, InternalMeasurementPoint, ProjectMeasurementsState };
+export type {
+  InternalMeasurementEntry,
+  InternalMeasurementPoint,
+  ProjectMeasurementsState,
+  UnifiedMeasurement,
+  UnifiedMeasurementPoint,
+};
 
 export type ViewerMousePreset = "cad" | "classic" | "orbitFriendly" | "mouseCentric";
 export type ViewerBackgroundMode = "studio" | "white" | "dark" | "woodFloor";
@@ -599,6 +609,12 @@ export interface ProjectActions {
   showAllInternalMeasurements: (_boxId?: string) => void;
   hideAllInternalMeasurements: (_boxId?: string) => void;
   clearInternalMeasurements: (_boxId?: string) => void;
+  addUnifiedMeasurement: (_entry: UnifiedMeasurement) => void;
+  removeUnifiedMeasurement: (_id: string) => void;
+  toggleUnifiedMeasurementVisibility: (_id: string) => void;
+  showAllUnifiedMeasurements: () => void;
+  hideAllUnifiedMeasurements: () => void;
+  clearUnifiedMeasurements: () => void;
   addDoorLayerItem: () => void;
   addDrawerLayerItem: () => void;
   removeDoorLayerItem: (_id: string) => void;
