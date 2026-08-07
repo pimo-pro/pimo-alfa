@@ -2,6 +2,12 @@
   "_pimoKep": "pimo-kep-fix-001",
   "publications": [
     {
+      "publishedAt": "2026-08-07T19:55:04.444Z",
+      "author": "pimo-pro",
+      "commitMessage": "Release — Nova versão completa sincronizada do projeto",
+      "version": "v6.0807.2055"
+    },
+    {
       "publishedAt": "2026-08-06T15:09:54.504Z",
       "author": "pimo-pro",
       "commitMessage": "Correção final DIV+SEP — altura exacta (1990,5), furos 2000, gap 0, remoção do Math.round no cutlist, validação de integração concluída.",

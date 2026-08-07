@@ -1,11 +1,41 @@
 {
-  "updatedAt": "2026-08-06T15:09:55.248Z",
+  "updatedAt": "2026-08-07T19:55:05.202Z",
   "news": [
+    {
+      "version": "v6.0807.2055",
+      "title": "Release — Nova versão completa sincronizada do projeto",
+      "description": "Release — Nova versão completa sincronizada do projeto",
+      "publishedAt": "2026-08-07T19:55:05.095Z",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "update",
+      "commit": "cd3d98d6"
+    },
+    {
+      "version": "v-full-release",
+      "title": "Release — Versão completa sincronizada do projeto",
+      "description": "Release — Versão completa sincronizada do projeto",
+      "publishedAt": "2026-08-07T20:29:03+01:00",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "update",
+      "commit": "7bac88f"
+    },
+    {
+      "version": "v6.0807.1245",
+      "title": "Régua unificada — implementação completa",
+      "description": "Régua unificada — implementação completa",
+      "publishedAt": "2026-08-07T12:45:19+01:00",
+      "type": "update",
+      "author": "pimo-pro",
+      "icon": "update",
+      "commit": "8bb0e2c"
+    },
     {
       "version": "v6.0806.1609",
       "title": "Correção final DIV+SEP — altura exacta (1990,5), furos 2000, gap 0, remoção do Math.round no cutlist, validação de in...",
       "description": "Correção final DIV+SEP — altura exacta (1990,5), furos 2000, gap 0, remoção do Math.round no cutlist, validação de integração concluída.",
-      "publishedAt": "2026-08-06T15:09:55.146Z",
+      "publishedAt": "2026-08-06T16:11:46+01:00",
       "type": "update",
       "author": "pimo-pro",
       "icon": "update",
