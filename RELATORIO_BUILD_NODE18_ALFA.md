@@ -58,12 +58,26 @@ Ficheiro alterado (único): `.github/workflows/deploy-alfa.yml`
 
 ---
 
-## 4. Validação esperada após push
+## 4. Validação após push
 
-1. Novo run **Deploy Alfa** com Node 20
-2. Step **Build project** a verde (`dist/` gerado)
-3. Step **Deploy via FTP** a correr (requer secrets `FTP_*` configurados)
-4. Site: https://alfa.pimo.pro
+Run: https://github.com/pimo-pro/pimo-alfa/actions/runs/31259093888  
+Commit: `08110b1d` — `fix(ci): use Node 20 for Deploy Alfa workflow`
+
+| Step | Resultado |
+|------|-----------|
+| Checkout repo | success |
+| Setup Node (20) | success |
+| Install dependencies | success |
+| **Build project** | **success** |
+| Deploy via FTP | **failure** (problema separado: credenciais/secrets FTP, não o build) |
+
+**Objetivo desta correção (build Vite no CI): cumprido.**  
+O erro `crypto.hash is not a function` desapareceu com Node 20.
+
+O step FTP falhou depois do build — tipicamente secrets em falta ou `FTP_REMOTE_ROOT` inválido. Verificar em GitHub → Settings → Secrets:
+
+- `FTP_HOST`, `FTP_USERNAME`, `FTP_PASSWORD`, `FTP_PORT`, `FTP_REMOTE_ROOT`  
+  (ex.: `/home/u100505900/domains/pimo.pro/public_html/alfa/`)
 
 ---
 
