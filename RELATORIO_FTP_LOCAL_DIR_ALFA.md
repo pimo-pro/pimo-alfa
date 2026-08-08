@@ -35,4 +35,14 @@ Node 20 mantido.
 
 ## Validação
 
-Após push para `main`: novo run Deploy Alfa — confirmar Build success + início do step FTP sem o erro de `local-dir`.
+Run pós-correção: https://github.com/pimo-pro/pimo-alfa/actions/runs/31259448866  
+Commit: `a3c6eae5`
+
+| Step | Resultado |
+|------|-----------|
+| Setup Node (20) | success |
+| Build project | success |
+| Deploy via FTP | failure *(já não é o erro de `local-dir`; o passo arranca após o build)* |
+
+O erro `local-dir should be a folder (must end with /)` fica resolvido com `./dist/`.  
+Se o FTP continuar a falhar, a causa seguinte é tipicamente secrets `FTP_*` em falta ou `FTP_REMOTE_ROOT` inválido (não este campo).
