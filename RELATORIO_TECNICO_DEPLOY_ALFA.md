@@ -113,10 +113,19 @@ Ficheiro: `.github/workflows/deploy-alfa.yml`
 - [x] Deploy local scriptado e validado (bloqueio de password placeholder)
 - [x] `deploy-alfa.yml` criado
 - [x] `deploy.yml` (pimo.pro) não modificado
-- [ ] Segredos FTP configurados no repositório GitHub
-- [ ] Push para `main` para disparar o workflow
-- [ ] Verificar run em GitHub → Actions → **Deploy Alfa**
+- [x] Workflow visível em GitHub Actions (**Deploy Alfa**, state=`active`, id=`329963677`)
+- [x] Push para `main` disparou o run: https://github.com/pimo-pro/pimo-alfa/actions/runs/31258651415
+- [ ] Segredos FTP configurados no repositório GitHub (`FTP_HOST`, `FTP_USERNAME`, `FTP_PASSWORD`, `FTP_PORT`, `FTP_REMOTE_ROOT`)
+- [ ] Build CI a verde (1.º run falhou no step **Build project**; FTP ainda não chegou a correr)
 - [ ] Verificar https://alfa.pimo.pro após sucesso
+
+### Nota do 1.º run (2026-08-08)
+
+- Checkout / Setup Node / `npm install` → sucesso  
+- `npm run build` → **failure**  
+- Deploy via FTP → skipped  
+
+Prováveis causas: Node 18 vs requisitos do projeto, ou variáveis `VITE_*` / `.env.production` em falta no CI (o workflow legado de tags injeta secrets antes do build).
 
 ---
 
