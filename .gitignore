@@ -28,6 +28,9 @@ deploy_key
 deploy_key.pub
 .git_disabled/
 
+# Credenciais FTP do subdomínio alfa (nunca versionar password)
+ftp-alfa.json
+
 # Auth PHP (Hostinger) — contém passwordHash
 api/data/users.json
 

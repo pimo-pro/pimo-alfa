@@ -1,0 +1,18 @@
+{
+  "host": "147.93.93.102",
+  "user": "u100505900.pimo.pro",
+  "password": "SENHA_FTP_AQUI",
+  "port": 21,
+  "localRoot": "./dist",
+  "remoteRoot": "/home/u100505900/domains/pimo.pro/public_html/alfa",
+  "include": ["*", "**/*"],
+  "exclude": [
+    "node_modules",
+    "node_modules/**",
+    ".git",
+    ".git/**",
+    ".git-ftp*",
+    ".ftp-deploy-sync-state.json"
+  ],
+  "deleteRemote": false
+}
