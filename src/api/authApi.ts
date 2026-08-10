@@ -1,6 +1,7 @@
 import axios from "axios";
 
 import { apiClient } from "./apiClient";
+import { isLocalAuthCredentials } from "../auth/localAuth";
 
 export type LoginResponse = {
   status: "ok";
@@ -51,6 +52,10 @@ function parseApiError(error: unknown): string {
 }
 
 export async function login(email: string, password: string): Promise<LoginResponse> {
+  // Blindagem: K/K nunca deve ir ao servidor (o AuthProvider curto-circuita antes).
+  if (isLocalAuthCredentials(email, password)) {
+    throw new Error("Credenciais locais K/K — sessão criada no AuthProvider sem API");
+  }
   try {
     const { data } = await apiClient.post<LoginResponse>("/auth/login", { email, password });
     return data;
