@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../auth/useAuth";
+import { LOCAL_AUTH_PASSWORD, LOCAL_AUTH_USERNAME } from "../auth/localAuth";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
 import FormGroup from "../components/ui/FormGroup";
@@ -13,8 +14,8 @@ import "../components/ui/ui.css";
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login, isAuthenticated } = useAuth();
-  const [email, setEmail] = useState("admin@pimo.local");
-  const [password, setPassword] = useState("admin123");
+  const [email, setEmail] = useState(LOCAL_AUTH_USERNAME);
+  const [password, setPassword] = useState(LOCAL_AUTH_PASSWORD);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -51,15 +52,20 @@ export default function LoginPage() {
               </Link>
             </div>
 
-            <Section title="Acesso por email e senha">
+            <Section title="Acesso local ou remoto">
+              <p className="ui-text-muted" style={{ fontSize: 13, marginTop: 0, marginBottom: 12 }}>
+                Modo local permanente: utilizador <strong>K</strong> / senha <strong>K</strong> (admin offline, sem
+                servidor). Outras credenciais usam o login remoto quando disponível.
+              </p>
               <form onSubmit={handleSubmit} className="ui-form-group">
                 <FormGroup>
                   <Input
-                    type="email"
-                    label="Email"
+                    type="text"
+                    label="Utilizador ou email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    autoComplete="username"
                   />
                 </FormGroup>
                 <FormGroup>
