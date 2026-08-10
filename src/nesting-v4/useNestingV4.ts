@@ -1,0 +1,417 @@
+/**
+ * Nesting V4 — Hook de estado da sessão.
+ * Toda a lógica de estado está aqui. A UI só chama as acções.
+ */
+
+import { useCallback, useEffect, useState } from "react";
+import type {
+  NestingV4State,
+  V4Piece,
+  V4Sheet,
+  V4DragState,
+  V4PiecesByProject,
+} from "./nestingV4Types";
+import { runNestingV4AutoLayout, getPieceColor } from "./nestingV4Engine";
+import type { CutPiece } from "../core/cutlayout/cutLayoutTypes";
+import { loadNestingV4SettingsFromGlobal, type NestingV4Settings, allowRotationForPiece } from "./nestingV4Settings";
+import { buildInitialSheetsForPieces, cloneDefaultSheet, defaultSheetFromSettings } from "./nestingSheetsFactory";
+import { findValidPlacement } from "./nestingV4Placement";
+import { isMaterialMadeira } from "../core/materials/nestingGrainLock";
+
+function makeDefaultState(): NestingV4State {
+  const settings = loadNestingV4SettingsFromGlobal();
+  return {
+    sheets: [defaultSheetFromSettings(settings)],
+    pieces: [],
+    placements: [],
+    unplacedPieceIds: [],
+    settings,
+    kerfMm: settings.kerfMm,
+    activeSheetIndex: 0,
+  };
+}
+
+function stateFromV4Pieces(pieces: V4Piece[]): NestingV4State {
+  const settings = loadNestingV4SettingsFromGlobal();
+  const sheets = buildInitialSheetsForPieces(pieces, settings);
+  return {
+    sheets,
+    pieces,
+    placements: [],
+    unplacedPieceIds: pieces.map((piece) => piece.id),
+    settings,
+    kerfMm: settings.kerfMm,
+    activeSheetIndex: 0,
+  };
+}
+
+let _pieceIdCounter = 1;
+function nextPieceId() { return `v4p-${_pieceIdCounter++}`; }
+
+// ── Converter CutPiece → V4Piece ──────────────────────────────────────────────
+
+export function cutPieceToV4(
+  cp: CutPiece,
+  index: number,
+  options?: { allowPieceRotation?: boolean; lockWoodGrain?: boolean }
+): V4Piece {
+  const holes = (cp.drillHoles ?? cp.holes ?? []).map((h) => ({
+    x: h.x, y: h.y, diameter: h.diameter, depth: h.depth, holeType: h.holeType,
+  }));
+  const metaAllow = cp.metadata?.allowPieceRotation;
+  const metaLock = cp.metadata?.lockWoodGrain;
+  const allowPieceRotation =
+    options?.allowPieceRotation ??
+    (metaAllow === true ? true : metaAllow === false ? false : undefined);
+  const lockWoodGrain =
+    options?.lockWoodGrain ??
+    (metaLock === true
+      ? true
+      : metaLock === false
+        ? false
+        : isMaterialMadeira(cp.materialId)
+          ? true
+          : undefined);
+  return {
+    id: nextPieceId(),
+    name: cp.partName,
+    widthMm: cp.largura_mm,
+    heightMm: cp.altura_mm,
+    thicknessMm: cp.espessura_mm,
+    materialId: cp.materialId,
+    materialName: cp.materialName,
+    originalHoles: holes,
+    rotation: 0,
+    color: getPieceColor(cp.materialId, index),
+    sourceBoxId: cp.boxId,
+    industrialGrainCode: cp.industrialGrainCode,
+    pieceTipo: cp.pieceTipo,
+    allowPieceRotation,
+    lockWoodGrain,
+  };
+}
+
+// ── Hook principal ────────────────────────────────────────────────────────────
+
+export function useNestingV4(initialCutPieces: CutPiece[] = []) {
+  const [state, setState] = useState<NestingV4State>(() => {
+    const base = makeDefaultState();
+    if (initialCutPieces.length === 0) return base;
+    const pieces: V4Piece[] = [];
+    let idx = 0;
+    for (const cp of initialCutPieces) {
+      const qty = cp.quantidade ?? 1;
+      for (let q = 0; q < qty; q++) {
+        pieces.push(cutPieceToV4(cp, idx++));
+      }
+    }
+    return { ...stateFromV4Pieces(pieces) };
+  });
+
+  const [dragState, setDragState] = useState<V4DragState | null>(null);
+
+  const loadPieces = useCallback((pieces: V4Piece[]) => {
+    setState(stateFromV4Pieces(pieces));
+    setDragState(null);
+  }, []);
+
+  const loadMultipleProjects = useCallback((_piecesByProject: V4PiecesByProject) => {
+    /* preparado para fase multi-projeto */
+  }, []);
+
+  const assignProjectColor = useCallback((_projectId: string) => {
+    return undefined as string | undefined;
+  }, []);
+
+  const generateOutputsGroupedByProject = useCallback(() => {
+    return undefined;
+  }, []);
+
+  useEffect(() => {
+    if (initialCutPieces.length === 0) return;
+    const pieces: V4Piece[] = [];
+    let idx = 0;
+    for (const cp of initialCutPieces) {
+      const qty = cp.quantidade ?? 1;
+      for (let q = 0; q < qty; q++) pieces.push(cutPieceToV4(cp, idx++));
+    }
+    loadPieces(pieces);
+  }, [initialCutPieces, loadPieces]);
+
+  // ── Auto-layout ─────────────────────────────────────────────────────────────
+
+  const runAutoLayout = useCallback(() => {
+    setState((prev) => {
+      const result = runNestingV4AutoLayout(prev.pieces, prev.sheets, prev.settings);
+      const template = prev.sheets[0] ?? defaultSheetFromSettings(prev.settings);
+      let newSheets = result.sheets ?? [...prev.sheets];
+      if (!result.sheets) {
+        while (newSheets.length < result.sheetsUsed) {
+          newSheets.push(cloneDefaultSheet(newSheets.length, template));
+        }
+      }
+      const nextPieces =
+        result.pieces ??
+        prev.pieces.map((piece) => {
+          const rotated = result.placements.some(
+            (pl) => pl.pieceId === piece.id && pl.rotated === true
+          );
+          const placed = result.placements.some((pl) => pl.pieceId === piece.id);
+          if (!placed) return piece;
+          return { ...piece, rotation: rotated ? 90 : 0 };
+        });
+      return {
+        ...prev,
+        sheets: newSheets,
+        pieces: nextPieces,
+        placements: result.placements,
+        unplacedPieceIds: result.unplacedPieceIds,
+      };
+    });
+  }, []);
+
+  // ── Move piece on sheet (com validação de overlap) ───────────────────────────
+
+  const movePiece = useCallback((
+    pieceId: string,
+    sheetIndex: number,
+    xMm: number,
+    yMm: number
+  ): boolean => {
+    let accepted = false;
+    setState((prev) => {
+      const piece = prev.pieces.find((p) => p.id === pieceId);
+      const sheet = prev.sheets[sheetIndex];
+      if (!piece || !sheet) return prev;
+
+      const valid = findValidPlacement(
+        pieceId, sheetIndex, xMm, yMm,
+        piece, sheet, prev.placements, prev.pieces, prev.settings
+      );
+      if (!valid) return prev;
+
+      accepted = true;
+      const placements = prev.placements.filter((p) => p.pieceId !== pieceId);
+      placements.push({ pieceId, sheetIndex, xMm: valid.xMm, yMm: valid.yMm });
+      const unplaced = prev.unplacedPieceIds.filter((id) => id !== pieceId);
+      return { ...prev, placements, unplacedPieceIds: unplaced };
+    });
+    return accepted;
+  }, []);
+
+  // ── Remove from sheet → back to sidebar ────────────────────────────────────
+
+  const returnToSidebar = useCallback((pieceId: string) => {
+    setState((prev) => ({
+      ...prev,
+      placements: prev.placements.filter((p) => p.pieceId !== pieceId),
+      unplacedPieceIds: prev.unplacedPieceIds.includes(pieceId)
+        ? prev.unplacedPieceIds
+        : [...prev.unplacedPieceIds, pieceId],
+    }));
+  }, []);
+
+  // ── Rotate piece ────────────────────────────────────────────────────────────
+
+  const rotatePiece = useCallback((pieceId: string) => {
+    setState((prev) => {
+      const placement = prev.placements.find((p) => p.pieceId === pieceId);
+      const piece = prev.pieces.find((p) => p.id === pieceId);
+      if (!piece) return prev;
+      if (!allowRotationForPiece(piece, prev.settings)) return prev;
+
+      const nextRotation = ((piece.rotation + 90) % 360) as 0 | 90 | 180 | 270;
+      const rotatedPiece = { ...piece, rotation: nextRotation };
+
+      if (!placement) {
+        return {
+          ...prev,
+          pieces: prev.pieces.map((p) => (p.id === pieceId ? rotatedPiece : p)),
+        };
+      }
+
+      const sheet = prev.sheets[placement.sheetIndex];
+      if (!sheet) return prev;
+
+      const valid = findValidPlacement(
+        pieceId, placement.sheetIndex, placement.xMm, placement.yMm,
+        rotatedPiece, sheet, prev.placements, prev.pieces, prev.settings
+      );
+
+      const placements = prev.placements.map((p) =>
+        p.pieceId === pieceId && valid
+          ? { ...p, xMm: valid.xMm, yMm: valid.yMm }
+          : p
+      );
+
+      return {
+        ...prev,
+        pieces: prev.pieces.map((p) => (p.id === pieceId ? rotatedPiece : p)),
+        placements: valid ? placements : prev.placements.filter((p) => p.pieceId !== pieceId),
+        unplacedPieceIds: valid
+          ? prev.unplacedPieceIds.filter((id) => id !== pieceId)
+          : [...new Set([...prev.unplacedPieceIds, pieceId])],
+      };
+    });
+  }, []);
+
+  // ── Move piece to different sheet ──────────────────────────────────────────
+
+  const movePieceToSheet = useCallback((pieceId: string, targetSheetIndex: number) => {
+    setState((prev) => {
+      const piece = prev.pieces.find((p) => p.id === pieceId);
+      const sheet = prev.sheets[targetSheetIndex];
+      if (!piece || !sheet) return prev;
+
+      const valid = findValidPlacement(
+        pieceId, targetSheetIndex, prev.settings.marginMm, prev.settings.marginMm,
+        piece, sheet, prev.placements, prev.pieces, prev.settings
+      );
+      if (!valid) return prev;
+
+      const placements = prev.placements
+        .filter((p) => p.pieceId !== pieceId)
+        .concat({ pieceId, sheetIndex: targetSheetIndex, xMm: valid.xMm, yMm: valid.yMm });
+      const unplaced = prev.unplacedPieceIds.filter((id) => id !== pieceId);
+      return { ...prev, placements, unplacedPieceIds: unplaced, activeSheetIndex: targetSheetIndex };
+    });
+  }, []);
+
+  // ── Add piece manually ──────────────────────────────────────────────────────
+
+  const addManualPiece = useCallback((
+    name: string,
+    widthMm: number,
+    heightMm: number,
+    thicknessMm: number
+  ) => {
+    setState((prev) => {
+      const piece: V4Piece = {
+        id: nextPieceId(),
+        name: name || `Peça ${prev.pieces.length + 1}`,
+        widthMm,
+        heightMm,
+        thicknessMm,
+        originalHoles: [],
+        rotation: 0,
+        color: getPieceColor(undefined, prev.pieces.length),
+      };
+      return {
+        ...prev,
+        pieces: [...prev.pieces, piece],
+        unplacedPieceIds: [...prev.unplacedPieceIds, piece.id],
+      };
+    });
+  }, []);
+
+  // ── Remove piece entirely ───────────────────────────────────────────────────
+
+  const removePiece = useCallback((pieceId: string) => {
+    setState((prev) => ({
+      ...prev,
+      pieces: prev.pieces.filter((p) => p.id !== pieceId),
+      placements: prev.placements.filter((p) => p.pieceId !== pieceId),
+      unplacedPieceIds: prev.unplacedPieceIds.filter((id) => id !== pieceId),
+    }));
+  }, []);
+
+  // ── Add / remove sheets ─────────────────────────────────────────────────────
+
+  const addSheet = useCallback(() => {
+    setState((prev) => {
+      const template = prev.sheets[prev.activeSheetIndex] ?? defaultSheetFromSettings(prev.settings);
+      return {
+        ...prev,
+        sheets: [...prev.sheets, cloneDefaultSheet(prev.sheets.length, template)],
+      };
+    });
+  }, []);
+
+  const removeSheet = useCallback((sheetIndex: number) => {
+    setState((prev) => {
+      const piecesOnSheet = prev.placements
+        .filter((p) => p.sheetIndex === sheetIndex)
+        .map((p) => p.pieceId);
+      return {
+        ...prev,
+        sheets: prev.sheets.filter((_, i) => i !== sheetIndex).map((s, i) => ({ ...s, index: i })),
+        placements: prev.placements.filter((p) => p.sheetIndex !== sheetIndex).map((p) =>
+          p.sheetIndex > sheetIndex ? { ...p, sheetIndex: p.sheetIndex - 1 } : p
+        ),
+        unplacedPieceIds: [...new Set([...prev.unplacedPieceIds, ...piecesOnSheet])],
+        activeSheetIndex: Math.min(prev.activeSheetIndex, Math.max(0, prev.sheets.length - 2)),
+      };
+    });
+  }, []);
+
+  const setActiveSheet = useCallback((idx: number) => {
+    setState((prev) => ({ ...prev, activeSheetIndex: idx }));
+  }, []);
+
+  const setKerfMm = useCallback((v: number) => {
+    setState((prev) => ({
+      ...prev,
+      kerfMm: v,
+      settings: { ...prev.settings, kerfMm: v },
+    }));
+  }, []);
+
+  const updateSettings = useCallback((patch: Partial<NestingV4Settings>) => {
+    setState((prev) => {
+      const settings = { ...prev.settings, ...patch };
+      return {
+        ...prev,
+        settings,
+        kerfMm: settings.kerfMm,
+      };
+    });
+  }, []);
+
+  const updateSheet = useCallback((idx: number, patch: Partial<V4Sheet>) => {
+    setState((prev) => ({
+      ...prev,
+      sheets: prev.sheets.map((s) => s.index === idx ? { ...s, ...patch } : s),
+    }));
+  }, []);
+
+  const clearAll = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      placements: [],
+      unplacedPieceIds: prev.pieces.map((p) => p.id),
+    }));
+  }, []);
+
+  const focusPiece = useCallback((pieceId: string) => {
+    setState((prev) => {
+      const placement = prev.placements.find((p) => p.pieceId === pieceId);
+      if (!placement) return prev;
+      return { ...prev, activeSheetIndex: placement.sheetIndex };
+    });
+  }, []);
+
+  return {
+    state,
+    dragState,
+    setDragState,
+    loadPieces,
+    loadMultipleProjects,
+    assignProjectColor,
+    generateOutputsGroupedByProject,
+    runAutoLayout,
+    movePiece,
+    returnToSidebar,
+    rotatePiece,
+    movePieceToSheet,
+    addManualPiece,
+    removePiece,
+    addSheet,
+    removeSheet,
+    setActiveSheet,
+    setKerfMm,
+    updateSettings,
+    updateSheet,
+    clearAll,
+    focusPiece,
+  };
+}

@@ -51,7 +51,7 @@ import Card from "./components/ui/Card";
 import PageContainer from "./components/ui/PageContainer";
 import { IconGallery } from "@/components/icons";
 import "./components/ui/ui.css";
-import type { V3Piece } from "./nesting-v3/nestingV3Types";
+import type { V4Piece } from "./nesting-v4/nestingV4Types";
 import IndustrialHomePage from "./app/industrial/index";
 import IndustrialWorkOrdersPage from "./app/industrial/work-orders/index";
 import WorkOrderOrProjectOrderPage from "./app/industrial/work-orders/WorkOrderOrProjectOrderPage";
@@ -77,6 +77,7 @@ import IndustrialMontagemPage from "./app/industrial/operations/montagem/index";
 import IndustrialEmbalagemPage from "./app/industrial/operations/embalagem/index";
 import IndustrialAdminSettingsPage from "./app/admin/settings/industrial/index";
 import RealtimeAlertsAdminPage from "./app/admin/system-settings/industrial/realtime-alerts";
+import IndustrialRulesHubPage from "./pages/admin/industrial/IndustrialRulesHubPage";
 import PieceMainView from "./app/industrial/piece/PieceMainView";
 import IndustrialSupervisorDashboardPage from "./app/industrial/supervisor/index";
 import SupervisorProjectPage from "./app/industrial/supervisor/SupervisorProjectPage";
@@ -90,11 +91,14 @@ import ProjetosPiecePage from "./app/PROJETOS/[project]/[box]/[piece]/page";
 import ProjetosAnaliseIndexPage from "./app/PROJETOS/[project]/analise/page";
 import ProjetosAnaliseDocPage from "./app/PROJETOS/[project]/analise/[docId]/page";
 import { ajudaRoutes } from "./routes/ajudaRoutes";
+import { features } from "./config/features";
 
 const Documentacao = lazy(() => import("./pages/Documentacao"));
 const AdminPanel = lazy(() => import("./pages/AdminPanel"));
-const V4Page = lazy(() => import("./pages/V4Page"));
+const V4Page = features.v4Viewer ? lazy(() => import("./pages/V4Page")) : null;
+const NestingV4RoutePage = lazy(() => import("./app/nesting-v4/NestingV4RoutePage"));
 const NestingV3RoutePage = lazy(() => import("./app/nesting-v3/NestingV3RoutePage"));
+const LayoutCorteAlfaRoutePage = lazy(() => import("./app/layout-de-corte-alfa/LayoutCorteAlfaRoutePage"));
 const DevPimoTest = import.meta.env.DEV
   ? lazy(() => import("./__dev__/DevPimoTest"))
   : null;
@@ -207,10 +211,10 @@ function LegacyApp() {
     setShowLanding(false);
   };
 
-  const navigateToNestingV3 = (payload?: { pieces?: V3Piece[]; projectId?: string; projectName?: string }) => {
-    navigate("/nesting_v3", {
+  const navigateToNestingV4 = (payload?: { pieces?: V4Piece[]; projectId?: string; projectName?: string }) => {
+    navigate("/nesting_v4", {
       state: {
-        openNestingV3: true,
+        openNestingV4: true,
         pieces: payload?.pieces,
         projectId: payload?.projectId,
         projectName: payload?.projectName,
@@ -218,14 +222,18 @@ function LegacyApp() {
     });
   };
 
-  // Listen for Nesting V3 open event (dispatched from UnifiedTopToolbar)
+  // Listen for Nesting V4 open event (dispatched from UnifiedTopToolbar)
   useEffect(() => {
     const handler = (event: Event) => {
       const detail = event instanceof CustomEvent ? event.detail : undefined;
-      navigateToNestingV3(detail);
+      navigateToNestingV4(detail);
     };
+    window.addEventListener("pimo:open-nesting-v4", handler);
     window.addEventListener("pimo:open-nesting-v3", handler);
-    return () => window.removeEventListener("pimo:open-nesting-v3", handler);
+    return () => {
+      window.removeEventListener("pimo:open-nesting-v4", handler);
+      window.removeEventListener("pimo:open-nesting-v3", handler);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -528,7 +536,9 @@ export default function App() {
                 </PermissionRoute>
               }
             />
+            <Route path="/nesting_v4" element={<NestingV4RoutePage />} />
             <Route path="/nesting_v3" element={<NestingV3RoutePage />} />
+            <Route path="/layout_de_corte_alfa" element={<LayoutCorteAlfaRoutePage />} />
             <Route path="/industrial/release-notes" element={<IndustrialReleaseNotesPage />} />
             <Route path="/industrial" element={<IndustrialHomePage />} />
             <Route path="/industrial/supervisor" element={<IndustrialSupervisorDashboardPage />} />
@@ -563,10 +573,26 @@ export default function App() {
             <Route path="/industrial/operations/orlar" element={<IndustrialOrlarPage />} />
             <Route path="/industrial/operations/montagem" element={<IndustrialMontagemPage />} />
             <Route path="/industrial/operations/embalagem" element={<IndustrialEmbalagemPage />} />
+            <Route
+              path="/admin/industrial"
+              element={
+                <PermissionRoute check={canAccessAdminPanel}>
+                  <IndustrialRulesHubPage />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="/admin/industrial/"
+              element={
+                <PermissionRoute check={canAccessAdminPanel}>
+                  <IndustrialRulesHubPage />
+                </PermissionRoute>
+              }
+            />
             <Route path="/admin/settings/industrial" element={<IndustrialAdminSettingsPage />} />
             <Route path="/admin/system-settings/industrial/realtime-alerts" element={<RealtimeAlertsAdminPage />} />
           </Route>
-          <Route path="/v4" element={<V4Page />} /> {/* TEMPORARY — remove before production */}
+          {V4Page ? <Route path="/v4" element={<V4Page />} /> : null}
         </Route>
         <Route path="/" element={<LegacyApp />} />
         {/* Fase 8 — redirects → Hub /documentacao */}

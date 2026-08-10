@@ -1,0 +1,65 @@
+/**
+ * V4Piece → CutPiece[] para runCutLayout (estação visual Nesting V4).
+ */
+
+import type { CutPiece } from "../cutLayoutTypes";
+import type { V4Piece } from "../../../nesting-v4/nestingV4Types";
+import type { NestingV4Settings } from "../../../nesting-v4/nestingV4Settings";
+import { sheetDimsForMaterial } from "../../../nesting-v4/nestingV4Settings";
+import { resolveNestingLayoutGrainDirection } from "../../materials/nestingGrainLock";
+
+function mapGrainDirection(piece: V4Piece): CutPiece["grainDirection"] {
+  const nestingLock = resolveNestingLayoutGrainDirection({
+    materialId: piece.materialId,
+    industrialGrainCode: piece.industrialGrainCode,
+    pieceTipo: piece.pieceTipo,
+    allowPieceRotation: piece.allowPieceRotation,
+    lockWoodGrain: piece.lockWoodGrain,
+  });
+  if (nestingLock) return nestingLock;
+  if (piece.industrialGrainCode === "YY") return "length";
+  if (piece.industrialGrainCode === "XX") return "width";
+  return undefined;
+}
+
+export function v4PiecesToCutPieces(pieces: V4Piece[], settings: NestingV4Settings): CutPiece[] {
+  return pieces.map((piece) => {
+    const sheetDims = sheetDimsForMaterial(piece.materialId, settings);
+    return {
+      largura_mm: piece.widthMm,
+      altura_mm: piece.heightMm,
+      espessura_mm: piece.thicknessMm,
+      quantidade: 1,
+      boxId: piece.sourceBoxId ?? piece.id,
+      partName: piece.name,
+      materialId: piece.materialId,
+      materialName: piece.materialName,
+      drillHoles: piece.originalHoles.map((h) => ({
+        x: h.x,
+        y: h.y,
+        diameter: h.diameter,
+        depth: h.depth,
+        holeType: h.holeType,
+      })),
+      industrialGrainCode: piece.industrialGrainCode,
+      pieceTipo: piece.pieceTipo,
+      grainDirection: mapGrainDirection(piece),
+      sheetWidthMm: sheetDims.sheetWidthMm,
+      sheetHeightMm: sheetDims.sheetHeightMm,
+      sheetThicknessMm: sheetDims.sheetThicknessMm,
+      metadata: {
+        v3PieceId: piece.id,
+        v4PieceId: piece.id,
+        v3Rotation: piece.rotation,
+        v4Rotation: piece.rotation,
+        v3SourceBoxId: piece.sourceBoxId,
+        v3SourceProjectId: piece.sourceProjectId,
+        allowPieceRotation: piece.allowPieceRotation,
+        lockWoodGrain: piece.lockWoodGrain,
+      },
+    };
+  });
+}
+
+/** @deprecated alias — preferir v4PiecesToCutPieces */
+export const v3PiecesToCutPieces = v4PiecesToCutPieces;
