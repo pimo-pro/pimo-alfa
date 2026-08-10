@@ -244,7 +244,7 @@ export default function LcaCncCanvas(props: Props) {
           })}
 
           {/* Origem CNC canto superior direito + eixos */}
-          {rules.cncOrigin.showOriginMarker && (
+          {rules.simulation.showOriginMarker && (
             <g>
               <circle cx={W} cy={H} r={5 / zoom} fill="#f87171" />
               <text
