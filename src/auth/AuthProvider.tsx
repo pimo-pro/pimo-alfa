@@ -3,6 +3,11 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import { getMe, login as loginApi } from "../api/authApi";
 import { setApiToken } from "../api/apiClient";
 import { AuthContext, type AuthUser } from "./AuthContext";
+import {
+  createLocalAuthSession,
+  isLocalAuthCredentials,
+  isLocalAuthToken,
+} from "./localAuth";
 
 const STORAGE_TOKEN = "pimo_auth_token";
 const STORAGE_USER = "pimo_auth_user";
@@ -14,11 +19,19 @@ const STORAGE_PERMISSIONS = "pimo_auth_permissions";
  *   identificador estável para GET/PATCH de preferências no servidor.
  * - Merge global → utilizador → local: ver `src/core/settings/settingsStorage.ts` (leitura única
  *   hoje em localStorage); a composição por camadas entrará nesse módulo + SettingsContext.
+ *
+ * Login local permanente: credenciais K/K → sessão admin sem API (ver `localAuth.ts`).
  */
 
 type Props = {
   children: ReactNode;
 };
+
+function persistSession(token: string, user: AuthUser, permissions: string[]) {
+  localStorage.setItem(STORAGE_TOKEN, token);
+  localStorage.setItem(STORAGE_USER, JSON.stringify(user));
+  localStorage.setItem(STORAGE_PERMISSIONS, JSON.stringify(permissions));
+}
 
 export function AuthProvider({ children }: Props) {
   const [token, setToken] = useState<string | null>(null);
@@ -34,6 +47,15 @@ export function AuthProvider({ children }: Props) {
     localStorage.removeItem(STORAGE_TOKEN);
     localStorage.removeItem(STORAGE_USER);
     localStorage.removeItem(STORAGE_PERMISSIONS);
+  }, []);
+
+  const applySession = useCallback((nextToken: string, nextUser: AuthUser, nextPermissions: string[]) => {
+    setToken(nextToken);
+    setUser(nextUser);
+    setPermissions(nextPermissions);
+    // Token local não é JWT remoto — evita Authorization inválido em APIs PHP.
+    setApiToken(isLocalAuthToken(nextToken) ? null : nextToken);
+    persistSession(nextToken, nextUser, nextPermissions);
   }, []);
 
   useEffect(() => {
@@ -52,7 +74,7 @@ export function AuthProvider({ children }: Props) {
       setToken(storedToken);
       setUser(parsedUser);
       setPermissions(Array.isArray(parsedPermissions) ? parsedPermissions : []);
-      setApiToken(storedToken);
+      setApiToken(isLocalAuthToken(storedToken) ? null : storedToken);
     } catch {
       clearSession();
     } finally {
@@ -62,34 +84,27 @@ export function AuthProvider({ children }: Props) {
 
   const login = useCallback(
     async (email: string, password: string) => {
+      // Modo local permanente: apenas K/K — sem rede, sem fallback genérico.
+      if (isLocalAuthCredentials(email, password)) {
+        const local = createLocalAuthSession();
+        applySession(local.token, local.user, local.permissions);
+        return;
+      }
+
       const loginResult = await loginApi(email, password);
       setApiToken(loginResult.token);
       const me = await getMe();
       if (!me?.user?.id) throw new Error("Resposta inválida do servidor");
 
-      setToken(loginResult.token);
-      setUser({
+      const nextUser: AuthUser = {
         id: me.user.id,
         username: me.user.username,
         role: me.user.role,
-      });
-      setPermissions(Array.isArray(me.user.permissions) ? me.user.permissions : []);
-
-      localStorage.setItem(STORAGE_TOKEN, loginResult.token);
-      localStorage.setItem(
-        STORAGE_USER,
-        JSON.stringify({
-          id: me.user.id,
-          username: me.user.username,
-          role: me.user.role,
-        })
-      );
-      localStorage.setItem(
-        STORAGE_PERMISSIONS,
-        JSON.stringify(Array.isArray(me.user.permissions) ? me.user.permissions : [])
-      );
+      };
+      const nextPermissions = Array.isArray(me.user.permissions) ? me.user.permissions : [];
+      applySession(loginResult.token, nextUser, nextPermissions);
     },
-    []
+    [applySession]
   );
 
   const logout = useCallback(() => {
